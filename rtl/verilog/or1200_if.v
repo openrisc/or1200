@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_if.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Major update: 
+// Structure reordered and bugs fixed. 
+//
+// Revision 1.5  2004/04/05 08:29:57  lampret
+// Merged branch_qmem into main tree.
+//
 // Revision 1.3  2002/03/29 15:16:56  lampret
 // Some of the warnings fixed.
 //
@@ -89,7 +96,7 @@ module or1200_if(
 	icpu_dat_i, icpu_ack_i, icpu_err_i, icpu_adr_i, icpu_tag_i,
 
 	// Internal i/f
-	if_freeze, if_insn, if_pc, flushpipe,
+	if_freeze, if_insn, if_pc, if_flushpipe, saving_if_insn, 
 	if_stall, no_more_dslot, genpc_refetch, rfe,
 	except_itlbmiss, except_immufault, except_ibuserr
 );
@@ -119,7 +126,8 @@ input	[3:0]			icpu_tag_i;
 input				if_freeze;
 output	[31:0]			if_insn;
 output	[31:0]			if_pc;
-input				flushpipe;
+input				if_flushpipe;
+output				saving_if_insn;
 output				if_stall;
 input				no_more_dslot;
 output				genpc_refetch;
@@ -131,21 +139,38 @@ output				except_ibuserr;
 //
 // Internal wires and regs
 //
-reg	[31:0]			insn_saved;
-reg	[31:0]			addr_saved;
-reg				saved;
+wire			save_insn;
+wire			if_bypass;
+reg			if_bypass_reg;
+reg	[31:0]		insn_saved;
+reg	[31:0]		addr_saved;
+reg	[2:0]		err_saved;
+reg			saved;
+
+assign save_insn = (icpu_ack_i | icpu_err_i) & if_freeze & !saved;
+assign saving_if_insn = !if_flushpipe & save_insn;
+
+//
+// IF bypass 
+//
+assign if_bypass = icpu_adr_i[0] ? 1'b0 : if_bypass_reg | if_flushpipe;
+
+always @(posedge clk or posedge rst)
+	if (rst)
+		if_bypass_reg <= #1 1'b0;
+	else
+		if_bypass_reg <= #1 if_bypass;
 
 //
 // IF stage insn
 //
-assign if_insn = icpu_err_i | no_more_dslot | rfe ? {`OR1200_OR32_NOP, 26'h041_0000} : saved ? insn_saved : icpu_ack_i ? icpu_dat_i : {`OR1200_OR32_NOP, 26'h061_0000};
-assign if_pc = saved ? addr_saved : icpu_adr_i;
-// assign if_stall = !icpu_err_i & !icpu_ack_i & !saved & !no_more_dslot;
+assign if_insn = no_more_dslot | rfe | if_bypass ? {`OR1200_OR32_NOP, 26'h041_0000} : saved ? insn_saved : icpu_ack_i ? icpu_dat_i : {`OR1200_OR32_NOP, 26'h061_0000};
+assign if_pc = saved ? addr_saved : {icpu_adr_i[31:2], 2'h0};
 assign if_stall = !icpu_err_i & !icpu_ack_i & !saved;
 assign genpc_refetch = saved & icpu_ack_i;
-assign except_itlbmiss = icpu_err_i & (icpu_tag_i == `OR1200_ITAG_TE) & !no_more_dslot;
-assign except_immufault = icpu_err_i & (icpu_tag_i == `OR1200_ITAG_PE) & !no_more_dslot;
-assign except_ibuserr = icpu_err_i & (icpu_tag_i == `OR1200_ITAG_BE) & !no_more_dslot;
+assign except_itlbmiss = no_more_dslot ? 1'b0 : saved ? err_saved[0] : icpu_err_i & (icpu_tag_i == `OR1200_ITAG_TE);
+assign except_immufault = no_more_dslot ? 1'b0 : saved ? err_saved[1] : icpu_err_i & (icpu_tag_i == `OR1200_ITAG_PE);
+assign except_ibuserr = no_more_dslot ? 1'b0 : saved ? err_saved[2] : icpu_err_i & (icpu_tag_i == `OR1200_ITAG_BE);
 
 //
 // Flag for saved insn/address
@@ -153,9 +178,9 @@ assign except_ibuserr = icpu_err_i & (icpu_tag_i == `OR1200_ITAG_BE) & !no_more_
 always @(posedge clk or posedge rst)
 	if (rst)
 		saved <= #1 1'b0;
-	else if (flushpipe)
+	else if (if_flushpipe)
 		saved <= #1 1'b0;
-	else if (icpu_ack_i & if_freeze & !saved)
+	else if (save_insn)
 		saved <= #1 1'b1;
 	else if (!if_freeze)
 		saved <= #1 1'b0;
@@ -166,10 +191,10 @@ always @(posedge clk or posedge rst)
 always @(posedge clk or posedge rst)
 	if (rst)
 		insn_saved <= #1 {`OR1200_OR32_NOP, 26'h041_0000};
-	else if (flushpipe)
+	else if (if_flushpipe)
 		insn_saved <= #1 {`OR1200_OR32_NOP, 26'h041_0000};
-	else if (icpu_ack_i & if_freeze & !saved)
-		insn_saved <= #1 icpu_dat_i;
+	else if (save_insn)
+		insn_saved <= #1 icpu_err_i ? {`OR1200_OR32_NOP, 26'h041_0000} : icpu_dat_i;
 	else if (!if_freeze)
 		insn_saved <= #1 {`OR1200_OR32_NOP, 26'h041_0000};
 
@@ -179,11 +204,28 @@ always @(posedge clk or posedge rst)
 always @(posedge clk or posedge rst)
 	if (rst)
 		addr_saved <= #1 32'h00000000;
-	else if (flushpipe)
+	else if (if_flushpipe)
 		addr_saved <= #1 32'h00000000;
-	else if (icpu_ack_i & if_freeze & !saved)
-		addr_saved <= #1 icpu_adr_i;
+	else if (save_insn)
+		addr_saved <= #1 {icpu_adr_i[31:2], 2'b00};
 	else if (!if_freeze)
-		addr_saved <= #1 icpu_adr_i;
+		addr_saved <= #1 {icpu_adr_i[31:2], 2'b00};
+
+//
+// Store fetched instruction's error tags 
+//
+always @(posedge clk or posedge rst)
+	if (rst)
+		err_saved <= #1 3'b000;
+	else if (if_flushpipe)
+		err_saved <= #1 3'b000;
+	else if (save_insn) begin
+		err_saved[0] <= #1 icpu_err_i & (icpu_tag_i == `OR1200_ITAG_TE);
+		err_saved[1] <= #1 icpu_err_i & (icpu_tag_i == `OR1200_ITAG_PE);
+		err_saved[2] <= #1 icpu_err_i & (icpu_tag_i == `OR1200_ITAG_BE);
+	end
+	else if (!if_freeze)
+		err_saved <= #1 3'b000;
+
 
 endmodule

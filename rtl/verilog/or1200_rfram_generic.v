@@ -42,7 +42,15 @@
 //////////////////////////////////////////////////////////////////////
 //
 // CVS Revision History
-// $Log: not supported by cvs2svn $
+//
+// $Log: or1200_rfram_generic.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Defines added, coding style changed. 
+//
+// Revision 1.3  2004/06/08 18:16:32  lampret
+// GPR0 hardwired to zero.
+//
 // Revision 1.2  2002/09/03 22:28:21  lampret
 // As per Taylor Su suggestion all case blocks are full case by default and optionally (OR1200_CASE_DEFAULT) can be disabled to increase clock frequncy.
 //
@@ -110,9 +118,38 @@ input	[dw-1:0]		di_w;
 //
 reg	[aw-1:0]		intaddr_a;
 reg	[aw-1:0]		intaddr_b;
+`ifdef OR1200_RFRAM_16REG
+reg	[16*dw-1:0]		mem;
+`else
 reg	[32*dw-1:0]		mem;
+`endif
 reg	[dw-1:0]		do_a;
 reg	[dw-1:0]		do_b;
+
+   // Function to access GPRs (for use by Verilator). No need to hide this one
+   // from the simulator, since it has an input (as required by IEEE 1364-2001).
+   function [31:0] get_gpr;
+      // verilator public
+      input [aw-1:0] 		gpr_no;
+
+      get_gpr = { mem[gpr_no*32 + 31], mem[gpr_no*32 + 30],
+                  mem[gpr_no*32 + 29], mem[gpr_no*32 + 28],
+                  mem[gpr_no*32 + 27], mem[gpr_no*32 + 26],
+                  mem[gpr_no*32 + 25], mem[gpr_no*32 + 24],
+                  mem[gpr_no*32 + 23], mem[gpr_no*32 + 22],
+                  mem[gpr_no*32 + 21], mem[gpr_no*32 + 20],
+                  mem[gpr_no*32 + 19], mem[gpr_no*32 + 18],
+                  mem[gpr_no*32 + 17], mem[gpr_no*32 + 16],
+                  mem[gpr_no*32 + 15], mem[gpr_no*32 + 14],
+                  mem[gpr_no*32 + 13], mem[gpr_no*32 + 12],
+                  mem[gpr_no*32 + 11], mem[gpr_no*32 + 10],
+                  mem[gpr_no*32 +  9], mem[gpr_no*32 +  8],
+                  mem[gpr_no*32 +  7], mem[gpr_no*32 +  6],
+                  mem[gpr_no*32 +  5], mem[gpr_no*32 +  4],
+                  mem[gpr_no*32 +  3], mem[gpr_no*32 +  2],
+                  mem[gpr_no*32 +  1], mem[gpr_no*32 +  0] };
+      
+   endfunction // get_gpr
 
 //
 // Write port
@@ -123,7 +160,6 @@ always @(posedge clk or posedge rst)
 	end
 	else if (ce_w & we_w)
 		case (addr_w)	// synopsys parallel_case
-			5'd00: mem[32*0+31:32*0] <= #1 32'h0000_0000;
 			5'd01: mem[32*1+31:32*1] <= #1 di_w;
 			5'd02: mem[32*2+31:32*2] <= #1 di_w;
 			5'd03: mem[32*3+31:32*3] <= #1 di_w;
@@ -139,6 +175,8 @@ always @(posedge clk or posedge rst)
 			5'd13: mem[32*13+31:32*13] <= #1 di_w;
 			5'd14: mem[32*14+31:32*14] <= #1 di_w;
 			5'd15: mem[32*15+31:32*15] <= #1 di_w;
+`ifdef OR1200_RFRAM_16REG
+`else
 			5'd16: mem[32*16+31:32*16] <= #1 di_w;
 			5'd17: mem[32*17+31:32*17] <= #1 di_w;
 			5'd18: mem[32*18+31:32*18] <= #1 di_w;
@@ -154,7 +192,9 @@ always @(posedge clk or posedge rst)
 			5'd28: mem[32*28+31:32*28] <= #1 di_w;
 			5'd29: mem[32*29+31:32*29] <= #1 di_w;
 			5'd30: mem[32*30+31:32*30] <= #1 di_w;
-			default: mem[32*31+31:32*31] <= #1 di_w;
+			5'd31: mem[32*31+31:32*31] <= #1 di_w;
+`endif
+			default: mem[32*0+31:32*0] <= #1 32'h0000_0000;
 		endcase
 
 //
@@ -169,7 +209,6 @@ always @(posedge clk or posedge rst)
 
 always @(mem or intaddr_a)
 	case (intaddr_a)	// synopsys parallel_case
-		5'd00: do_a = 32'h0000_0000;
 		5'd01: do_a = mem[32*1+31:32*1];
 		5'd02: do_a = mem[32*2+31:32*2];
 		5'd03: do_a = mem[32*3+31:32*3];
@@ -185,6 +224,8 @@ always @(mem or intaddr_a)
 		5'd13: do_a = mem[32*13+31:32*13];
 		5'd14: do_a = mem[32*14+31:32*14];
 		5'd15: do_a = mem[32*15+31:32*15];
+`ifdef OR1200_RFRAM_16REG
+`else
 		5'd16: do_a = mem[32*16+31:32*16];
 		5'd17: do_a = mem[32*17+31:32*17];
 		5'd18: do_a = mem[32*18+31:32*18];
@@ -200,7 +241,9 @@ always @(mem or intaddr_a)
 		5'd28: do_a = mem[32*28+31:32*28];
 		5'd29: do_a = mem[32*29+31:32*29];
 		5'd30: do_a = mem[32*30+31:32*30];
-		default: do_a = mem[32*31+31:32*31];
+		5'd31: do_a = mem[32*31+31:32*31];
+`endif
+		default: do_a = 32'h0000_0000;
 	endcase
 
 //
@@ -215,7 +258,6 @@ always @(posedge clk or posedge rst)
 
 always @(mem or intaddr_b)
 	case (intaddr_b)	// synopsys parallel_case
-		5'd00: do_b = 32'h0000_0000;
 		5'd01: do_b = mem[32*1+31:32*1];
 		5'd02: do_b = mem[32*2+31:32*2];
 		5'd03: do_b = mem[32*3+31:32*3];
@@ -231,6 +273,8 @@ always @(mem or intaddr_b)
 		5'd13: do_b = mem[32*13+31:32*13];
 		5'd14: do_b = mem[32*14+31:32*14];
 		5'd15: do_b = mem[32*15+31:32*15];
+`ifdef OR1200_RFRAM_16REG
+`else
 		5'd16: do_b = mem[32*16+31:32*16];
 		5'd17: do_b = mem[32*17+31:32*17];
 		5'd18: do_b = mem[32*18+31:32*18];
@@ -246,7 +290,9 @@ always @(mem or intaddr_b)
 		5'd28: do_b = mem[32*28+31:32*28];
 		5'd29: do_b = mem[32*29+31:32*29];
 		5'd30: do_b = mem[32*30+31:32*30];
-		default: do_b = mem[32*31+31:32*31];
+		5'd31: do_b = mem[32*31+31:32*31];
+`endif
+		default: do_b = 32'h0000_0000;
 	endcase
 
 endmodule

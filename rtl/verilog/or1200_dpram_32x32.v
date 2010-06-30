@@ -62,7 +62,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_dpram_32x32.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Coding style changed.
+//
+// Revision 1.10  2005/10/19 11:37:56  jcastillo
+// Added support for RAMB16 Xilinx4/Spartan3 primitives
+//
 // Revision 1.9  2004/06/08 18:15:48  lampret
 // Changed behavior of the simulation generic models
 //
@@ -376,7 +383,7 @@ or1200_xcv_ram32x8d xcv_ram32x8d_3 (
 //
 RAMB4_S16_S16 ramb4_s16_0(
 	.CLKA(clk_a),
-	.RSTA(rst_a),
+	.RSTA(1'b0),
 	.ADDRA({3'b000, addr_a}),
 	.DIA(16'h0000),
 	.ENA(ce_a),
@@ -384,7 +391,7 @@ RAMB4_S16_S16 ramb4_s16_0(
 	.DOA(do_a[15:0]),
 
 	.CLKB(clk_b),
-	.RSTB(rst_b),
+	.RSTB(1'b0),
 	.ADDRB({3'b000, addr_b}),
 	.DIB(di_b[15:0]),
 	.ENB(ce_b),
@@ -397,7 +404,7 @@ RAMB4_S16_S16 ramb4_s16_0(
 //
 RAMB4_S16_S16 ramb4_s16_1(
 	.CLKA(clk_a),
-	.RSTA(rst_a),
+	.RSTA(1'b0),
 	.ADDRA({3'b000, addr_a}),
 	.DIA(16'h0000),
 	.ENA(ce_a),
@@ -405,7 +412,7 @@ RAMB4_S16_S16 ramb4_s16_1(
 	.DOA(do_a[31:16]),
 
 	.CLKB(clk_b),
-	.RSTB(rst_b),
+	.RSTB(1'b0),
 	.ADDRB({3'b000, addr_b}),
 	.DIB(di_b[31:16]),
 	.ENB(ce_b),
@@ -427,7 +434,7 @@ RAMB4_S16_S16 ramb4_s16_1(
 
 RAMB16_S36_S36 ramb16_s36_s36(
 	.CLKA(clk_a),
-	.SSRA(rst_a),
+	.SSRA(1'b0),
 	.ADDRA({4'b0000, addr_a}),
 	.DIA(32'h00000000),
 	.DIPA(4'h0),
@@ -437,7 +444,7 @@ RAMB16_S36_S36 ramb16_s36_s36(
 	.DOPA(),
 
 	.CLKB(clk_b),
-	.SSRB(rst_b),
+	.SSRB(1'b0),
 	.ADDRB({4'b0000, addr_b}),
 	.DIB(di_b),
 	.DIPB(4'h0),
@@ -465,8 +472,8 @@ altqpram altqpram_component (
         .wren_a (we_a),
         .inclocken_b (ce_b),
         .wren_b (we_b),
-        .inaclr_a (rst_a),
-        .inaclr_b (rst_b),
+        .inaclr_a (1'b0),
+        .inaclr_b (1'b0),
         .inclock_a (clk_a),
         .inclock_b (clk_b),
         .data_a (di_a),

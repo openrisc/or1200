@@ -43,7 +43,13 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_ic_top.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// No update 
+//
+// Revision 1.9  2004/04/05 08:29:57  lampret
+// Merged branch_qmem into main tree.
+//
 // Revision 1.7.4.2  2003/12/09 11:46:48  simons
 // Mbist nameing changed, Artisan ram instance signal names fixed, some synthesis waning fixed.
 //

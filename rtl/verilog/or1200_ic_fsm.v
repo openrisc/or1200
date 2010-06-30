@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_ic_fsm.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Bugs fixed. 
+//
+// Revision 1.10  2004/06/08 18:17:36  lampret
+// Non-functional changes. Coding style fixes.
+//
 // Revision 1.9  2004/04/05 08:29:57  lampret
 // Merged branch_qmem into main tree.
 //
@@ -173,7 +180,7 @@ assign saved_addr = saved_addr_r;
 // Assert for cache miss first word stored/loaded OK
 // Assert for cache miss first word stored/loaded with an error
 //
-assign first_hit_ack = (state == `OR1200_ICFSM_CFETCH) & hitmiss_eval & !tagcomp_miss & !cache_inhibit & !icqmem_ci_i;
+assign first_hit_ack = (state == `OR1200_ICFSM_CFETCH) & hitmiss_eval & !tagcomp_miss & !cache_inhibit;
 assign first_miss_ack = (state == `OR1200_ICFSM_CFETCH) & biudata_valid;
 assign first_miss_err = (state == `OR1200_ICFSM_CFETCH) & biudata_error;
 
@@ -203,7 +210,7 @@ always @(posedge clk or posedge rst) begin
 				saved_addr_r <= #1 start_addr;
 				hitmiss_eval <= #1 1'b1;
 				load <= #1 1'b1;
-				cache_inhibit <= #1 1'b0;
+				cache_inhibit <= #1 icqmem_ci_i;
 			end
 			else begin							// idle
 				hitmiss_eval <= #1 1'b0;
@@ -231,21 +238,27 @@ always @(posedge clk or posedge rst) begin
 				cnt <= #1 `OR1200_ICLS-2;
 				cache_inhibit <= #1 1'b0;
 			end
-			else if (!tagcomp_miss & !icqmem_ci_i) begin	// fetch hit, finish immediately
-				saved_addr_r <= #1 start_addr;
-				cache_inhibit <= #1 1'b0;
-			end
 			else if (!icqmem_cycstb_i) begin	// fetch aborted (usually caused by exception)
 				state <= #1 `OR1200_ICFSM_IDLE;
 				hitmiss_eval <= #1 1'b0;
 				load <= #1 1'b0;
 				cache_inhibit <= #1 1'b0;
 			end
+			else if (!tagcomp_miss & !icqmem_ci_i) begin	// fetch hit, finish immediately
+				saved_addr_r <= #1 start_addr;
+				cache_inhibit <= #1 1'b0;
+			end
 			else						// fetch in-progress
 				hitmiss_eval <= #1 1'b0;
 		end
 		`OR1200_ICFSM_LREFILL3 : begin
-			if (biudata_valid && (|cnt)) begin		// refill ack, more fetchs to come
+            if (!ic_en) begin           	// abort because IC has just been turned off
+				state <= #1 `OR1200_ICFSM_IDLE;	// invalidate before IC can be turned on
+                saved_addr_r <= #1 start_addr;
+                hitmiss_eval <= #1 1'b0;
+                load <= #1 1'b0;
+            end
+			else if (biudata_valid && (|cnt)) begin		// refill ack, more fetchs to come
 				cnt <= #1 cnt - 3'd1;
 				saved_addr_r[3:2] <= #1 saved_addr_r[3:2] + 1'd1;
 			end

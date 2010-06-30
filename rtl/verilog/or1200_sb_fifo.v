@@ -43,7 +43,13 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_sb_fifo.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// No update 
+//
+// Revision 1.3  2002/11/06 13:53:41  simons
+// SB mem width fixed.
+//
 // Revision 1.2  2002/08/22 02:18:55  lampret
 // Store buffer has been tested and it works. BY default it is still disabled until uClinux confirms correct operation on FPGA board.
 //

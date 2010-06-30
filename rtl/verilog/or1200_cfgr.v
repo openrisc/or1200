@@ -43,7 +43,13 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_cfgr.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// No update 
+//
+// Revision 1.4  2004/06/08 18:17:36  lampret
+// Non-functional changes. Coding style fixes.
+//
 // Revision 1.3  2002/03/29 15:16:54  lampret
 // Some of the warnings fixed.
 //
@@ -198,7 +204,7 @@ always @(spr_addr)
 //
 always @(spr_addr)
 `ifdef OR1200_SYS_FULL_DECODE
-	if (!spr_addr[31:4])
+	if (spr_addr[31:4] == 28'h0)
 `endif
 		case(spr_addr[3:0])
 			`OR1200_SPRGRP_SYS_VR: begin

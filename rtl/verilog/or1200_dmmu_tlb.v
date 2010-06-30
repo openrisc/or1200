@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_dmmu_tlb.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Bugs fixed, coding style changed. 
+//
+// Revision 1.7  2004/06/08 18:17:36  lampret
+// Non-functional changes. Coding style fixes.
+//
 // Revision 1.6  2004/04/05 08:29:57  lampret
 // Merged branch_qmem into main tree.
 //
@@ -204,7 +211,7 @@ assign tlb_tr_we = spr_cs & spr_write & spr_addr[`OR1200_DTLB_TM_ADDR];
 // Output to SPRS unit
 //
 assign spr_dat_o = (spr_cs & !spr_write & !spr_addr[`OR1200_DTLB_TM_ADDR]) ?
-			{vpn, tlb_index & {`OR1200_DTLB_INDXW{v}}, {`OR1200_DTLB_TAGW-7{1'b0}}, 1'b0, 5'b00000, v} :
+			{vpn, tlb_index, {`OR1200_DTLB_TAGW-7{1'b0}}, 1'b0, 5'b00000, v} : 
 		(spr_cs & !spr_write & spr_addr[`OR1200_DTLB_TM_ADDR]) ?
 			{ppn, {`OR1200_DMMU_PS-10{1'b0}}, swe, sre, uwe, ure, {4{1'b0}}, ci, 1'b0} :
 			32'h00000000;
@@ -248,41 +255,51 @@ assign tlb_index = spr_cs ? spr_addr[`OR1200_DTLB_INDXW-1:0] : vaddr[`OR1200_DTL
 //
 // Instantiation of DTLB Match Registers
 //
-or1200_spram_64x14 dtlb_mr_ram(
-	.clk(clk),
-	.rst(rst),
+//or1200_spram_64x14 dtlb_mr_ram(
+   or1200_spram #
+     (
+      .aw(6),
+      .dw(14)
+      )
+   dtlb_ram
+     (
+      .clk(clk),
 `ifdef OR1200_BIST
-	// RAM BIST
-	.mbist_si_i(mbist_mr_si),
-	.mbist_so_o(mbist_mr_so),
-	.mbist_ctrl_i(mbist_ctrl_i),
+      // RAM BIST
+      .mbist_si_i(mbist_mr_si),
+      .mbist_so_o(mbist_mr_so),
+      .mbist_ctrl_i(mbist_ctrl_i),
 `endif
-	.ce(tlb_mr_en),
-	.we(tlb_mr_we),
-	.oe(1'b1),
-	.addr(tlb_index),
-	.di(tlb_mr_ram_in),
-	.doq(tlb_mr_ram_out)
-);
-
-//
-// Instantiation of DTLB Translate Registers
-//
-or1200_spram_64x24 dtlb_tr_ram(
-	.clk(clk),
-	.rst(rst),
+      .ce(tlb_mr_en),
+      .we(tlb_mr_we),
+      .addr(tlb_index),
+      .di(tlb_mr_ram_in),
+      .doq(tlb_mr_ram_out)
+      );
+   
+   //
+   // Instantiation of DTLB Translate Registers
+   //
+   //or1200_spram_64x24 dtlb_tr_ram(
+   or1200_spram #
+     (
+      .aw(6),
+      .dw(24)
+      )
+   dtlb_tr_ram
+     (
+      .clk(clk),
 `ifdef OR1200_BIST
-	// RAM BIST
-	.mbist_si_i(mbist_tr_si),
-	.mbist_so_o(mbist_tr_so),
-	.mbist_ctrl_i(mbist_ctrl_i),
+      // RAM BIST
+      .mbist_si_i(mbist_tr_si),
+      .mbist_so_o(mbist_tr_so),
+      .mbist_ctrl_i(mbist_ctrl_i),
 `endif
-	.ce(tlb_tr_en),
-	.we(tlb_tr_we),
-	.oe(1'b1),
-	.addr(tlb_index),
-	.di(tlb_tr_ram_in),
-	.doq(tlb_tr_ram_out)
-);
-
-endmodule
+      .ce(tlb_tr_en),
+      .we(tlb_tr_we),
+      .addr(tlb_index),
+      .di(tlb_tr_ram_in),
+      .doq(tlb_tr_ram_out)
+      );
+   
+endmodule // or1200_dmmu_tlb

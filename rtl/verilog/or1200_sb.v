@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_sb.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Bugs fixed. 
+//
+// Revision 1.2  2002/08/22 02:18:55  lampret
+// Store buffer has been tested and it works. BY default it is still disabled until uClinux confirms correct operation on FPGA board.
+//
 // Revision 1.1  2002/08/18 19:53:08  lampret
 // Added store buffer.
 //
@@ -57,6 +64,9 @@
 module or1200_sb(
 	// RISC clock, reset
 	clk, rst,
+
+	// Internal RISC bus (SB)
+	sb_en,
 
 	// Internal RISC bus (DC<->SB)
 	dcsb_dat_i, dcsb_adr_i, dcsb_cyc_i, dcsb_stb_i, dcsb_we_i, dcsb_sel_i, dcsb_cab_i,
@@ -75,6 +85,11 @@ parameter aw = `OR1200_OPERAND_WIDTH;
 //
 input			clk;		// RISC clock
 input			rst;		// RISC reset
+
+//
+// Internal RISC bus (SB)
+//
+input			sb_en;		// SB enable
 
 //
 // Internal RISC bus (DC<->SB)
@@ -116,6 +131,7 @@ wire			fifo_rd;
 wire			fifo_full;
 wire			fifo_empty;
 wire			sel_sb;
+reg			sb_en_reg;
 reg			outstanding_store;
 reg			fifo_wr_ack;
 
@@ -137,7 +153,18 @@ assign sbbiu_cyc_o = sel_sb ? outstanding_store : dcsb_cyc_i;
 assign sbbiu_stb_o = sel_sb ? outstanding_store : dcsb_stb_i;
 assign sbbiu_we_o = sel_sb ? 1'b1 : dcsb_we_i;
 assign sbbiu_cab_o = sel_sb ? 1'b0 : dcsb_cab_i;
-assign sel_sb = ~fifo_empty | (fifo_empty & outstanding_store); // | fifo_wr;
+assign sel_sb = sb_en_reg & (~fifo_empty | (fifo_empty & outstanding_store));
+
+//
+// SB enable
+//
+always @(posedge clk or posedge rst)
+	if (rst)
+		sb_en_reg <= 1'b0;
+	else if (sb_en & ~dcsb_cyc_i)
+		sb_en_reg <= #1 1'b1; // enable SB when there is no dcsb transfer in progress
+	else if (~sb_en & (~fifo_empty | (fifo_empty & outstanding_store)))
+		sb_en_reg <= #1 1'b0; // disable SB when there is no pending transfers from SB
 
 //
 // Store buffer FIFO instantiation

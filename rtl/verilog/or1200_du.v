@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_du.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Bugs fixed. 
+//
+// Revision 1.12  2005/10/19 11:37:56  jcastillo
+// Added support for RAMB16 Xilinx4/Spartan3 primitives
+//
 // Revision 1.11  2005/01/07 09:35:08  andreje
 // du_hwbkpt disabled when debug unit not implemented
 //
@@ -128,8 +135,8 @@ module or1200_du(
 	dcpu_dat_dc, icpu_cycstb_i,
 	ex_freeze, branch_op, ex_insn, id_pc,
 	spr_dat_npc, rf_dataw,
-	du_dsr, du_stall, du_addr, du_dat_i, du_dat_o,
-	du_read, du_write, du_except, du_hwbkpt,
+	du_dsr, du_dmr1, du_stall, du_addr, du_dat_i, du_dat_o,
+	du_read, du_write, du_except_stop, du_hwbkpt,
 	spr_cs, spr_write, spr_addr, spr_dat_i, spr_dat_o,
 
 	// External Debug Interface
@@ -162,13 +169,14 @@ input	[31:0]			id_pc;		// insn fetch EA
 input	[31:0]			spr_dat_npc;	// Next PC (for trace)
 input	[31:0]			rf_dataw;	// ALU result (for trace)
 output	[`OR1200_DU_DSR_WIDTH-1:0]     du_dsr;		// DSR
+output	[24: 0]			du_dmr1;
 output				du_stall;	// Debug Unit Stall
 output	[aw-1:0]		du_addr;	// Debug Unit Address
 input	[dw-1:0]		du_dat_i;	// Debug Unit Data In
 output	[dw-1:0]		du_dat_o;	// Debug Unit Data Out
 output				du_read;	// Debug Unit Read Enable
 output				du_write;	// Debug Unit Write Enable
-input	[12:0]			du_except;	// Exception masked by DSR
+input	[12:0]			du_except_stop;	// Exception masked by DSR
 output				du_hwbkpt;	// Cause trap exception (HW Breakpoints)
 input				spr_cs;		// SPR Chip Select
 input				spr_write;	// SPR Read/Write
@@ -191,6 +199,8 @@ input	[aw-1:0]	dbg_adr_i;	// External Address Input
 input	[dw-1:0]	dbg_dat_i;	// External Data Input
 output	[dw-1:0]	dbg_dat_o;	// External Data Output
 output			dbg_ack_o;	// External Data Acknowledge (not WB compatible)
+reg	[dw-1:0]	dbg_dat_o;	// External Data Output
+reg			dbg_ack_o;	// External Data Acknowledge (not WB compatible)
 
 
 //
@@ -206,8 +216,7 @@ reg	[1:0]			dbg_is_o;
 always @(posedge clk or posedge rst)
 	if (rst)
 		dbg_is_o <= #1 2'b00;
-	else if (!ex_freeze &
-		~((ex_insn[31:26] == `OR1200_OR32_NOP) & ex_insn[16]))
+	else if (!ex_freeze & ~((ex_insn[31:26] == `OR1200_OR32_NOP) & ex_insn[16]))
 		dbg_is_o <= #1 ~dbg_is_o;
 `ifdef UNUSED
 assign dbg_is_o = 2'b00;
@@ -217,7 +226,6 @@ assign dbg_lss_o = dcpu_cycstb_i ? {dcpu_we_i, 3'b000} : 4'b0000;
 assign dbg_is_o = {1'b0, icpu_cycstb_i};
 `endif
 assign dbg_wp_o = 11'b000_0000_0000;
-assign dbg_dat_o = du_dat_i;
 
 //
 // Some connections go directly from Debug I/F through DU to the CPU
@@ -228,15 +236,26 @@ assign du_dat_o = dbg_dat_i;
 assign du_read = dbg_stb_i && !dbg_we_i;
 assign du_write = dbg_stb_i && dbg_we_i;
 
+reg				dbg_ack;
 //
 // Generate acknowledge -- just delay stb signal
 //
-reg dbg_ack_o;
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or posedge rst) begin
+	if (rst) begin
+		dbg_ack   <= #1 1'b0;
 		dbg_ack_o <= #1 1'b0;
-	else
-		dbg_ack_o <= #1 dbg_stb_i;
+	end
+	else begin
+		dbg_ack   <= #1 dbg_stb_i;		// valid when du_dat_i 
+		dbg_ack_o <= #1 dbg_ack & dbg_stb_i;	// valid when dbg_dat_o 
+	end
+end
+
+// 
+// Register data output
+//
+always @(posedge clk)
+    dbg_dat_o <= #1 du_dat_i;
 
 `ifdef OR1200_DU_IMPLEMENTED
 
@@ -248,6 +267,7 @@ reg	[24:0]			dmr1;		// DMR1 implemented
 `else
 wire	[24:0]			dmr1;		// DMR1 not implemented
 `endif
+assign du_dmr1 = dmr1;
 
 //
 // Debug Mode Register 2
@@ -496,6 +516,7 @@ reg				incr_wpcntr1;
 reg	[10:0]			wp;
 `endif
 wire				du_hwbkpt;
+reg				du_hwbkpt_hold;
 `ifdef OR1200_DU_READREGS
 reg	[31:0]			spr_dat_o;
 `endif
@@ -583,42 +604,48 @@ assign dwcr1_sel = (spr_cs && (spr_addr[`OR1200_DUOFS_BITS] == `OR1200_DU_DWCR1)
 //
 // Decode started exception
 //
-always @(du_except) begin
+always @(du_except_stop) begin
 	except_stop = 14'b0000_0000_0000;
-	casex (du_except)
-		13'b1_xxxx_xxxx_xxxx:
+	casex (du_except_stop)
+		13'b1_xxxx_xxxx_xxxx: begin
 			except_stop[`OR1200_DU_DRR_TTE] = 1'b1;
+		end
 		13'b0_1xxx_xxxx_xxxx: begin
 			except_stop[`OR1200_DU_DRR_IE] = 1'b1;
 		end
 		13'b0_01xx_xxxx_xxxx: begin
 			except_stop[`OR1200_DU_DRR_IME] = 1'b1;
 		end
-		13'b0_001x_xxxx_xxxx:
+		13'b0_001x_xxxx_xxxx: begin
 			except_stop[`OR1200_DU_DRR_IPFE] = 1'b1;
+		end
 		13'b0_0001_xxxx_xxxx: begin
 			except_stop[`OR1200_DU_DRR_BUSEE] = 1'b1;
 		end
-		13'b0_0000_1xxx_xxxx:
+		13'b0_0000_1xxx_xxxx: begin
 			except_stop[`OR1200_DU_DRR_IIE] = 1'b1;
+		end
 		13'b0_0000_01xx_xxxx: begin
 			except_stop[`OR1200_DU_DRR_AE] = 1'b1;
 		end
 		13'b0_0000_001x_xxxx: begin
 			except_stop[`OR1200_DU_DRR_DME] = 1'b1;
 		end
-		13'b0_0000_0001_xxxx:
+		13'b0_0000_0001_xxxx: begin
 			except_stop[`OR1200_DU_DRR_DPFE] = 1'b1;
-		13'b0_0000_0000_1xxx:
+		end
+		13'b0_0000_0000_1xxx: begin
 			except_stop[`OR1200_DU_DRR_BUSEE] = 1'b1;
+		end
 		13'b0_0000_0000_01xx: begin
 			except_stop[`OR1200_DU_DRR_RE] = 1'b1;
 		end
 		13'b0_0000_0000_001x: begin
 			except_stop[`OR1200_DU_DRR_TE] = 1'b1;
 		end
-		13'b0_0000_0000_0001:
+		13'b0_0000_0000_0001: begin
 			except_stop[`OR1200_DU_DRR_SCE] = 1'b1;
+		end
 		default:
 			except_stop = 14'b0000_0000_0000;
 	endcase
@@ -641,7 +668,7 @@ always @(posedge clk or posedge rst)
                         | ~((ex_insn[31:26] == `OR1200_OR32_NOP) & ex_insn[16]) & dmr1[`OR1200_DU_DMR1_ST]
 `endif
 `ifdef OR1200_DU_DMR1_BT
-                        | (branch_op != `OR1200_BRANCHOP_NOP) & dmr1[`OR1200_DU_DMR1_BT]
+                        | (branch_op != `OR1200_BRANCHOP_NOP) & (branch_op != `OR1200_BRANCHOP_RFE) & dmr1[`OR1200_DU_DMR1_BT]
 `endif
 			;
         else
@@ -1105,23 +1132,23 @@ always @(match_cond0_stb or dcr0 or dvr0 or match_cond0_ct)
 		4'b1_000,
 		4'b1_111: match0 = 1'b0;
 		4'b1_001: match0 =
-			((match_cond0_ct[31] ^ dcr0[`OR1200_DU_DCR_SC]) ==
-			(dvr0[31] ^ dcr0[`OR1200_DU_DCR_SC]));
+			({(match_cond0_ct[31] ^ dcr0[`OR1200_DU_DCR_SC]), match_cond0_ct[30:0]} ==
+			 {(dvr0[31] ^ dcr0[`OR1200_DU_DCR_SC]), dvr0[30:0]});
 		4'b1_010: match0 = 
-			((match_cond0_ct[31] ^ dcr0[`OR1200_DU_DCR_SC]) <
-			(dvr0[31] ^ dcr0[`OR1200_DU_DCR_SC]));
+			({(match_cond0_ct[31] ^ dcr0[`OR1200_DU_DCR_SC]), match_cond0_ct[30:0]} <
+			 {(dvr0[31] ^ dcr0[`OR1200_DU_DCR_SC]), dvr0[30:0]});
 		4'b1_011: match0 = 
-			((match_cond0_ct[31] ^ dcr0[`OR1200_DU_DCR_SC]) <=
-			(dvr0[31] ^ dcr0[`OR1200_DU_DCR_SC]));
+			({(match_cond0_ct[31] ^ dcr0[`OR1200_DU_DCR_SC]), match_cond0_ct[30:0]} <=
+			 {(dvr0[31] ^ dcr0[`OR1200_DU_DCR_SC]), dvr0[30:0]});
 		4'b1_100: match0 = 
-			((match_cond0_ct[31] ^ dcr0[`OR1200_DU_DCR_SC]) >
-			(dvr0[31] ^ dcr0[`OR1200_DU_DCR_SC]));
+			({(match_cond0_ct[31] ^ dcr0[`OR1200_DU_DCR_SC]), match_cond0_ct[30:0]} >
+			 {(dvr0[31] ^ dcr0[`OR1200_DU_DCR_SC]), dvr0[30:0]});
 		4'b1_101: match0 = 
-			((match_cond0_ct[31] ^ dcr0[`OR1200_DU_DCR_SC]) >=
-			(dvr0[31] ^ dcr0[`OR1200_DU_DCR_SC]));
+			({(match_cond0_ct[31] ^ dcr0[`OR1200_DU_DCR_SC]), match_cond0_ct[30:0]} >=
+			 {(dvr0[31] ^ dcr0[`OR1200_DU_DCR_SC]), dvr0[30:0]});
 		4'b1_110: match0 = 
-			((match_cond0_ct[31] ^ dcr0[`OR1200_DU_DCR_SC]) !=
-			(dvr0[31] ^ dcr0[`OR1200_DU_DCR_SC]));
+			({(match_cond0_ct[31] ^ dcr0[`OR1200_DU_DCR_SC]), match_cond0_ct[30:0]} !=
+			 {(dvr0[31] ^ dcr0[`OR1200_DU_DCR_SC]), dvr0[30:0]});
 	endcase
 
 //
@@ -1169,23 +1196,23 @@ always @(match_cond1_stb or dcr1 or dvr1 or match_cond1_ct)
 		4'b1_000,
 		4'b1_111: match1 = 1'b0;
 		4'b1_001: match1 =
-			((match_cond1_ct[31] ^ dcr1[`OR1200_DU_DCR_SC]) ==
-			(dvr1[31] ^ dcr1[`OR1200_DU_DCR_SC]));
+			({(match_cond1_ct[31] ^ dcr1[`OR1200_DU_DCR_SC]), match_cond1_ct[30:0]} ==
+			 {(dvr1[31] ^ dcr1[`OR1200_DU_DCR_SC]), dvr1[30:0]});
 		4'b1_010: match1 = 
-			((match_cond1_ct[31] ^ dcr1[`OR1200_DU_DCR_SC]) <
-			(dvr1[31] ^ dcr1[`OR1200_DU_DCR_SC]));
+			({(match_cond1_ct[31] ^ dcr1[`OR1200_DU_DCR_SC]), match_cond1_ct[30:0]} <
+			 {(dvr1[31] ^ dcr1[`OR1200_DU_DCR_SC]), dvr1[30:0]});
 		4'b1_011: match1 = 
-			((match_cond1_ct[31] ^ dcr1[`OR1200_DU_DCR_SC]) <=
-			(dvr1[31] ^ dcr1[`OR1200_DU_DCR_SC]));
+			({(match_cond1_ct[31] ^ dcr1[`OR1200_DU_DCR_SC]), match_cond1_ct[30:0]} <=
+			 {(dvr1[31] ^ dcr1[`OR1200_DU_DCR_SC]), dvr1[30:0]});
 		4'b1_100: match1 = 
-			((match_cond1_ct[31] ^ dcr1[`OR1200_DU_DCR_SC]) >
-			(dvr1[31] ^ dcr1[`OR1200_DU_DCR_SC]));
+			({(match_cond1_ct[31] ^ dcr1[`OR1200_DU_DCR_SC]), match_cond1_ct[30:0]} >
+			 {(dvr1[31] ^ dcr1[`OR1200_DU_DCR_SC]), dvr1[30:0]});
 		4'b1_101: match1 = 
-			((match_cond1_ct[31] ^ dcr1[`OR1200_DU_DCR_SC]) >=
-			(dvr1[31] ^ dcr1[`OR1200_DU_DCR_SC]));
+			({(match_cond1_ct[31] ^ dcr1[`OR1200_DU_DCR_SC]), match_cond1_ct[30:0]} >=
+			 {(dvr1[31] ^ dcr1[`OR1200_DU_DCR_SC]), dvr1[30:0]});
 		4'b1_110: match1 = 
-			((match_cond1_ct[31] ^ dcr1[`OR1200_DU_DCR_SC]) !=
-			(dvr1[31] ^ dcr1[`OR1200_DU_DCR_SC]));
+			({(match_cond1_ct[31] ^ dcr1[`OR1200_DU_DCR_SC]), match_cond1_ct[30:0]} !=
+			 {(dvr1[31] ^ dcr1[`OR1200_DU_DCR_SC]), dvr1[30:0]});
 	endcase
 
 //
@@ -1233,23 +1260,23 @@ always @(match_cond2_stb or dcr2 or dvr2 or match_cond2_ct)
 		4'b1_000,
 		4'b1_111: match2 = 1'b0;
 		4'b1_001: match2 =
-			((match_cond2_ct[31] ^ dcr2[`OR1200_DU_DCR_SC]) ==
-			(dvr2[31] ^ dcr2[`OR1200_DU_DCR_SC]));
+			({(match_cond2_ct[31] ^ dcr2[`OR1200_DU_DCR_SC]), match_cond2_ct[30:0]} ==
+			 {(dvr2[31] ^ dcr2[`OR1200_DU_DCR_SC]), dvr2[30:0]});
 		4'b1_010: match2 = 
-			((match_cond2_ct[31] ^ dcr2[`OR1200_DU_DCR_SC]) <
-			(dvr2[31] ^ dcr2[`OR1200_DU_DCR_SC]));
+			({(match_cond2_ct[31] ^ dcr2[`OR1200_DU_DCR_SC]), match_cond2_ct[30:0]} <
+			 {(dvr2[31] ^ dcr2[`OR1200_DU_DCR_SC]), dvr2[30:0]});
 		4'b1_011: match2 = 
-			((match_cond2_ct[31] ^ dcr2[`OR1200_DU_DCR_SC]) <=
-			(dvr2[31] ^ dcr2[`OR1200_DU_DCR_SC]));
+			({(match_cond2_ct[31] ^ dcr2[`OR1200_DU_DCR_SC]), match_cond2_ct[30:0]} <=
+			 {(dvr2[31] ^ dcr2[`OR1200_DU_DCR_SC]), dvr2[30:0]});
 		4'b1_100: match2 = 
-			((match_cond2_ct[31] ^ dcr2[`OR1200_DU_DCR_SC]) >
-			(dvr2[31] ^ dcr2[`OR1200_DU_DCR_SC]));
+			({(match_cond2_ct[31] ^ dcr2[`OR1200_DU_DCR_SC]), match_cond2_ct[30:0]} >
+			 {(dvr2[31] ^ dcr2[`OR1200_DU_DCR_SC]), dvr2[30:0]});
 		4'b1_101: match2 = 
-			((match_cond2_ct[31] ^ dcr2[`OR1200_DU_DCR_SC]) >=
-			(dvr2[31] ^ dcr2[`OR1200_DU_DCR_SC]));
+			({(match_cond2_ct[31] ^ dcr2[`OR1200_DU_DCR_SC]), match_cond2_ct[30:0]} >=
+			 {(dvr2[31] ^ dcr2[`OR1200_DU_DCR_SC]), dvr2[30:0]});
 		4'b1_110: match2 = 
-			((match_cond2_ct[31] ^ dcr2[`OR1200_DU_DCR_SC]) !=
-			(dvr2[31] ^ dcr2[`OR1200_DU_DCR_SC]));
+			({(match_cond2_ct[31] ^ dcr2[`OR1200_DU_DCR_SC]), match_cond2_ct[30:0]} !=
+			 {(dvr2[31] ^ dcr2[`OR1200_DU_DCR_SC]), dvr2[30:0]});
 	endcase
 
 //
@@ -1297,23 +1324,23 @@ always @(match_cond3_stb or dcr3 or dvr3 or match_cond3_ct)
 		4'b1_000,
 		4'b1_111: match3 = 1'b0;
 		4'b1_001: match3 =
-			((match_cond3_ct[31] ^ dcr3[`OR1200_DU_DCR_SC]) ==
-			(dvr3[31] ^ dcr3[`OR1200_DU_DCR_SC]));
+			({(match_cond3_ct[31] ^ dcr3[`OR1200_DU_DCR_SC]), match_cond3_ct[30:0]} ==
+			 {(dvr3[31] ^ dcr3[`OR1200_DU_DCR_SC]), dvr3[30:0]});
 		4'b1_010: match3 = 
-			((match_cond3_ct[31] ^ dcr3[`OR1200_DU_DCR_SC]) <
-			(dvr3[31] ^ dcr3[`OR1200_DU_DCR_SC]));
+			({(match_cond3_ct[31] ^ dcr3[`OR1200_DU_DCR_SC]), match_cond3_ct[30:0]} <
+			 {(dvr3[31] ^ dcr3[`OR1200_DU_DCR_SC]), dvr3[30:0]});
 		4'b1_011: match3 = 
-			((match_cond3_ct[31] ^ dcr3[`OR1200_DU_DCR_SC]) <=
-			(dvr3[31] ^ dcr3[`OR1200_DU_DCR_SC]));
+			({(match_cond3_ct[31] ^ dcr3[`OR1200_DU_DCR_SC]), match_cond3_ct[30:0]} <=
+			 {(dvr3[31] ^ dcr3[`OR1200_DU_DCR_SC]), dvr3[30:0]});
 		4'b1_100: match3 = 
-			((match_cond3_ct[31] ^ dcr3[`OR1200_DU_DCR_SC]) >
-			(dvr3[31] ^ dcr3[`OR1200_DU_DCR_SC]));
+			({(match_cond3_ct[31] ^ dcr3[`OR1200_DU_DCR_SC]), match_cond3_ct[30:0]} >
+			 {(dvr3[31] ^ dcr3[`OR1200_DU_DCR_SC]), dvr3[30:0]});
 		4'b1_101: match3 = 
-			((match_cond3_ct[31] ^ dcr3[`OR1200_DU_DCR_SC]) >=
-			(dvr3[31] ^ dcr3[`OR1200_DU_DCR_SC]));
+			({(match_cond3_ct[31] ^ dcr3[`OR1200_DU_DCR_SC]), match_cond3_ct[30:0]} >=
+			 {(dvr3[31] ^ dcr3[`OR1200_DU_DCR_SC]), dvr3[30:0]});
 		4'b1_110: match3 = 
-			((match_cond3_ct[31] ^ dcr3[`OR1200_DU_DCR_SC]) !=
-			(dvr3[31] ^ dcr3[`OR1200_DU_DCR_SC]));
+			({(match_cond3_ct[31] ^ dcr3[`OR1200_DU_DCR_SC]), match_cond3_ct[30:0]} !=
+			 {(dvr3[31] ^ dcr3[`OR1200_DU_DCR_SC]), dvr3[30:0]});
 	endcase
 
 //
@@ -1361,23 +1388,23 @@ always @(match_cond4_stb or dcr4 or dvr4 or match_cond4_ct)
 		4'b1_000,
 		4'b1_111: match4 = 1'b0;
 		4'b1_001: match4 =
-			((match_cond4_ct[31] ^ dcr4[`OR1200_DU_DCR_SC]) ==
-			(dvr4[31] ^ dcr4[`OR1200_DU_DCR_SC]));
+			({(match_cond4_ct[31] ^ dcr4[`OR1200_DU_DCR_SC]), match_cond4_ct[30:0]} ==
+			 {(dvr4[31] ^ dcr4[`OR1200_DU_DCR_SC]), dvr4[30:0]});
 		4'b1_010: match4 = 
-			((match_cond4_ct[31] ^ dcr4[`OR1200_DU_DCR_SC]) <
-			(dvr4[31] ^ dcr4[`OR1200_DU_DCR_SC]));
+			({(match_cond4_ct[31] ^ dcr4[`OR1200_DU_DCR_SC]), match_cond4_ct[30:0]} <
+			 {(dvr4[31] ^ dcr4[`OR1200_DU_DCR_SC]), dvr4[30:0]});
 		4'b1_011: match4 = 
-			((match_cond4_ct[31] ^ dcr4[`OR1200_DU_DCR_SC]) <=
-			(dvr4[31] ^ dcr4[`OR1200_DU_DCR_SC]));
+			({(match_cond4_ct[31] ^ dcr4[`OR1200_DU_DCR_SC]), match_cond4_ct[30:0]} <=
+			 {(dvr4[31] ^ dcr4[`OR1200_DU_DCR_SC]), dvr4[30:0]});
 		4'b1_100: match4 = 
-			((match_cond4_ct[31] ^ dcr4[`OR1200_DU_DCR_SC]) >
-			(dvr4[31] ^ dcr4[`OR1200_DU_DCR_SC]));
+			({(match_cond4_ct[31] ^ dcr4[`OR1200_DU_DCR_SC]), match_cond4_ct[30:0]} >
+			 {(dvr4[31] ^ dcr4[`OR1200_DU_DCR_SC]), dvr4[30:0]});
 		4'b1_101: match4 = 
-			((match_cond4_ct[31] ^ dcr4[`OR1200_DU_DCR_SC]) >=
-			(dvr4[31] ^ dcr4[`OR1200_DU_DCR_SC]));
+			({(match_cond4_ct[31] ^ dcr4[`OR1200_DU_DCR_SC]), match_cond4_ct[30:0]} >=
+			 {(dvr4[31] ^ dcr4[`OR1200_DU_DCR_SC]), dvr4[30:0]});
 		4'b1_110: match4 = 
-			((match_cond4_ct[31] ^ dcr4[`OR1200_DU_DCR_SC]) !=
-			(dvr4[31] ^ dcr4[`OR1200_DU_DCR_SC]));
+			({(match_cond4_ct[31] ^ dcr4[`OR1200_DU_DCR_SC]), match_cond4_ct[30:0]} !=
+			 {(dvr4[31] ^ dcr4[`OR1200_DU_DCR_SC]), dvr4[30:0]});
 	endcase
 
 //
@@ -1425,23 +1452,23 @@ always @(match_cond5_stb or dcr5 or dvr5 or match_cond5_ct)
 		4'b1_000,
 		4'b1_111: match5 = 1'b0;
 		4'b1_001: match5 =
-			((match_cond5_ct[31] ^ dcr5[`OR1200_DU_DCR_SC]) ==
-			(dvr5[31] ^ dcr5[`OR1200_DU_DCR_SC]));
+			({(match_cond5_ct[31] ^ dcr5[`OR1200_DU_DCR_SC]), match_cond5_ct[30:0]} ==
+			 {(dvr5[31] ^ dcr5[`OR1200_DU_DCR_SC]), dvr5[30:0]});
 		4'b1_010: match5 = 
-			((match_cond5_ct[31] ^ dcr5[`OR1200_DU_DCR_SC]) <
-			(dvr5[31] ^ dcr5[`OR1200_DU_DCR_SC]));
+			({(match_cond5_ct[31] ^ dcr5[`OR1200_DU_DCR_SC]), match_cond5_ct[30:0]} <
+			 {(dvr5[31] ^ dcr5[`OR1200_DU_DCR_SC]), dvr5[30:0]});
 		4'b1_011: match5 = 
-			((match_cond5_ct[31] ^ dcr5[`OR1200_DU_DCR_SC]) <=
-			(dvr5[31] ^ dcr5[`OR1200_DU_DCR_SC]));
+			({(match_cond5_ct[31] ^ dcr5[`OR1200_DU_DCR_SC]), match_cond5_ct[30:0]} <=
+			 {(dvr5[31] ^ dcr5[`OR1200_DU_DCR_SC]), dvr5[30:0]});
 		4'b1_100: match5 = 
-			((match_cond5_ct[31] ^ dcr5[`OR1200_DU_DCR_SC]) >
-			(dvr5[31] ^ dcr5[`OR1200_DU_DCR_SC]));
+			({(match_cond5_ct[31] ^ dcr5[`OR1200_DU_DCR_SC]), match_cond5_ct[30:0]} >
+			 {(dvr5[31] ^ dcr5[`OR1200_DU_DCR_SC]), dvr5[30:0]});
 		4'b1_101: match5 = 
-			((match_cond5_ct[31] ^ dcr5[`OR1200_DU_DCR_SC]) >=
-			(dvr5[31] ^ dcr5[`OR1200_DU_DCR_SC]));
+			({(match_cond5_ct[31] ^ dcr5[`OR1200_DU_DCR_SC]), match_cond5_ct[30:0]} >=
+			 {(dvr5[31] ^ dcr5[`OR1200_DU_DCR_SC]), dvr5[30:0]});
 		4'b1_110: match5 = 
-			((match_cond5_ct[31] ^ dcr5[`OR1200_DU_DCR_SC]) !=
-			(dvr5[31] ^ dcr5[`OR1200_DU_DCR_SC]));
+			({(match_cond5_ct[31] ^ dcr5[`OR1200_DU_DCR_SC]), match_cond5_ct[30:0]} !=
+			 {(dvr5[31] ^ dcr5[`OR1200_DU_DCR_SC]), dvr5[30:0]});
 	endcase
 
 //
@@ -1489,23 +1516,23 @@ always @(match_cond6_stb or dcr6 or dvr6 or match_cond6_ct)
 		4'b1_000,
 		4'b1_111: match6 = 1'b0;
 		4'b1_001: match6 =
-			((match_cond6_ct[31] ^ dcr6[`OR1200_DU_DCR_SC]) ==
-			(dvr6[31] ^ dcr6[`OR1200_DU_DCR_SC]));
+			({(match_cond6_ct[31] ^ dcr6[`OR1200_DU_DCR_SC]), match_cond6_ct[30:0]} ==
+			 {(dvr6[31] ^ dcr6[`OR1200_DU_DCR_SC]), dvr6[30:0]});
 		4'b1_010: match6 = 
-			((match_cond6_ct[31] ^ dcr6[`OR1200_DU_DCR_SC]) <
-			(dvr6[31] ^ dcr6[`OR1200_DU_DCR_SC]));
+			({(match_cond6_ct[31] ^ dcr6[`OR1200_DU_DCR_SC]), match_cond6_ct[30:0]} <
+			 {(dvr6[31] ^ dcr6[`OR1200_DU_DCR_SC]), dvr6[30:0]});
 		4'b1_011: match6 = 
-			((match_cond6_ct[31] ^ dcr6[`OR1200_DU_DCR_SC]) <=
-			(dvr6[31] ^ dcr6[`OR1200_DU_DCR_SC]));
+			({(match_cond6_ct[31] ^ dcr6[`OR1200_DU_DCR_SC]), match_cond6_ct[30:0]} <=
+			 {(dvr6[31] ^ dcr6[`OR1200_DU_DCR_SC]), dvr6[30:0]});
 		4'b1_100: match6 = 
-			((match_cond6_ct[31] ^ dcr6[`OR1200_DU_DCR_SC]) >
-			(dvr6[31] ^ dcr6[`OR1200_DU_DCR_SC]));
+			({(match_cond6_ct[31] ^ dcr6[`OR1200_DU_DCR_SC]), match_cond6_ct[30:0]} >
+			 {(dvr6[31] ^ dcr6[`OR1200_DU_DCR_SC]), dvr6[30:0]});
 		4'b1_101: match6 = 
-			((match_cond6_ct[31] ^ dcr6[`OR1200_DU_DCR_SC]) >=
-			(dvr6[31] ^ dcr6[`OR1200_DU_DCR_SC]));
+			({(match_cond6_ct[31] ^ dcr6[`OR1200_DU_DCR_SC]), match_cond6_ct[30:0]} >=
+			 {(dvr6[31] ^ dcr6[`OR1200_DU_DCR_SC]), dvr6[30:0]});
 		4'b1_110: match6 = 
-			((match_cond6_ct[31] ^ dcr6[`OR1200_DU_DCR_SC]) !=
-			(dvr6[31] ^ dcr6[`OR1200_DU_DCR_SC]));
+			({(match_cond6_ct[31] ^ dcr6[`OR1200_DU_DCR_SC]), match_cond6_ct[30:0]} !=
+			 {(dvr6[31] ^ dcr6[`OR1200_DU_DCR_SC]), dvr6[30:0]});
 	endcase
 
 //
@@ -1553,23 +1580,23 @@ always @(match_cond7_stb or dcr7 or dvr7 or match_cond7_ct)
 		4'b1_000,
 		4'b1_111: match7 = 1'b0;
 		4'b1_001: match7 =
-			((match_cond7_ct[31] ^ dcr7[`OR1200_DU_DCR_SC]) ==
-			(dvr7[31] ^ dcr7[`OR1200_DU_DCR_SC]));
+			({(match_cond7_ct[31] ^ dcr7[`OR1200_DU_DCR_SC]), match_cond7_ct[30:0]} ==
+			 {(dvr7[31] ^ dcr7[`OR1200_DU_DCR_SC]), dvr7[30:0]});
 		4'b1_010: match7 = 
-			((match_cond7_ct[31] ^ dcr7[`OR1200_DU_DCR_SC]) <
-			(dvr7[31] ^ dcr7[`OR1200_DU_DCR_SC]));
+			({(match_cond7_ct[31] ^ dcr7[`OR1200_DU_DCR_SC]), match_cond7_ct[30:0]} <
+			 {(dvr7[31] ^ dcr7[`OR1200_DU_DCR_SC]), dvr7[30:0]});
 		4'b1_011: match7 = 
-			((match_cond7_ct[31] ^ dcr7[`OR1200_DU_DCR_SC]) <=
-			(dvr7[31] ^ dcr7[`OR1200_DU_DCR_SC]));
+			({(match_cond7_ct[31] ^ dcr7[`OR1200_DU_DCR_SC]), match_cond7_ct[30:0]} <=
+			 {(dvr7[31] ^ dcr7[`OR1200_DU_DCR_SC]), dvr7[30:0]});
 		4'b1_100: match7 = 
-			((match_cond7_ct[31] ^ dcr7[`OR1200_DU_DCR_SC]) >
-			(dvr7[31] ^ dcr7[`OR1200_DU_DCR_SC]));
+			({(match_cond7_ct[31] ^ dcr7[`OR1200_DU_DCR_SC]), match_cond7_ct[30:0]} >
+			 {(dvr7[31] ^ dcr7[`OR1200_DU_DCR_SC]), dvr7[30:0]});
 		4'b1_101: match7 = 
-			((match_cond7_ct[31] ^ dcr7[`OR1200_DU_DCR_SC]) >=
-			(dvr7[31] ^ dcr7[`OR1200_DU_DCR_SC]));
+			({(match_cond7_ct[31] ^ dcr7[`OR1200_DU_DCR_SC]), match_cond7_ct[30:0]} >=
+			 {(dvr7[31] ^ dcr7[`OR1200_DU_DCR_SC]), dvr7[30:0]});
 		4'b1_110: match7 = 
-			((match_cond7_ct[31] ^ dcr7[`OR1200_DU_DCR_SC]) !=
-			(dvr7[31] ^ dcr7[`OR1200_DU_DCR_SC]));
+			({(match_cond7_ct[31] ^ dcr7[`OR1200_DU_DCR_SC]), match_cond7_ct[30:0]} !=
+			 {(dvr7[31] ^ dcr7[`OR1200_DU_DCR_SC]), dvr7[30:0]});
 	endcase
 
 //
@@ -1660,10 +1687,19 @@ always @(dmr1 or dbg_ewt_i or wp)
 // Watchpoints can cause trap exception
 //
 `ifdef OR1200_DU_HWBKPTS
-assign du_hwbkpt = |(wp & dmr2[`OR1200_DU_DMR2_WGB]);
+assign du_hwbkpt = |(wp & dmr2[`OR1200_DU_DMR2_WGB]) | du_hwbkpt_hold | (dbg_bp_r & ~dsr[`OR1200_DU_DSR_TE]);
 `else
 assign du_hwbkpt = 1'b0;
 `endif
+
+// Hold du_hwbkpt if ex_freeze is active in order to cause trap exception 
+always @(posedge clk or posedge rst)
+	if (rst)
+		du_hwbkpt_hold <= #1 1'b0;
+	else if (du_hwbkpt & ex_freeze)
+		du_hwbkpt_hold <= #1 1'b1;
+	else if (!ex_freeze)
+		du_hwbkpt_hold <= #1 1'b0;
 
 `ifdef OR1200_DU_TB_IMPLEMENTED
 //
@@ -1703,14 +1739,14 @@ always @(posedge clk or posedge rst)
 
 or1200_dpram_256x32 tbia_ram(
 	.clk_a(clk),
-	.rst_a(rst),
+	.rst_a(1'b0),
 	.addr_a(spr_addr[7:0]),
 	.ce_a(1'b1),
 	.oe_a(1'b1),
 	.do_a(tbia_dat_o),
 
 	.clk_b(clk),
-	.rst_b(rst),
+	.rst_b(1'b0),
 	.addr_b(tb_wadr),
 	.di_b(spr_dat_npc),
 	.ce_b(1'b1),
@@ -1720,14 +1756,14 @@ or1200_dpram_256x32 tbia_ram(
 
 or1200_dpram_256x32 tbim_ram(
 	.clk_a(clk),
-	.rst_a(rst),
+	.rst_a(1'b0),
 	.addr_a(spr_addr[7:0]),
 	.ce_a(1'b1),
 	.oe_a(1'b1),
 	.do_a(tbim_dat_o),
 	
 	.clk_b(clk),
-	.rst_b(rst),
+	.rst_b(1'b0),
 	.addr_b(tb_wadr),
 	.di_b(ex_insn),
 	.ce_b(1'b1),
@@ -1736,14 +1772,14 @@ or1200_dpram_256x32 tbim_ram(
 
 or1200_dpram_256x32 tbar_ram(
 	.clk_a(clk),
-	.rst_a(rst),
+	.rst_a(1'b0),
 	.addr_a(spr_addr[7:0]),
 	.ce_a(1'b1),
 	.oe_a(1'b1),
 	.do_a(tbar_dat_o),
 	
 	.clk_b(clk),
-	.rst_b(rst),
+	.rst_b(1'b0),
 	.addr_b(tb_wadr),
 	.di_b(rf_dataw),
 	.ce_b(1'b1),
@@ -1752,14 +1788,14 @@ or1200_dpram_256x32 tbar_ram(
 
 or1200_dpram_256x32 tbts_ram(
 	.clk_a(clk),
-	.rst_a(rst),
+	.rst_a(1'b0),
 	.addr_a(spr_addr[7:0]),
 	.ce_a(1'b1),
 	.oe_a(1'b1),
 	.do_a(tbts_dat_o),
 
 	.clk_b(clk),
-	.rst_b(rst),
+	.rst_b(1'b0),
 	.addr_b(tb_wadr),
 	.di_b(tb_timstmp),
 	.ce_b(1'b1),
@@ -1782,6 +1818,7 @@ assign tbts_dat_o = 32'h0000_0000;
 //
 assign dbg_bp_o = 1'b0;
 assign du_dsr = {`OR1200_DU_DSR_WIDTH{1'b0}};
+assign du_dmr1 = {25{1'b0}};
 assign du_hwbkpt = 1'b0;
 
 //

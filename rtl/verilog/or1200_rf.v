@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_rf.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Bugs fixed, coding style changed. 
+//
+// Revision 1.3  2003/04/07 01:21:56  lampret
+// RFRAM type always need to be defined.
+//
 // Revision 1.2  2002/06/08 16:19:09  lampret
 // Added generic flip-flop based memory macro instantiation.
 //
@@ -92,7 +99,7 @@ module or1200_rf(
 	clk, rst,
 
 	// Write i/f
-	supv, wb_freeze, addrw, dataw, we, flushpipe,
+	cy_we_i, cy_we_o, supv, wb_freeze, addrw, dataw, we, flushpipe,
 
 	// Read i/f
 	id_freeze, addra, addrb, dataa, datab, rda, rdb,
@@ -117,6 +124,8 @@ input				rst;
 //
 // Write i/f
 //
+input				cy_we_i;
+output				cy_we_o;
 input				supv;
 input				wb_freeze;
 input	[aw-1:0]		addrw;
@@ -149,8 +158,6 @@ output	[31:0]			spr_dat_o;
 //
 wire	[dw-1:0]		from_rfa;
 wire	[dw-1:0]		from_rfb;
-reg	[dw:0]			dataa_saved;
-reg	[dw:0]			datab_saved;
 wire	[aw-1:0]		rf_addra;
 wire	[aw-1:0]		rf_addrw;
 wire	[dw-1:0]		rf_dataw;
@@ -174,12 +181,12 @@ assign spr_dat_o = from_rfa;
 //
 // Operand A comes from RF or from saved A register
 //
-assign dataa = (dataa_saved[32]) ? dataa_saved[31:0] : from_rfa;
+assign dataa = from_rfa;
 
 //
 // Operand B comes from RF or from saved B register
 //
-assign datab = (datab_saved[32]) ? datab_saved[31:0] : from_rfb;
+assign datab = from_rfb;
 
 //
 // RF A read address is either from SPRS or normal from CPU control
@@ -205,13 +212,17 @@ always @(posedge rst or posedge clk)
 	else if (~wb_freeze)
 		rf_we_allow <= #1 ~flushpipe;
 
-assign rf_we = ((spr_valid & spr_write) | (we & ~wb_freeze)) & rf_we_allow & (supv | (|rf_addrw));
+//assign rf_we = ((spr_valid & spr_write) | (we & ~wb_freeze)) & rf_we_allow & (supv | (|rf_addrw));
+assign rf_we = ((spr_valid & spr_write) | (we & ~wb_freeze)) & rf_we_allow;
+//assign cy_we_o = cy_we_i && rf_we;
+assign cy_we_o = cy_we_i && ~wb_freeze && rf_we_allow;
 
 //
 // CS RF A asserted when instruction reads operand A and ID stage
 // is not stalled
 //
-assign rf_ena = rda & ~id_freeze | spr_valid;	// probably works with fixed binutils
+//assign rf_ena = rda & ~id_freeze | spr_valid;	// probably works with fixed binutils
+assign rf_ena = (rda & ~id_freeze) | (spr_valid & !spr_write);	// probably works with fixed binutils
 // assign rf_ena = 1'b1;			// does not work with single-stepping
 //assign rf_ena = ~id_freeze | spr_valid;	// works with broken binutils 
 
@@ -219,35 +230,10 @@ assign rf_ena = rda & ~id_freeze | spr_valid;	// probably works with fixed binut
 // CS RF B asserted when instruction reads operand B and ID stage
 // is not stalled
 //
-assign rf_enb = rdb & ~id_freeze | spr_valid;
+//assign rf_enb = rdb & ~id_freeze | spr_valid;
+assign rf_enb = rdb & ~id_freeze;
 // assign rf_enb = 1'b1;
 //assign rf_enb = ~id_freeze | spr_valid;	// works with broken binutils 
-
-//
-// Stores operand from RF_A into temp reg when pipeline is frozen
-//
-always @(posedge clk or posedge rst)
-	if (rst) begin
-		dataa_saved <= #1 33'b0;
-	end
-	else if (id_freeze & !dataa_saved[32]) begin
-		dataa_saved <= #1 {1'b1, from_rfa};
-	end
-	else if (!id_freeze)
-		dataa_saved <= #1 33'b0;
-
-//
-// Stores operand from RF_B into temp reg when pipeline is frozen
-//
-always @(posedge clk or posedge rst)
-	if (rst) begin
-		datab_saved <= #1 33'b0;
-	end
-	else if (id_freeze & !datab_saved[32]) begin
-		datab_saved <= #1 {1'b1, from_rfb};
-	end
-	else if (!id_freeze)
-		datab_saved <= #1 33'b0;
 
 `ifdef OR1200_RFRAM_TWOPORT
 
@@ -308,45 +294,51 @@ or1200_tpram_32x32 rf_b(
 //
 // Instantiation of register file two-port RAM A
 //
-or1200_dpram_32x32 rf_a(
-	// Port A
-	.clk_a(clk),
-	.rst_a(rst),
-	.ce_a(rf_ena),
-	.oe_a(1'b1),
-	.addr_a(rf_addra),
-	.do_a(from_rfa),
+   or1200_dpram #
+     (
+      .aw(5),
+      .dw(32)
+      )
+   rf_a
+     (
+      // Port A
+      .clk_a(clk),
+      .ce_a(rf_ena),
+      .addr_a(rf_addra),
+      .do_a(from_rfa),
+      
+      // Port B
+      .clk_b(clk),
+      .ce_b(rf_we),
+      .we_b(rf_we),
+      .addr_b(rf_addrw),
+      .di_b(rf_dataw)
+      );
 
-	// Port B
-	.clk_b(clk),
-	.rst_b(rst),
-	.ce_b(rf_we),
-	.we_b(rf_we),
-	.addr_b(rf_addrw),
-	.di_b(rf_dataw)
-);
-
-//
-// Instantiation of register file two-port RAM B
-//
-or1200_dpram_32x32 rf_b(
-	// Port A
-	.clk_a(clk),
-	.rst_a(rst),
-	.ce_a(rf_enb),
-	.oe_a(1'b1),
-	.addr_a(addrb),
-	.do_a(from_rfb),
-
-	// Port B
-	.clk_b(clk),
-	.rst_b(rst),
-	.ce_b(rf_we),
-	.we_b(rf_we),
-	.addr_b(rf_addrw),
-	.di_b(rf_dataw)
-);
-
+   //
+   // Instantiation of register file two-port RAM B
+   //
+   or1200_dpram #
+     (
+      .aw(5),
+      .dw(32)
+      )
+   rf_b
+     (
+      // Port A
+      .clk_a(clk),
+      .ce_a(rf_enb),
+      .addr_a(addrb),
+      .do_a(from_rfb),
+      
+      // Port B
+      .clk_b(clk),
+      .ce_b(rf_we),
+      .we_b(rf_we),
+      .addr_b(rf_addrw),
+      .di_b(rf_dataw)
+      );
+   
 `else
 
 `ifdef OR1200_RFRAM_GENERIC

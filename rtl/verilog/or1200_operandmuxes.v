@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_operandmuxes.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Bugs fixed. 
+//
+// Revision 1.2  2002/03/29 15:16:56  lampret
+// Some of the warnings fixed.
+//
 // Revision 1.1  2002/01/03 08:16:15  lampret
 // New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
 //
@@ -78,7 +85,7 @@ module or1200_operandmuxes(
 
 	// Internal i/f
 	id_freeze, ex_freeze, rf_dataa, rf_datab, ex_forw, wb_forw,
-	simm, sel_a, sel_b, operand_a, operand_b, muxed_b
+	simm, sel_a, sel_b, operand_a, operand_b, muxed_a, muxed_b
 );
 
 parameter width = `OR1200_OPERAND_WIDTH;
@@ -99,6 +106,7 @@ input	[`OR1200_SEL_WIDTH-1:0]	sel_a;
 input	[`OR1200_SEL_WIDTH-1:0]	sel_b;
 output	[width-1:0]		operand_a;
 output	[width-1:0]		operand_b;
+output	[width-1:0]		muxed_a;
 output	[width-1:0]		muxed_b;
 
 //

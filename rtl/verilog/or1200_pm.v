@@ -43,7 +43,13 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_pm.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// No update 
+//
+// Revision 1.1  2002/01/03 08:16:15  lampret
+// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
+//
 // Revision 1.8  2001/10/21 17:57:16  lampret
 // Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
 //

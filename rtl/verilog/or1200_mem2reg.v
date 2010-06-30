@@ -43,7 +43,13 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_mem2reg.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// No update 
+//
+// Revision 1.5  2002/09/03 22:28:21  lampret
+// As per Taylor Su suggestion all case blocks are full case by default and optionally (OR1200_CASE_DEFAULT) can be disabled to increase clock frequncy.
+//
 // Revision 1.4  2002/03/29 15:16:56  lampret
 // Some of the warnings fixed.
 //

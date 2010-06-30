@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_genpc.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Major update: 
+// Structure reordered and bugs fixed. 
+//
+// Revision 1.10  2004/06/08 18:17:36  lampret
+// Non-functional changes. Coding style fixes.
+//
 // Revision 1.9  2004/04/05 08:29:57  lampret
 // Merged branch_qmem into main tree.
 //
@@ -114,10 +121,11 @@ module or1200_genpc(
 	icpu_rty_i, icpu_adr_i,
 
 	// Internal i/f
-	branch_op, except_type, except_prefix,
-	branch_addrofs, lr_restor, flag, taken, except_start,
-	binsn_addr, epcr, spr_dat_i, spr_pc_we, genpc_refetch,
-	genpc_freeze, genpc_stop_prefetch, no_more_dslot
+	pre_branch_op, branch_op, except_type, except_prefix,
+	id_branch_addrtarget, ex_branch_addrtarget, muxed_b, operand_b, 
+	flag, flagforw, ex_branch_taken, except_start,
+	epcr, spr_dat_i, spr_pc_we, genpc_refetch,
+	genpc_freeze, no_more_dslot
 );
 
 //
@@ -143,44 +151,45 @@ input	[31:0]			icpu_adr_i;
 //
 // Internal i/f
 //
+input   [`OR1200_BRANCHOP_WIDTH-1:0]    pre_branch_op;
 input	[`OR1200_BRANCHOP_WIDTH-1:0]	branch_op;
 input	[`OR1200_EXCEPT_WIDTH-1:0]	except_type;
 input					except_prefix;
-input	[31:2]			branch_addrofs;
-input	[31:0]			lr_restor;
+input	[31:2]			id_branch_addrtarget;
+input	[31:2]			ex_branch_addrtarget;
+input	[31:0]			muxed_b;
+input	[31:0]			operand_b;
 input				flag;
-output				taken;
+input				flagforw;
+output				ex_branch_taken;
 input				except_start;
-input	[31:2]			binsn_addr;
 input	[31:0]			epcr;
 input	[31:0]			spr_dat_i;
 input				spr_pc_we;
 input				genpc_refetch;
-input				genpc_stop_prefetch;
 input				genpc_freeze;
 input				no_more_dslot;
 
 //
 // Internal wires and regs
 //
+reg	[31:2]			pcreg_default;
+wire	[31:0]			pcreg_boot;
+reg				pcreg_select;
 reg	[31:2]			pcreg;
 reg	[31:0]			pc;
-reg				taken;	/* Set to in case of jump or taken branch */
+reg				ex_branch_taken;	/* Set to in case of jump or taken branch */
 reg				genpc_refetch_r;
 
 //
 // Address of insn to be fecthed
 //
-assign icpu_adr_o = !no_more_dslot & !except_start & !spr_pc_we & (icpu_rty_i | genpc_refetch) ? icpu_adr_i : pc;
-// assign icpu_adr_o = !except_start & !spr_pc_we & (icpu_rty_i | genpc_refetch) ? icpu_adr_i : pc;
+assign icpu_adr_o = !no_more_dslot & !except_start & !spr_pc_we & (icpu_rty_i | genpc_refetch) ? icpu_adr_i : {pc[31:2], 1'b0, ex_branch_taken|spr_pc_we};
 
 //
 // Control access to IC subsystem
 //
-// assign icpu_cycstb_o = !genpc_freeze & !no_more_dslot;
-assign icpu_cycstb_o = !genpc_freeze; // works, except remaining raised cycstb during long load/store
-//assign icpu_cycstb_o = !(genpc_freeze | genpc_refetch & genpc_refetch_r);
-//assign icpu_cycstb_o = !(genpc_freeze | genpc_stop_prefetch);
+assign icpu_cycstb_o = ~(genpc_freeze | (|pre_branch_op && !icpu_rty_i));
 assign icpu_sel_o = 4'b1111;
 assign icpu_tag_o = `OR1200_ITAG_NI;
 
@@ -198,49 +207,40 @@ always @(posedge clk or posedge rst)
 //
 // Async calculation of new PC value. This value is used for addressing the IC.
 //
-always @(pcreg or branch_addrofs or binsn_addr or flag or branch_op or except_type
-	or except_start or lr_restor or epcr or spr_pc_we or spr_dat_i or except_prefix) begin
+always @(pcreg or ex_branch_addrtarget or flag or branch_op or except_type
+	or except_start or operand_b or epcr or spr_pc_we or spr_dat_i or except_prefix) begin
 	casex ({spr_pc_we, except_start, branch_op})	// synopsys parallel_case
 		{2'b00, `OR1200_BRANCHOP_NOP}: begin
 			pc = {pcreg + 30'd1, 2'b0};
-			taken = 1'b0;
+			ex_branch_taken = 1'b0;
 		end
 		{2'b00, `OR1200_BRANCHOP_J}: begin
 `ifdef OR1200_VERBOSE
 // synopsys translate_off
-			$display("%t: BRANCHOP_J: pc <= branch_addrofs %h", $time, branch_addrofs);
+			$display("%t: BRANCHOP_J: pc <= ex_branch_addrtarget %h", $time, ex_branch_addrtarget);
 // synopsys translate_on
 `endif
-			pc = {branch_addrofs, 2'b0};
-			taken = 1'b1;
+			pc = {ex_branch_addrtarget, 2'b00};
+			ex_branch_taken = 1'b1;
 		end
 		{2'b00, `OR1200_BRANCHOP_JR}: begin
 `ifdef OR1200_VERBOSE
 // synopsys translate_off
-			$display("%t: BRANCHOP_JR: pc <= lr_restor %h", $time, lr_restor);
+			$display("%t: BRANCHOP_JR: pc <= operand_b %h", $time, operand_b);
 // synopsys translate_on
 `endif
-			pc = lr_restor;
-			taken = 1'b1;
-		end
-		{2'b00, `OR1200_BRANCHOP_BAL}: begin
-`ifdef OR1200_VERBOSE
-// synopsys translate_off
-			$display("%t: BRANCHOP_BAL: pc %h = binsn_addr %h + branch_addrofs %h", $time, binsn_addr + branch_addrofs, binsn_addr, branch_addrofs);
-// synopsys translate_on
-`endif
-			pc = {binsn_addr + branch_addrofs, 2'b0};
-			taken = 1'b1;
+			pc = operand_b;
+			ex_branch_taken = 1'b1;
 		end
 		{2'b00, `OR1200_BRANCHOP_BF}:
 			if (flag) begin
 `ifdef OR1200_VERBOSE
 // synopsys translate_off
-				$display("%t: BRANCHOP_BF: pc %h = binsn_addr %h + branch_addrofs %h", $time, binsn_addr + branch_addrofs, binsn_addr, branch_addrofs);
+				$display("%t: BRANCHOP_BF: pc <= ex_branch_addrtarget %h", $time, ex_branch_addrtarget);
 // synopsys translate_on
 `endif
-				pc = {binsn_addr + branch_addrofs, 2'b0};
-				taken = 1'b1;
+				pc = {ex_branch_addrtarget, 2'b00};
+				ex_branch_taken = 1'b1;
 			end
 			else begin
 `ifdef OR1200_VERBOSE
@@ -249,26 +249,26 @@ always @(pcreg or branch_addrofs or binsn_addr or flag or branch_op or except_ty
 // synopsys translate_on
 `endif
 				pc = {pcreg + 30'd1, 2'b0};
-				taken = 1'b0;
+				ex_branch_taken = 1'b0;
 			end
 		{2'b00, `OR1200_BRANCHOP_BNF}:
 			if (flag) begin
-				pc = {pcreg + 30'd1, 2'b0};
 `ifdef OR1200_VERBOSE
 // synopsys translate_off
 				$display("%t: BRANCHOP_BNF: not taken", $time);
 // synopsys translate_on
 `endif
-				taken = 1'b0;
+				pc = {pcreg + 30'd1, 2'b0};
+				ex_branch_taken = 1'b0;
 			end
 			else begin
 `ifdef OR1200_VERBOSE
 // synopsys translate_off
-				$display("%t: BRANCHOP_BNF: pc %h = binsn_addr %h + branch_addrofs %h", $time, binsn_addr + branch_addrofs, binsn_addr, branch_addrofs);
+				$display("%t: BRANCHOP_BNF: pc <= ex_branch_addrtarget %h", $time, ex_branch_addrtarget);
 // synopsys translate_on
 `endif
-				pc = {binsn_addr + branch_addrofs, 2'b0};
-				taken = 1'b1;
+				pc = {ex_branch_addrtarget, 2'b00};
+				ex_branch_taken = 1'b1;
 			end
 		{2'b00, `OR1200_BRANCHOP_RFE}: begin
 `ifdef OR1200_VERBOSE
@@ -277,7 +277,7 @@ always @(pcreg or branch_addrofs or binsn_addr or flag or branch_op or except_ty
 // synopsys translate_on
 `endif
 			pc = epcr;
-			taken = 1'b1;
+			ex_branch_taken = 1'b1;
 		end
 		{2'b01, 3'bxxx}: begin
 `ifdef OR1200_VERBOSE
@@ -286,7 +286,7 @@ always @(pcreg or branch_addrofs or binsn_addr or flag or branch_op or except_ty
 // synopsys translate_on
 `endif
 			pc = {(except_prefix ? `OR1200_EXCEPT_EPH1_P : `OR1200_EXCEPT_EPH0_P), except_type, `OR1200_EXCEPT_V};
-			taken = 1'b1;
+			ex_branch_taken = 1'b1;
 		end
 		default: begin
 `ifdef OR1200_VERBOSE
@@ -295,7 +295,7 @@ always @(pcreg or branch_addrofs or binsn_addr or flag or branch_op or except_ty
 // synopsys translate_on
 `endif
 			pc = spr_dat_i;
-			taken = 1'b0;
+			ex_branch_taken = 1'b0;
 		end
 	endcase
 end
@@ -304,13 +304,32 @@ end
 // PC register
 //
 always @(posedge clk or posedge rst)
-	if (rst)
-//		pcreg <= #1 30'd63;
-		pcreg <= #1 ({(except_prefix ? `OR1200_EXCEPT_EPH1_P : `OR1200_EXCEPT_EPH0_P), `OR1200_EXCEPT_RESET, `OR1200_EXCEPT_V} - 1) >> 2;
-	else if (spr_pc_we)
-		pcreg <= #1 spr_dat_i[31:2];
-	else if (no_more_dslot | except_start | !genpc_freeze & !icpu_rty_i & !genpc_refetch)
-//	else if (except_start | !genpc_freeze & !icpu_rty_i & !genpc_refetch)
-		pcreg <= #1 pc[31:2];
+	// default value 
+	if (rst) begin
+	   //pcreg_default <= #1 30'd63;
+	   pcreg_default <= #1 /*30'd63 */ `OR1200_BOOT_PCREG_DEFAULT; // jb
+	   pcreg_select <= #1 1'b1;		// select async. value due to reset state
+	end
+	// selected value (different from default) is written into FF after reset state
+	else if (pcreg_select) begin
+		pcreg_default <= #1 pcreg_boot[31:2];	// dynamic value can only be assigned to FF out of reset! 
+		pcreg_select <= #1 1'b0;		// select FF value 
+	end
+	else if (spr_pc_we) begin
+		pcreg_default <= #1 spr_dat_i[31:2];
+	end
+	else if (no_more_dslot | except_start | !genpc_freeze & !icpu_rty_i & !genpc_refetch) begin
+		pcreg_default <= #1 pc[31:2];
+	end
+
+// select async. value for pcreg after reset - PC jumps to the address selected after boot! 
+//assign  pcreg_boot = {(except_prefix ? `OR1200_EXCEPT_EPH1_P : `OR1200_EXCEPT_EPH0_P), `OR1200_EXCEPT_RESET, `OR1200_EXCEPT_V} - 1;
+   assign  pcreg_boot = `OR1200_BOOT_ADR; // changed JB
+
+always @(pcreg_boot or pcreg_default or pcreg_select)
+    if (pcreg_select)
+        pcreg = pcreg_boot[31:2];	// async. value is selected due to reset state 
+    else
+        pcreg = pcreg_default ;		// FF value is selected 2nd clock after reset state 
 
 endmodule

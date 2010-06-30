@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_dmmu_top.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Bugs fixed. 
+//
+// Revision 1.9  2004/04/05 08:29:57  lampret
+// Merged branch_qmem into main tree.
+//
 // Revision 1.7.4.2  2003/12/09 11:46:48  simons
 // Mbist nameing changed, Artisan ram instance signal names fixed, some synthesis waning fixed.
 //
@@ -267,7 +274,8 @@ assign qmemdmmu_cycstb_o = (!dc_en & dmmu_en) ? ~(miss | fault) & dtlb_done & dc
 //
 // Cache Inhibit
 //
-assign qmemdmmu_ci_o = dmmu_en ? dtlb_done & dtlb_ci : `OR1200_DMMU_CI;
+//assign qmemdmmu_ci_o = dmmu_en ? dtlb_done & dtlb_ci : `OR1200_DMMU_CI;
+assign qmemdmmu_ci_o = dmmu_en ? dtlb_ci : `OR1200_DMMU_CI;
 
 //
 // Register dcpu_adr_i's VPN for use when DMMU is not enabled but PPN is expected to come

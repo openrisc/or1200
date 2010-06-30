@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_alu.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Defines added, flags are corrected. 
+//
+// Revision 1.15  2005/01/07 09:23:39  andreje
+// l.ff1 and l.cmov instructions added
+//
 // Revision 1.14  2004/06/08 18:17:36  lampret
 // Non-functional changes. Coding style fixes.
 //
@@ -167,6 +174,9 @@ wire				cy_csum;
 `endif
 wire	[width-1:0]		result_and;
 wire				cy_sum;
+`ifdef OR1200_IMPL_SUB
+wire				cy_sub;
+`endif
 reg				cyforw;
 
 //
@@ -178,9 +188,12 @@ assign comp_b = {b[width-1] ^ comp_op[3] , b[width-2:0]};
 assign a_eq_b = (comp_a == comp_b);
 assign a_lt_b = (comp_a < comp_b);
 `endif
+`ifdef OR1200_IMPL_SUB
+assign cy_sub = a < b;
+`endif
 assign {cy_sum, result_sum} = a + b;
 `ifdef OR1200_IMPL_ADDC
-assign {cy_csum, result_csum} = a + b + {32'd0, carry};
+assign {cy_csum, result_csum} = a + b + {`OR1200_OPERAND_WIDTH'd0, carry};
 `endif
 assign result_and = a & b;
 
@@ -199,15 +212,19 @@ end
 //
 // Central part of the ALU
 //
-always @(alu_op or a or b or result_sum or result_and or macrc_op or shifted_rotated or mult_mac_result) begin
+always @(alu_op or a or b or result_sum or result_and or macrc_op or shifted_rotated or mult_mac_result or flag or result_cust5 or carry
+`ifdef OR1200_IMPL_ADDC
+         or result_csum
+`endif
+) begin
 `ifdef OR1200_CASE_DEFAULT
 	casex (alu_op)		// synopsys parallel_case
 `else
 	casex (alu_op)		// synopsys full_case parallel_case
 `endif
-    `OR1200_ALUOP_FF1: begin
-        result = a[0] ? 1 : a[1] ? 2 : a[2] ? 3 : a[3] ? 4 : a[4] ? 5 : a[5] ? 6 : a[6] ? 7 : a[7] ? 8 : a[8] ? 9 : a[9] ? 10 : a[10] ? 11 : a[11] ? 12 : a[12] ? 13 : a[13] ? 14 : a[14] ? 15 : a[15] ? 16 : a[16] ? 17 : a[17] ? 18 : a[18] ? 19 : a[19] ? 20 : a[20] ? 21 : a[21] ? 22 : a[22] ? 23 : a[23] ? 24 : a[24] ? 25 : a[25] ? 26 : a[26] ? 27 : a[27] ? 28 : a[28] ? 29 : a[29] ? 30 : a[30] ? 31 : a[31] ? 32 : 0;
-    end
+		`OR1200_ALUOP_FF1: begin
+			result = a[0] ? 1 : a[1] ? 2 : a[2] ? 3 : a[3] ? 4 : a[4] ? 5 : a[5] ? 6 : a[6] ? 7 : a[7] ? 8 : a[8] ? 9 : a[9] ? 10 : a[10] ? 11 : a[11] ? 12 : a[12] ? 13 : a[13] ? 14 : a[14] ? 15 : a[15] ? 16 : a[16] ? 17 : a[17] ? 18 : a[18] ? 19 : a[19] ? 20 : a[20] ? 21 : a[21] ? 22 : a[22] ? 23 : a[23] ? 24 : a[24] ? 25 : a[25] ? 26 : a[26] ? 27 : a[27] ? 28 : a[28] ? 29 : a[29] ? 30 : a[30] ? 31 : a[31] ? 32 : 0;
+		end
 		`OR1200_ALUOP_CUST5 : begin 
 				result = result_cust5;
 		end
@@ -222,9 +239,11 @@ always @(alu_op or a or b or result_sum or result_and or macrc_op or shifted_rot
 				result = result_csum;
 		end
 `endif
+`ifdef OR1200_IMPL_SUB
 		`OR1200_ALUOP_SUB : begin
 				result = a - b;
 		end
+`endif
 		`OR1200_ALUOP_XOR : begin
 				result = a ^ b;
 		end
@@ -251,18 +270,17 @@ always @(alu_op or a or b or result_sum or result_and or macrc_op or shifted_rot
 				result = mult_mac_result;
 		end
 `endif
-    `OR1200_ALUOP_CMOV: begin
-        result = flag ? a : b;
-    end
+		`OR1200_ALUOP_CMOV: begin
+			result = flag ? a : b;
+		end
 
 `ifdef OR1200_CASE_DEFAULT
-    default: begin
+		default: begin
 `else
-    `OR1200_ALUOP_COMP, `OR1200_ALUOP_AND:
-    begin
+		`OR1200_ALUOP_COMP, `OR1200_ALUOP_AND: begin
 `endif
-      result=result_and;
-    end 
+			result=result_and;
+		end 
 	endcase
 end
 
@@ -297,7 +315,11 @@ end
 //
 // Generate flag and flag write enable
 //
-always @(alu_op or result_sum or result_and or flagcomp) begin
+always @(alu_op or result_sum or result_and or flagcomp
+`ifdef OR1200_IMPL_ADDC
+         or result_csum
+`endif
+) begin
 	casex (alu_op)		// synopsys parallel_case
 `ifdef OR1200_ADDITIONAL_FLAG_MODIFIERS
 		`OR1200_ALUOP_ADD : begin
@@ -320,7 +342,7 @@ always @(alu_op or result_sum or result_and or flagcomp) begin
 			flag_we = 1'b1;
 		end
 		default: begin
-			flagforw = 1'b0;
+			flagforw = flagcomp;
 			flag_we = 1'b0;
 		end
 	endcase
@@ -330,10 +352,15 @@ end
 // Generate SR[CY] write enable
 //
 always @(alu_op or cy_sum
+`ifdef OR1200_IMPL_CY
 `ifdef OR1200_IMPL_ADDC
 	or cy_csum
 `endif
-	) begin
+`ifdef OR1200_IMPL_SUB
+	or cy_sub
+`endif
+`endif
+) begin
 	casex (alu_op)		// synopsys parallel_case
 `ifdef OR1200_IMPL_CY
 		`OR1200_ALUOP_ADD : begin
@@ -343,6 +370,12 @@ always @(alu_op or cy_sum
 `ifdef OR1200_IMPL_ADDC
 		`OR1200_ALUOP_ADDC: begin
 			cyforw = cy_csum;
+			cy_we = 1'b1;
+		end
+`endif
+`ifdef OR1200_IMPL_SUB
+		`OR1200_ALUOP_SUB: begin
+			cyforw = cy_sub;
 			cy_we = 1'b1;
 		end
 `endif

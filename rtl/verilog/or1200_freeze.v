@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_freeze.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Bugs fixed. 
+//
+// Revision 1.8  2004/06/08 18:17:36  lampret
+// Non-functional changes. Coding style fixes.
+//
 // Revision 1.7  2004/04/05 08:29:57  lampret
 // Merged branch_qmem into main tree.
 //
@@ -116,7 +123,7 @@ module or1200_freeze(
 	multicycle, flushpipe, extend_flush, lsu_stall, if_stall,
 	lsu_unstall, du_stall, mac_stall, 
 	force_dslot_fetch, abort_ex,
-	genpc_freeze, if_freeze, id_freeze, ex_freeze, wb_freeze,
+	genpc_freeze, if_freeze, id_freeze, ex_freeze, wb_freeze, saving_if_insn, 
 	icpu_ack_i, icpu_err_i
 );
 
@@ -140,6 +147,7 @@ output				if_freeze;
 output				id_freeze;
 output				ex_freeze;
 output				wb_freeze;
+input               saving_if_insn;
 input				icpu_ack_i;
 input				icpu_err_i;
 
@@ -164,7 +172,8 @@ reg				flushpipe_r;
 // This way NOP is asserted from stage ID into EX stage.
 //
 //assign genpc_freeze = du_stall | flushpipe_r | lsu_stall;
-assign genpc_freeze = du_stall | flushpipe_r;
+//assign genpc_freeze = du_stall | flushpipe_r;
+assign genpc_freeze = (du_stall & !saving_if_insn) | flushpipe_r;
 assign if_freeze = id_freeze | extend_flush;
 //assign id_freeze = (lsu_stall | (~lsu_unstall & if_stall) | multicycle_freeze | force_dslot_fetch) & ~flushpipe | du_stall;
 assign id_freeze = (lsu_stall | (~lsu_unstall & if_stall) | multicycle_freeze | force_dslot_fetch) | du_stall | mac_stall;

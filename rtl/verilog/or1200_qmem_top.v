@@ -46,7 +46,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_qmem_top.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Coding style changed.
+//
+// Revision 1.3  2004/06/08 18:17:36  lampret
+// Non-functional changes. Coding style fixes.
+//
 // Revision 1.2  2004/04/05 08:40:26  lampret
 // Merged branch_qmem into main tree.
 //
@@ -90,8 +97,8 @@ module or1200_qmem_top(
 	qmemimmu_adr_i,
 	qmemimmu_cycstb_i,
 	qmemimmu_ci_i,
-	qmemicpu_sel_i, 
-	qmemicpu_tag_i, 
+	qmemicpu_sel_i,
+	qmemicpu_tag_i,
 	qmemicpu_dat_o,
 	qmemicpu_ack_o,
 	qmemimmu_rty_o,
@@ -101,7 +108,7 @@ module or1200_qmem_top(
 	// QMEM and IC
 	icqmem_adr_o,
 	icqmem_cycstb_o,
-	icqmem_ci_o,  
+	icqmem_ci_o,
 	icqmem_sel_o,
 	icqmem_tag_o,
 	icqmem_dat_i,
@@ -114,10 +121,10 @@ module or1200_qmem_top(
 	qmemdmmu_adr_i,
 	qmemdmmu_cycstb_i,
 	qmemdmmu_ci_i,
-	qmemdcpu_we_i,   
-	qmemdcpu_sel_i, 
-	qmemdcpu_tag_i, 
-	qmemdcpu_dat_i, 
+	qmemdcpu_we_i,
+	qmemdcpu_sel_i,
+	qmemdcpu_tag_i,
+	qmemdcpu_dat_i,
 	qmemdcpu_dat_o,
 	qmemdcpu_ack_o,
 	qmemdcpu_rty_o,
@@ -125,9 +132,18 @@ module or1200_qmem_top(
 	qmemdmmu_tag_o,
 
 	// QMEM and DC
-	dcqmem_adr_o, dcqmem_cycstb_o, dcqmem_ci_o,
-	dcqmem_we_o, dcqmem_sel_o, dcqmem_tag_o, dcqmem_dat_o,
-	dcqmem_dat_i, dcqmem_ack_i, dcqmem_rty_i, dcqmem_err_i, dcqmem_tag_i
+	dcqmem_adr_o,
+	dcqmem_cycstb_o,
+	dcqmem_ci_o,
+	dcqmem_we_o,
+	dcqmem_sel_o,
+	dcqmem_tag_o,
+	dcqmem_dat_o,
+	dcqmem_dat_i,
+	dcqmem_ack_i,
+	dcqmem_rty_i,
+	dcqmem_err_i,
+	dcqmem_tag_i 
 
 );
 
@@ -158,8 +174,8 @@ output mbist_so_o;
 input	[31:0]			qmemimmu_adr_i;
 input				qmemimmu_cycstb_i;
 input				qmemimmu_ci_i;
-input	[3:0]			qmemicpu_sel_i; 
-input	[3:0]			qmemicpu_tag_i; 
+input	[3:0]			qmemicpu_sel_i;
+input	[3:0]			qmemicpu_tag_i;
 output	[31:0]			qmemicpu_dat_o;
 output				qmemicpu_ack_o;
 output				qmemimmu_rty_o;
@@ -187,9 +203,9 @@ input	[31:0]			qmemdmmu_adr_i;
 input				qmemdmmu_cycstb_i;
 input				qmemdmmu_ci_i;
 input				qmemdcpu_we_i;
-input	[3:0]			qmemdcpu_sel_i; 
-input	[3:0]			qmemdcpu_tag_i; 
-input	[31:0]			qmemdcpu_dat_i; 
+input	[3:0]			qmemdcpu_sel_i;
+input	[3:0]			qmemdcpu_tag_i;
+input	[31:0]			qmemdcpu_dat_i;
 output	[31:0]			qmemdcpu_dat_o;
 output				qmemdcpu_ack_o;
 output				qmemdcpu_rty_o;

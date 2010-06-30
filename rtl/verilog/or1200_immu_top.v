@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_immu_top.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Major update: 
+// Structure reordered and bugs fixed. 
+//
+// Revision 1.15  2004/06/08 18:17:36  lampret
+// Non-functional changes. Coding style fixes.
+//
 // Revision 1.14  2004/04/05 08:29:57  lampret
 // Merged branch_qmem into main tree.
 //
@@ -126,6 +133,9 @@ module or1200_immu_top(
 	ic_en, immu_en, supv, icpu_adr_i, icpu_cycstb_i,
 	icpu_adr_o, icpu_tag_o, icpu_rty_o, icpu_err_o,
 
+	// SR Interface
+	boot_adr_sel_i,
+
 	// SPR access
 	spr_cs, spr_write, spr_addr, spr_dat_i, spr_dat_o,
 
@@ -163,6 +173,11 @@ output	[aw-1:0]		icpu_adr_o;
 output	[3:0]			icpu_tag_o;
 output				icpu_rty_o;
 output				icpu_err_o;
+
+//
+// SR Interface
+//
+input				boot_adr_sel_i;
 
 //
 // SPR access
@@ -207,12 +222,16 @@ wire				itlb_done;
 wire				fault;
 wire				miss;
 wire				page_cross;
-reg	[31:0]			icpu_adr_o;
+reg	[31:0]			icpu_adr_default;
+wire	[31:0]			icpu_adr_boot;
+reg				icpu_adr_select;
+reg		[31:0]		icpu_adr_o;
 reg	[31:`OR1200_IMMU_PS]	icpu_vpn_r;
 `ifdef OR1200_NO_IMMU
 `else
 reg				itlb_en_r;
-reg				dis_spr_access;
+reg				dis_spr_access_frst_clk;
+reg				dis_spr_access_scnd_clk;
 `endif
 
 //
@@ -233,10 +252,29 @@ reg				dis_spr_access;
 //
 `ifdef OR1200_REGISTERED_OUTPUTS
 always @(posedge rst or posedge clk)
-	if (rst)
-		icpu_adr_o <= #1 32'h0000_0100;
+	// default value 
+	if (rst) begin
+		icpu_adr_default <= #1 32'h0000_0100;
+		icpu_adr_select  <= #1 1'b1;		// select async. value due to reset state
+	end
+	// selected value (different from default) is written into FF after reset state
+	else if (icpu_adr_select) begin
+		icpu_adr_default <= #1 icpu_adr_boot;	// dynamic value can only be assigned to FF out of reset! 
+		icpu_adr_select  <= #1 1'b0;		// select FF value 
+	end
+	else begin
+		icpu_adr_default <= #1 icpu_adr_i;
+	end
+
+// select async. value for boot address after reset - PC jumps to the address selected after boot! 
+//assign icpu_adr_boot = {(boot_adr_sel_i ? `OR1200_EXCEPT_EPH1_P : `OR1200_EXCEPT_EPH0_P), 12'h100} ;
+   assign icpu_adr_boot = `OR1200_BOOT_ADR; // jb
+
+always @(icpu_adr_boot or icpu_adr_default or icpu_adr_select)
+	if (icpu_adr_select)
+		icpu_adr_o = icpu_adr_boot ;		// async. value is selected due to reset state 
 	else
-		icpu_adr_o <= #1 icpu_adr_i;
+		icpu_adr_o = icpu_adr_default ;		// FF value is selected 2nd clock after reset state 
 `else
 Unsupported !!!
 `endif
@@ -284,40 +322,51 @@ assign mbist_so_o = mbist_si_i;
 // 1300 - 13FF  itlbtr w0
 // 1300 - 133F  itlbtr w0 [63:0]
 //
-assign itlb_spr_access = spr_cs & ~dis_spr_access;
+assign itlb_spr_access = spr_cs & ~dis_spr_access_scnd_clk;
 
 //
 // Disable ITLB SPR access
 //
-// This flop is used to mask ITLB miss/fault exception
-// during first clock cycle of accessing ITLB SPR. In
+// This flops are used to mask ITLB miss/fault exception
+// during first & second clock cycles of accessing ITLB SPR. In
 // subsequent clock cycles it is assumed that ITLB SPR
 // access was accomplished and that normal instruction fetching
 // can proceed.
 //
-// spr_cs sets dis_spr_access and icpu_rty_o clears it.
+// spr_cs sets dis_spr_access_frst_clk and icpu_rty_o clears it.
+// dis_spr_access_frst_clk  sets dis_spr_access_scnd_clk and 
+// icpu_rty_o clears it.
 //
 always @(posedge clk or posedge rst)
 	if (rst)
-		dis_spr_access <= #1 1'b0;
+		dis_spr_access_frst_clk  <= #1 1'b0;
 	else if (!icpu_rty_o)
-		dis_spr_access <= #1 1'b0;
+		dis_spr_access_frst_clk  <= #1 1'b0;
 	else if (spr_cs)
-		dis_spr_access <= #1 1'b1;
+		dis_spr_access_frst_clk  <= #1 1'b1;
+
+always @(posedge clk or posedge rst)
+	if (rst)
+		dis_spr_access_scnd_clk  <= #1 1'b0;
+	else if (!icpu_rty_o)
+		dis_spr_access_scnd_clk  <= #1 1'b0;
+	else if (dis_spr_access_frst_clk)
+		dis_spr_access_scnd_clk  <= #1 1'b1;
 
 //
 // Tags:
 //
-// OR1200_DTAG_TE - TLB miss Exception
-// OR1200_DTAG_PE - Page fault Exception
+// OR1200_ITAG_TE - TLB miss Exception
+// OR1200_ITAG_PE - Page fault Exception
 //
-assign icpu_tag_o = miss ? `OR1200_DTAG_TE : fault ? `OR1200_DTAG_PE : qmemimmu_tag_i;
+assign icpu_tag_o = miss ? `OR1200_ITAG_TE : fault ? `OR1200_ITAG_PE : qmemimmu_tag_i;
 
 //
 // icpu_rty_o
 //
 // assign icpu_rty_o = !icpu_err_o & qmemimmu_rty_i;
-assign icpu_rty_o = qmemimmu_rty_i | itlb_spr_access & immu_en;
+//assign icpu_rty_o = qmemimmu_rty_i | itlb_spr_access & immu_en;
+assign icpu_rty_o = qmemimmu_rty_i;
 
 //
 // icpu_err_o
@@ -340,11 +389,12 @@ always @(posedge clk or posedge rst)
 assign itlb_done = itlb_en_r & ~page_cross;
 
 //
-// Cut transfer if something goes wrong with translation. If IC is disabled,
-// use delayed signals.
+// Cut transfer when access (mtspr/mfspr) to/from ITLB occure or if something goes 
+// wrong with translation. If IC is disabled, use delayed signals.
 //
 // assign qmemimmu_cycstb_o = (!ic_en & immu_en) ? ~(miss | fault) & icpu_cycstb_i & ~page_cross : (miss | fault) ? 1'b0 : icpu_cycstb_i & ~page_cross; // DL
-assign qmemimmu_cycstb_o = immu_en ? ~(miss | fault) & icpu_cycstb_i & ~page_cross & itlb_done : icpu_cycstb_i & ~page_cross;
+//assign qmemimmu_cycstb_o = immu_en ? ~(miss | fault) & icpu_cycstb_i & ~page_cross & itlb_done : icpu_cycstb_i & ~page_cross;
+assign qmemimmu_cycstb_o = immu_en ? ~(miss | fault) & icpu_cycstb_i & ~page_cross & itlb_done & ~itlb_spr_access : icpu_cycstb_i & ~page_cross;
 
 //
 // Cache Inhibit
@@ -352,21 +402,33 @@ assign qmemimmu_cycstb_o = immu_en ? ~(miss | fault) & icpu_cycstb_i & ~page_cro
 // Cache inhibit is not really needed for instruction memory subsystem.
 // If we would doq it, we would doq it like this.
 // assign qmemimmu_ci_o = immu_en ? itlb_done & itlb_ci : `OR1200_IMMU_CI;
-// However this causes a async combinational loop so we stick to
+// However this causes an async combinatorial loop so we stick to
 // no cache inhibit.
-assign qmemimmu_ci_o = `OR1200_IMMU_CI;
+//assign qmemimmu_ci_o = `OR1200_IMMU_CI;
+// Cache inhibit without an async combinatorial loop 
+assign qmemimmu_ci_o = immu_en ? itlb_ci : `OR1200_IMMU_CI;
 
 
 //
 // Physical address is either translated virtual address or
 // simply equal when IMMU is disabled
 //
-assign qmemimmu_adr_o = itlb_done ? {itlb_ppn, icpu_adr_i[`OR1200_IMMU_PS-1:0]} : {icpu_vpn_r, icpu_adr_i[`OR1200_IMMU_PS-1:0]}; // DL: immu_en
+//assign qmemimmu_adr_o = itlb_done ? {itlb_ppn, icpu_adr_i[`OR1200_IMMU_PS-1:0]} : {icpu_vpn_r, icpu_adr_i[`OR1200_IMMU_PS-1:0]}; // DL: immu_en
+assign qmemimmu_adr_o = immu_en & itlb_done ? {itlb_ppn, icpu_adr_i[`OR1200_IMMU_PS-1:2], 2'h0} : {icpu_vpn_r, icpu_adr_i[`OR1200_IMMU_PS-1:2], 2'h0}; 
 
+reg     [31:0]                  spr_dat_reg;
 //
 // Output to SPRS unit
 //
-assign spr_dat_o = spr_cs ? itlb_dat_o : 32'h00000000;
+// spr_dat_o is registered on the 1st clock of spr read 
+// so itlb can continue with process during execution of mfspr.
+always @(posedge clk or posedge rst)
+	if (rst)
+		spr_dat_reg <= #1 32'h0000_0000;
+	else if (spr_cs & !dis_spr_access_scnd_clk)
+		spr_dat_reg <= #1 itlb_dat_o;
+
+assign spr_dat_o = itlb_spr_access ? itlb_dat_o : spr_dat_reg; 
 
 //
 // Page fault exception logic

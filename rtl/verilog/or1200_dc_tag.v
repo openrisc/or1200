@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_dc_tag.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Coding style changed.
+//
+// Revision 1.5  2004/06/08 18:17:36  lampret
+// Non-functional changes. Coding style fixes.
+//
 // Revision 1.4  2004/04/05 08:29:57  lampret
 // Merged branch_qmem into main tree.
 //
@@ -132,27 +139,34 @@ assign mbist_so_o = mbist_si_i;
 // Instantiation of TAG RAM block
 //
 `ifdef OR1200_DC_1W_4KB
-or1200_spram_256x21 dc_tag0(
+   or1200_spram #
+     (
+      .aw(8),
+      .dw(21)
+      )
 `endif
 `ifdef OR1200_DC_1W_8KB
-or1200_spram_512x20 dc_tag0(
+   or1200_spram #
+     (
+      .aw(9),
+      .dw(20)
+      )
 `endif
+   dc_tag0
+     (
 `ifdef OR1200_BIST
-	// RAM BIST
-	.mbist_si_i(mbist_si_i),
-	.mbist_so_o(mbist_so_o),
-	.mbist_ctrl_i(mbist_ctrl_i),
+      // RAM BIST
+      .mbist_si_i(mbist_si_i),
+      .mbist_so_o(mbist_so_o),
+      .mbist_ctrl_i(mbist_ctrl_i),
 `endif
-	.clk(clk),
-	.rst(rst),
-	.ce(en),
-	.we(we),
-	.oe(1'b1),
-	.addr(addr),
-	.di(datain),
-	.doq({tag, tag_v})
-);
-
+      .clk(clk),
+      .ce(en),
+      .we(we),
+      .addr(addr),
+      .di(datain),
+      .doq({tag, tag_v})
+      );
 `endif
 
-endmodule
+endmodule // or1200_dc_tag

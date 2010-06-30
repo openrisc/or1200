@@ -57,6 +57,10 @@
 //
 // CVS Revision History
 //
+// $Log: or1200_dpram_256x32.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// New
+//
 
 // synopsys translate_off
 `include "timescale.v"

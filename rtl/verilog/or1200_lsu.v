@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_lsu.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Major update: 
+// Structure reordered and bugs fixed. 
+//
+// Revision 1.5  2004/04/05 08:29:57  lampret
+// Merged branch_qmem into main tree.
+//
 // Revision 1.4  2002/03/29 15:16:56  lampret
 // Some of the warnings fixed.
 //
@@ -82,10 +89,14 @@
 `include "or1200_defines.v"
 
 module or1200_lsu(
+	// Clock and Reset
+	clk, rst,
 
 	// Internal i/f
-	addrbase, addrofs, lsu_op, lsu_datain, lsu_dataout, lsu_stall, lsu_unstall,
-        du_stall, except_align, except_dtlbmiss, except_dmmufault, except_dbuserr,
+	id_addrbase, ex_addrbase, id_addrofs, ex_addrofs, id_lsu_op, 
+	lsu_datain, lsu_dataout, lsu_stall, lsu_unstall,
+	du_stall, except_align, except_dtlbmiss, except_dmmufault, except_dbuserr,
+	id_freeze, ex_freeze, flushpipe,
 
 	// External i/f to DC
 	dcpu_adr_o, dcpu_cycstb_o, dcpu_we_o, dcpu_sel_o, dcpu_tag_o, dcpu_dat_o,
@@ -100,11 +111,19 @@ parameter aw = `OR1200_REGFILE_ADDR_WIDTH;
 //
 
 //
+// Clock and reset
+//
+input				clk;
+input				rst;
+
+//
 // Internal i/f
 //
-input	[31:0]			addrbase;
-input	[31:0]			addrofs;
-input	[`OR1200_LSUOP_WIDTH-1:0]	lsu_op;
+input	[31:0]			id_addrbase;
+input	[31:0]			ex_addrbase;
+input	[31:0]			id_addrofs;
+input	[31:0]			ex_addrofs;
+input	[`OR1200_LSUOP_WIDTH-1:0] id_lsu_op;
 input	[dw-1:0]		lsu_datain;
 output	[dw-1:0]		lsu_dataout;
 output				lsu_stall;
@@ -114,6 +133,9 @@ output				except_align;
 output				except_dtlbmiss;
 output				except_dmmufault;
 output				except_dbuserr;
+input                           id_freeze;
+input                           ex_freeze;
+input                           flushpipe;
 
 //
 // External i/f to DC
@@ -135,13 +157,58 @@ input	[3:0]			dcpu_tag_i;
 //
 reg	[3:0]			dcpu_sel_o;
 
+reg	[`OR1200_LSUOP_WIDTH-1:0] ex_lsu_op;
+wire	[`OR1200_LSUEA_PRECALC:0] id_precalc_sum;
+reg	[`OR1200_LSUEA_PRECALC:0] dcpu_adr_r;
+reg				except_align;
+
+//
+// ex_lsu_op
+//
+always @(posedge clk or posedge rst) begin
+    if (rst)
+        ex_lsu_op <= #1 `OR1200_LSUOP_NOP;
+    else if (!ex_freeze & id_freeze | flushpipe)
+        ex_lsu_op <= #1 `OR1200_LSUOP_NOP;
+    else if (!ex_freeze)
+        ex_lsu_op <= #1 id_lsu_op;
+end
+
+//
+// Precalculate part of load/store EA in ID stage
+//
+assign id_precalc_sum = id_addrbase[`OR1200_LSUEA_PRECALC-1:0] +
+                        id_addrofs[`OR1200_LSUEA_PRECALC-1:0];
+
+always @(posedge clk or posedge rst) begin
+    if (rst)
+        dcpu_adr_r <= #1 {`OR1200_LSUEA_PRECALC{1'b0}};
+    else if (!ex_freeze)
+        dcpu_adr_r <= #1 id_precalc_sum;
+end
+
+//
+// Generate except_align in ID stage
+//
+always @(posedge clk or posedge rst) begin
+    if (rst)
+        except_align <= #1 1'b0;
+    else if (!ex_freeze & id_freeze | flushpipe)
+        except_align <= #1 1'b0;
+    else if (!ex_freeze)
+        except_align <= #1 ((id_lsu_op == `OR1200_LSUOP_SH) |
+                            (id_lsu_op == `OR1200_LSUOP_LHZ) |
+                            (id_lsu_op == `OR1200_LSUOP_LHS)) & id_precalc_sum[0]
+		        |  ((id_lsu_op == `OR1200_LSUOP_SW) |
+		            (id_lsu_op == `OR1200_LSUOP_LWZ) |
+		            (id_lsu_op == `OR1200_LSUOP_LWS)) & |id_precalc_sum[1:0];
+end
+
 //
 // Internal I/F assignments
 //
 assign lsu_stall = dcpu_rty_i & dcpu_cycstb_o;
 assign lsu_unstall = dcpu_ack_i;
-assign except_align = ((lsu_op == `OR1200_LSUOP_SH) | (lsu_op == `OR1200_LSUOP_LHZ) | (lsu_op == `OR1200_LSUOP_LHS)) & dcpu_adr_o[0]
-		|  ((lsu_op == `OR1200_LSUOP_SW) | (lsu_op == `OR1200_LSUOP_LWZ) | (lsu_op == `OR1200_LSUOP_LWS)) & |dcpu_adr_o[1:0];
 assign except_dtlbmiss = dcpu_err_i & (dcpu_tag_i == `OR1200_DTAG_TE);
 assign except_dmmufault = dcpu_err_i & (dcpu_tag_i == `OR1200_DTAG_PE);
 assign except_dbuserr = dcpu_err_i & (dcpu_tag_i == `OR1200_DTAG_BE);
@@ -149,12 +216,15 @@ assign except_dbuserr = dcpu_err_i & (dcpu_tag_i == `OR1200_DTAG_BE);
 //
 // External I/F assignments
 //
-assign dcpu_adr_o = addrbase + addrofs;
-assign dcpu_cycstb_o = du_stall | lsu_unstall | except_align ? 1'b0 : |lsu_op;
-assign dcpu_we_o = lsu_op[3];
+assign dcpu_adr_o[31:`OR1200_LSUEA_PRECALC] = ex_addrbase[31:`OR1200_LSUEA_PRECALC] +
+                                              ex_addrofs[31:`OR1200_LSUEA_PRECALC] +
+                                              dcpu_adr_r[`OR1200_LSUEA_PRECALC]; // carry
+assign dcpu_adr_o[`OR1200_LSUEA_PRECALC-1:0] = dcpu_adr_r[`OR1200_LSUEA_PRECALC-1:0];
+assign dcpu_cycstb_o = du_stall | lsu_unstall | except_align ? 1'b0 : |ex_lsu_op;
+assign dcpu_we_o = ex_lsu_op[3];
 assign dcpu_tag_o = dcpu_cycstb_o ? `OR1200_DTAG_ND : `OR1200_DTAG_IDLE;
-always @(lsu_op or dcpu_adr_o)
-	casex({lsu_op, dcpu_adr_o[1:0]})
+always @(ex_lsu_op or dcpu_adr_o)
+	casex({ex_lsu_op, dcpu_adr_o[1:0]})
 		{`OR1200_LSUOP_SB, 2'b00} : dcpu_sel_o = 4'b1000;
 		{`OR1200_LSUOP_SB, 2'b01} : dcpu_sel_o = 4'b0100;
 		{`OR1200_LSUOP_SB, 2'b10} : dcpu_sel_o = 4'b0010;
@@ -177,7 +247,7 @@ always @(lsu_op or dcpu_adr_o)
 //
 or1200_mem2reg or1200_mem2reg(
 	.addr(dcpu_adr_o[1:0]),
-	.lsu_op(lsu_op),
+	.lsu_op(ex_lsu_op),
 	.memdata(dcpu_dat_i),
 	.regdata(lsu_dataout)
 );
@@ -187,7 +257,7 @@ or1200_mem2reg or1200_mem2reg(
 //
 or1200_reg2mem or1200_reg2mem(
         .addr(dcpu_adr_o[1:0]),
-        .lsu_op(lsu_op),
+        .lsu_op(ex_lsu_op),
         .regdata(lsu_datain),
         .memdata(dcpu_dat_o)
 );

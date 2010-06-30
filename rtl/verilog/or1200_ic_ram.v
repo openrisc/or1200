@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_ic_ram.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Coding style changed.
+//
+// Revision 1.6  2004/06/08 18:17:36  lampret
+// Non-functional changes. Coding style fixes.
+//
 // Revision 1.5  2004/04/08 11:00:46  simont
 // Add support for 512B instruction cache.
 //
@@ -136,30 +143,42 @@ assign mbist_so_o = mbist_si_i;
 // Instantiation of IC RAM block
 //
 `ifdef OR1200_IC_1W_512B
-or1200_spram_128x32 ic_ram0(
+   or1200_spram #
+     (
+      .aw(9),
+      .dw(32)
+      )
 `endif
 `ifdef OR1200_IC_1W_4KB
-or1200_spram_1024x32 ic_ram0(
+   or1200_spram #
+     (
+      .aw(10),
+      .dw(32)
+      )
 `endif
 `ifdef OR1200_IC_1W_8KB
-or1200_spram_2048x32 ic_ram0(
+   or1200_spram #
+     (
+      .aw(11),
+      .dw(32)
+      )
 `endif
+   ic_ram0
+     (
 `ifdef OR1200_BIST
-	// RAM BIST
-	.mbist_si_i(mbist_si_i),
-	.mbist_so_o(mbist_so_o),
-	.mbist_ctrl_i(mbist_ctrl_i),
+      // RAM BIST
+      .mbist_si_i(mbist_si_i),
+      .mbist_so_o(mbist_so_o),
+      .mbist_ctrl_i(mbist_ctrl_i),
 `endif
-	.clk(clk),
-	.rst(rst),
-	.ce(en),
-	.we(we[0]),
-	.oe(1'b1),
-	.addr(addr),
-	.di(datain),
-	.doq(dataout)
-);
-
+      .clk(clk),
+      .ce(en),
+      .we(we[0]),
+      //.oe(1'b1),
+      .addr(addr),
+      .di(datain),
+      .doq(dataout)
+      );   
 `endif
 
 endmodule
