@@ -62,7 +62,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_spram_2048x32_bw.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Coding style changed.
+//
+// Revision 1.5  2005/10/19 11:37:56  jcastillo
+// Added support for RAMB16 Xilinx4/Spartan3 primitives
+//
 // Revision 1.4  2004/06/08 18:15:32  lampret
 // Changed behavior of the simulation generic models
 //
@@ -334,7 +341,7 @@ vs_hdsp_2048x8 vs_ssp_3(
 //
 RAMB4_S2 ramb4_s2_0(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[1:0]),
 	.EN(ce),
@@ -347,7 +354,7 @@ RAMB4_S2 ramb4_s2_0(
 //
 RAMB4_S2 ramb4_s2_1(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[3:2]),
 	.EN(ce),
@@ -360,7 +367,7 @@ RAMB4_S2 ramb4_s2_1(
 //
 RAMB4_S2 ramb4_s2_2(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[5:4]),
 	.EN(ce),
@@ -373,7 +380,7 @@ RAMB4_S2 ramb4_s2_2(
 //
 RAMB4_S2 ramb4_s2_3(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[7:6]),
 	.EN(ce),
@@ -385,7 +392,7 @@ RAMB4_S2 ramb4_s2_3(
 //
 RAMB4_S2 ramb4_s2_4(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[9:8]),
 	.EN(ce),
@@ -398,7 +405,7 @@ RAMB4_S2 ramb4_s2_4(
 //
 RAMB4_S2 ramb4_s2_5(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[11:10]),
 	.EN(ce),
@@ -411,7 +418,7 @@ RAMB4_S2 ramb4_s2_5(
 //
 RAMB4_S2 ramb4_s2_6(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[13:12]),
 	.EN(ce),
@@ -424,7 +431,7 @@ RAMB4_S2 ramb4_s2_6(
 //
 RAMB4_S2 ramb4_s2_7(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[15:14]),
 	.EN(ce),
@@ -436,7 +443,7 @@ RAMB4_S2 ramb4_s2_7(
 //
 RAMB4_S2 ramb4_s2_8(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[17:16]),
 	.EN(ce),
@@ -449,7 +456,7 @@ RAMB4_S2 ramb4_s2_8(
 //
 RAMB4_S2 ramb4_s2_9(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[19:18]),
 	.EN(ce),
@@ -462,7 +469,7 @@ RAMB4_S2 ramb4_s2_9(
 //
 RAMB4_S2 ramb4_s2_10(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[21:20]),
 	.EN(ce),
@@ -475,7 +482,7 @@ RAMB4_S2 ramb4_s2_10(
 //
 RAMB4_S2 ramb4_s2_11(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[23:22]),
 	.EN(ce),
@@ -487,7 +494,7 @@ RAMB4_S2 ramb4_s2_11(
 //
 RAMB4_S2 ramb4_s2_12(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[25:24]),
 	.EN(ce),
@@ -500,7 +507,7 @@ RAMB4_S2 ramb4_s2_12(
 //
 RAMB4_S2 ramb4_s2_13(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[27:26]),
 	.EN(ce),
@@ -513,7 +520,7 @@ RAMB4_S2 ramb4_s2_13(
 //
 RAMB4_S2 ramb4_s2_14(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[29:28]),
 	.EN(ce),
@@ -526,7 +533,7 @@ RAMB4_S2 ramb4_s2_14(
 //
 RAMB4_S2 ramb4_s2_15(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[31:30]),
 	.EN(ce),
@@ -551,7 +558,7 @@ RAMB4_S2 ramb4_s2_15(
 //
 RAMB16_S9 ramb16_s9_0(
 	.CLK(clk),
-	.SSR(rst),
+	.SSR(1'b0),
 	.ADDR(addr),
 	.DI(di[7:0]),
 	.DIP(1'b0),
@@ -566,7 +573,7 @@ RAMB16_S9 ramb16_s9_0(
 //
 RAMB16_S9 ramb16_s9_1(
 	.CLK(clk),
-	.SSR(rst),
+	.SSR(1'b0),
 	.ADDR(addr),
 	.DI(di[15:8]),
 	.DIP(1'b0),
@@ -581,7 +588,7 @@ RAMB16_S9 ramb16_s9_1(
 //
 RAMB16_S9 ramb16_s9_2(
 	.CLK(clk),
-	.SSR(rst),
+	.SSR(1'b0),
 	.ADDR(addr),
 	.DI(di[23:16]),
 	.DIP(1'b0),
@@ -596,7 +603,7 @@ RAMB16_S9 ramb16_s9_2(
 //
 RAMB16_S9 ramb16_s9_3(
 	.CLK(clk),
-	.SSR(rst),
+	.SSR(1'b0),
 	.ADDR(addr),
 	.DI(di[31:24]),
 	.DIP(1'b0),

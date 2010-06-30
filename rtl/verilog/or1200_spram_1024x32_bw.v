@@ -62,7 +62,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_spram_1024x32_bw.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Coding style changed.
+//
+// Revision 1.4  2005/10/19 11:37:56  jcastillo
+// Added support for RAMB16 Xilinx4/Spartan3 primitives
+//
 // Revision 1.3  2004/06/08 18:15:32  lampret
 // Changed behavior of the simulation generic models
 //
@@ -331,7 +338,7 @@ vs_hdsp_1024x8 vs_ssp_3(
 //
 RAMB4_S4 ramb4_s4_0(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[3:0]),
 	.EN(ce),
@@ -344,7 +351,7 @@ RAMB4_S4 ramb4_s4_0(
 //
 RAMB4_S4 ramb4_s4_1(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[7:4]),
 	.EN(ce),
@@ -357,7 +364,7 @@ RAMB4_S4 ramb4_s4_1(
 //
 RAMB4_S4 ramb4_s4_2(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[11:8]),
 	.EN(ce),
@@ -370,7 +377,7 @@ RAMB4_S4 ramb4_s4_2(
 //
 RAMB4_S4 ramb4_s4_3(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[15:12]),
 	.EN(ce),
@@ -383,7 +390,7 @@ RAMB4_S4 ramb4_s4_3(
 //
 RAMB4_S4 ramb4_s4_4(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[19:16]),
 	.EN(ce),
@@ -396,7 +403,7 @@ RAMB4_S4 ramb4_s4_4(
 //
 RAMB4_S4 ramb4_s4_5(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[23:20]),
 	.EN(ce),
@@ -409,7 +416,7 @@ RAMB4_S4 ramb4_s4_5(
 //
 RAMB4_S4 ramb4_s4_6(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[27:24]),
 	.EN(ce),
@@ -422,7 +429,7 @@ RAMB4_S4 ramb4_s4_6(
 //
 RAMB4_S4 ramb4_s4_7(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR(addr),
 	.DI(di[31:28]),
 	.EN(ce),
@@ -447,7 +454,7 @@ RAMB4_S4 ramb4_s4_7(
 //
 RAMB16_S9 ramb16_s9_0(
 	.CLK(clk),
-	.SSR(rst),
+	.SSR(1'b0),
 	.ADDR({1'b0,addr}),
 	.DI(di[7:0]),
 	.DIP(1'b0),
@@ -462,7 +469,7 @@ RAMB16_S9 ramb16_s9_0(
 //
 RAMB16_S9 ramb16_s9_1(
 	.CLK(clk),
-	.SSR(rst),
+	.SSR(1'b0),
 	.ADDR({1'b0,addr}),
 	.DI(di[15:8]),
 	.DIP(1'b0),
@@ -477,7 +484,7 @@ RAMB16_S9 ramb16_s9_1(
 //
 RAMB16_S9 ramb16_s9_2(
 	.CLK(clk),
-	.SSR(rst),
+	.SSR(1'b0),
 	.ADDR({1'b0,addr}),
 	.DI(di[23:16]),
 	.DIP(1'b0),
@@ -492,7 +499,7 @@ RAMB16_S9 ramb16_s9_2(
 //
 RAMB16_S9 ramb16_s9_3(
 	.CLK(clk),
-	.SSR(rst),
+	.SSR(1'b0),
 	.ADDR({1'b0,addr}),
 	.DI(di[31:24]),
 	.DIP(1'b0),

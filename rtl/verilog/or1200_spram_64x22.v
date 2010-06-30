@@ -63,7 +63,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_spram_64x22.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Minor update: 
+// Coding style changed.
+//
+// Revision 1.9  2005/10/19 11:37:56  jcastillo
+// Added support for RAMB16 Xilinx4/Spartan3 primitives
+//
 // Revision 1.8  2004/06/08 18:15:32  lampret
 // Changed behavior of the simulation generic models
 //
@@ -284,7 +291,7 @@ vs_hdsp_64x22 vs_ssp(
 //
 RAMB4_S16 ramb4_s16_0(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR({2'b00, addr}),
 	.DI(di[15:0]),
 	.EN(ce),
@@ -297,7 +304,7 @@ RAMB4_S16 ramb4_s16_0(
 //
 RAMB4_S16 ramb4_s16_1(
 	.CLK(clk),
-	.RST(rst),
+	.RST(1'b0),
 	.ADDR({2'b00, addr}),
 	.DI({10'b0000000000, di[21:16]}),
 	.EN(ce),
@@ -319,7 +326,7 @@ RAMB4_S16 ramb4_s16_1(
 
 RAMB16_S36 ramb16_s36(
 	.CLK(clk),
-	.SSR(rst),
+	.SSR(1'b0),
 	.ADDR({3'b000, addr}),
 	.DI({10'b0000000000,di}),
 	.DIP(4'h0),

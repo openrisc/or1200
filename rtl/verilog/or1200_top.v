@@ -43,7 +43,14 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_top.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// Major update: 
+// Structure reordered. 
+//
+// Revision 1.13  2004/06/08 18:17:36  lampret
+// Non-functional changes. Coding style fixes.
+//
 // Revision 1.12  2004/04/05 08:29:57  lampret
 // Merged branch_qmem into main tree.
 //
@@ -176,6 +183,8 @@ module or1200_top(
 	pm_cpustall_i,
 	pm_clksd_o, pm_dc_gate_o, pm_ic_gate_o, pm_dmmu_gate_o, 
 	pm_immu_gate_o, pm_tt_gate_o, pm_cpu_gate_o, pm_wakeup_o, pm_lvolt_o
+
+,sig_tick		  
 
 );
 
@@ -318,6 +327,7 @@ wire			sbbiu_err_biu;
 //
 wire	[dw-1:0]	icbiu_dat_ic;
 wire	[aw-1:0]	icbiu_adr_ic;
+wire	[aw-1:0]	icbiu_adr_ic_word;
 wire			icbiu_cyc_ic;
 wire			icbiu_stb_ic;
 wire			icbiu_we_ic;
@@ -330,6 +340,11 @@ wire			icbiu_err_biu;
 wire	[3:0]		icbiu_tag_biu;
 
 //
+// SR Interface (this signal can be connected to the input pin)
+//
+wire 			boot_adr_sel = `OR1200_SR_EPH_DEF;
+
+//
 // CPU's SPR access to various RISC units (shared wires)
 //
 wire			supv;
@@ -337,6 +352,11 @@ wire	[aw-1:0]	spr_addr;
 wire	[dw-1:0]	spr_dat_cpu;
 wire	[31:0]		spr_cs;
 wire			spr_we;
+
+//
+// SB
+//
+wire			sb_en;
 
 //
 // DMMU and CPU
@@ -443,7 +463,7 @@ wire	[dw-1:0]	spr_dat_pm;
 // CPU and TT
 //
 wire	[dw-1:0]	spr_dat_tt;
-wire			sig_tick;
+output wire			sig_tick; // jb
 
 //
 // Debug port and caches/MMUs
@@ -454,17 +474,31 @@ wire	[dw-1:0]	du_addr;
 wire	[dw-1:0]	du_dat_du;
 wire			du_read;
 wire			du_write;
-wire	[12:0]		du_except;
+wire	[12:0]		du_except_trig;
+wire	[12:0]		du_except_stop;
 wire	[`OR1200_DU_DSR_WIDTH-1:0]     du_dsr;
+wire	[24:0]		du_dmr1;
 wire	[dw-1:0]	du_dat_cpu;
+wire	[dw-1:0]	du_lsu_store_dat;
+wire	[dw-1:0]	du_lsu_load_dat;
 wire			du_hwbkpt;
-
+wire			du_hwbkpt_ls_r = 1'b0;
+wire			flushpipe;
 wire			ex_freeze;
+wire			wb_freeze;
+wire			id_void;
+wire			ex_void;
+wire	[31:0]		id_insn;
 wire	[31:0]		ex_insn;
+wire	[31:0]		wb_insn;
 wire	[31:0]		id_pc;
+wire	[31:0]		ex_pc;
+wire	[31:0]		wb_pc;
 wire	[`OR1200_BRANCHOP_WIDTH-1:0]	branch_op;
 wire	[31:0]		spr_dat_npc;
 wire	[31:0]		rf_dataw;
+wire			abort_ex;
+wire			abort_mvspr;
 
 `ifdef OR1200_BIST
 //
@@ -474,7 +508,7 @@ wire			mbist_immu_so;
 wire			mbist_ic_so;
 wire			mbist_dmmu_so;
 wire			mbist_dc_so;
-wire      mbist_qmem_so;
+wire			mbist_qmem_so;
 wire			mbist_immu_si = mbist_si_i;
 wire			mbist_ic_si = mbist_immu_so;
 wire			mbist_qmem_si = mbist_ic_so;
@@ -490,7 +524,7 @@ wire  [3:0] dcqmem_tag_qmem;
 //
 // Instantiation of Instruction WISHBONE BIU
 //
-or1200_iwb_biu iwb_biu(
+or1200_wb_biu iwb_biu(
 	// RISC clk, rst and clock control
 	.clk(clk_i),
 	.rst(rst_i),
@@ -519,7 +553,7 @@ or1200_iwb_biu iwb_biu(
 
 	// Internal RISC bus
 	.biu_dat_i(icbiu_dat_ic),
-	.biu_adr_i(icbiu_adr_ic),
+	.biu_adr_i(icbiu_adr_ic_word),
 	.biu_cyc_i(icbiu_cyc_ic),
 	.biu_stb_i(icbiu_stb_ic),
 	.biu_we_i(icbiu_we_ic),
@@ -529,6 +563,7 @@ or1200_iwb_biu iwb_biu(
 	.biu_ack_o(icbiu_ack_biu),
 	.biu_err_o(icbiu_err_biu)
 );
+assign icbiu_adr_ic_word = {icbiu_adr_ic[31:2], 2'h0};
 
 //
 // Instantiation of Data WISHBONE BIU
@@ -598,6 +633,9 @@ or1200_immu_top or1200_immu_top(
 	.icpu_tag_o(icpu_tag_immu),
 	.icpu_rty_o(icpu_rty_immu),
 	.icpu_err_o(icpu_err_immu),
+
+	// SR Interface
+	.boot_adr_sel_i(boot_adr_sel),
 
 	// SPR access
 	.spr_cs(spr_cs[`OR1200_SPR_GROUP_IMMU]),
@@ -681,21 +719,35 @@ or1200_cpu or1200_cpu(
 	.icpu_tag_i(icpu_tag_immu),
 
 	// Connection CPU to external Debug port
-	.ex_freeze(ex_freeze),
+	.id_void(id_void),
+	.id_insn(id_insn),
+	.ex_void(ex_void),
 	.ex_insn(ex_insn),
+	.ex_freeze(ex_freeze),
+	.wb_insn(wb_insn),
+	.wb_freeze(wb_freeze),
 	.id_pc(id_pc),
+	.ex_pc(ex_pc),
+	.wb_pc(wb_pc),
 	.branch_op(branch_op),
+	.rf_dataw(rf_dataw),
+	.ex_flushpipe(flushpipe),
 	.du_stall(du_stall),
 	.du_addr(du_addr),
 	.du_dat_du(du_dat_du),
 	.du_read(du_read),
 	.du_write(du_write),
+	.du_except_trig(du_except_trig),
+	.du_except_stop(du_except_stop),
 	.du_dsr(du_dsr),
-	.du_except(du_except),
-	.du_dat_cpu(du_dat_cpu),
+	.du_dmr1(du_dmr1),
 	.du_hwbkpt(du_hwbkpt),
-	.rf_dataw(rf_dataw),
-
+	.du_hwbkpt_ls_r(du_hwbkpt_ls_r),
+	.du_dat_cpu(du_dat_cpu),
+	.du_lsu_store_dat(du_lsu_store_dat),
+	.du_lsu_load_dat(du_lsu_load_dat),
+	.abort_mvspr(abort_mvspr),
+	.abort_ex(abort_ex),
 
 	// Connection IMMU and CPU internally
 	.immu_en(immu_en),
@@ -716,6 +768,12 @@ or1200_cpu or1200_cpu(
 
 	// Connection DMMU and CPU internally
 	.dmmu_en(dmmu_en),
+
+	// SR Interface
+	.boot_adr_sel_i(boot_adr_sel),
+
+	// SB Enable
+	.sb_en(sb_en),
 
 	// Connection PIC and CPU's EXCEPT
 	.sig_int(sig_int),
@@ -898,6 +956,9 @@ or1200_sb or1200_sb(
 	.clk(clk_i),
 	.rst(rst_i),
 
+	// Internal RISC bus (SB)
+	.sb_en(sb_en),
+
 	// Internal RISC bus (DC<->SB)
 	.dcsb_dat_i(dcsb_dat_dc),
 	.dcsb_adr_i(dcsb_adr_dc),
@@ -941,6 +1002,7 @@ or1200_du or1200_du(
 	.ex_insn(ex_insn),
 	.id_pc(id_pc),
 	.du_dsr(du_dsr),
+	.du_dmr1(du_dmr1),
 
 	// For Trace buffer
 	.spr_dat_npc(spr_dat_npc),
@@ -953,7 +1015,7 @@ or1200_du or1200_du(
 	.du_dat_o(du_dat_du),
 	.du_read(du_read),
 	.du_write(du_write),
-	.du_except(du_except),
+	.du_except_stop(du_except_stop),
 	.du_hwbkpt(du_hwbkpt),
 
 	// Access to DU's SPRs

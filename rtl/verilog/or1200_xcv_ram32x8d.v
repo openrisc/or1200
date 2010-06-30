@@ -43,7 +43,13 @@
 //
 // CVS Revision History
 //
-// $Log: not supported by cvs2svn $
+// $Log: or1200_xcv_ram32x8d.v,v $
+// Revision 2.0  2010/06/30 11:00:00  ORSoC
+// No update 
+//
+// Revision 1.2  2002/07/14 22:17:17  lampret
+// Added simple trace buffer [only for Xilinx Virtex target]. Fixed instruction fetch abort when new exception is recognized.
+//
 // Revision 1.1  2002/01/03 08:16:15  lampret
 // New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
 //
