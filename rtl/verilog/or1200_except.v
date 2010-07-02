@@ -42,8 +42,8 @@
 //////////////////////////////////////////////////////////////////////
 //
 // CVS Revision History
-//
 // $Log: or1200_except.v,v $
+//
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Major update: 
 // Structure reordered and bugs fixed. 
@@ -291,20 +291,20 @@ assign spr_dat_npc = ex_void ? id_pc : ex_pc;
 // Order defines exception detection priority
 //
 assign except_trig = {
-			tick_pending		& ~du_dsr[`OR1200_DU_DSR_TTE],
-			int_pending 		& ~du_dsr[`OR1200_DU_DSR_IE],
-			ex_exceptflags[1]	& ~du_dsr[`OR1200_DU_DSR_IME],
-			ex_exceptflags[0]	& ~du_dsr[`OR1200_DU_DSR_IPFE],
-			ex_exceptflags[2]	& ~du_dsr[`OR1200_DU_DSR_BUSEE],
-			sig_illegal		& ~du_dsr[`OR1200_DU_DSR_IIE],
-			sig_align		& ~du_dsr[`OR1200_DU_DSR_AE],
-			sig_dtlbmiss		& ~du_dsr[`OR1200_DU_DSR_DME],
-			sig_dmmufault		& ~du_dsr[`OR1200_DU_DSR_DPFE],
-			sig_dbuserr		& ~du_dsr[`OR1200_DU_DSR_BUSEE],
-			sig_range		& ~du_dsr[`OR1200_DU_DSR_RE],
-			sig_trap		& ~du_dsr[`OR1200_DU_DSR_TE],
-			sig_syscall		& ~du_dsr[`OR1200_DU_DSR_SCE] & ~ex_freeze
-		};
+		      ex_exceptflags[1]	& ~du_dsr[`OR1200_DU_DSR_IME],
+		      ex_exceptflags[0]	& ~du_dsr[`OR1200_DU_DSR_IPFE],
+		      ex_exceptflags[2]	& ~du_dsr[`OR1200_DU_DSR_BUSEE],
+		      sig_illegal	& ~du_dsr[`OR1200_DU_DSR_IIE],
+		      sig_align		& ~du_dsr[`OR1200_DU_DSR_AE],
+		      sig_dtlbmiss		& ~du_dsr[`OR1200_DU_DSR_DME],
+		      sig_trap		& ~du_dsr[`OR1200_DU_DSR_TE],
+		      sig_syscall		& ~du_dsr[`OR1200_DU_DSR_SCE] & ~ex_freeze,
+		      sig_dmmufault		& ~du_dsr[`OR1200_DU_DSR_DPFE],
+		      sig_dbuserr		& ~du_dsr[`OR1200_DU_DSR_BUSEE],
+		      sig_range		& ~du_dsr[`OR1200_DU_DSR_RE],
+		      int_pending 		& ~du_dsr[`OR1200_DU_DSR_IE],
+		      tick_pending		& ~du_dsr[`OR1200_DU_DSR_TTE]
+		      };
 wire    trace_cond  = !ex_freeze && !ex_void && (1'b0
 `ifdef OR1200_DU_DMR1_ST
     ||  dmr1_st
@@ -496,60 +496,57 @@ always @(posedge clk or posedge rst) begin
 					extend_flush <= #1 1'b1;
 					esr <= #1 sr_we ? to_sr : sr;
 					casex (except_trig)
-`ifdef OR1200_EXCEPT_TICK
-						13'b1_xxxx_xxxx_xxxx: begin
-							except_type <= #1 `OR1200_EXCEPT_TICK;
-							epcr <= #1 id_pc;
-							//epcr <= #1 ex_dslot ? wb_pc : delayed1_ex_dslot ? id_pc : delayed2_ex_dslot ? id_pc : id_pc;
-						end
-`endif
-`ifdef OR1200_EXCEPT_INT
-						13'b0_1xxx_xxxx_xxxx: begin
-							except_type <= #1 `OR1200_EXCEPT_INT;
-							epcr <= #1 id_pc;
-							//epcr <= #1 ex_dslot ? wb_pc : delayed1_ex_dslot ? id_pc : delayed2_ex_dslot ? id_pc : id_pc;
-						end
-`endif
 `ifdef OR1200_EXCEPT_ITLBMISS
-						13'b0_01xx_xxxx_xxxx: begin
+						13'b1_xxxx_xxxx_xxxx: begin
 							except_type <= #1 `OR1200_EXCEPT_ITLBMISS;
 							eear <= #1 ex_dslot ? ex_pc : ex_pc;
 							epcr <= #1 ex_dslot ? wb_pc : ex_pc;
 						end
 `endif
 `ifdef OR1200_EXCEPT_IPF
-						13'b0_001x_xxxx_xxxx: begin
+						13'b0_1xxx_xxxx_xxxx: begin
 							except_type <= #1 `OR1200_EXCEPT_IPF;
 							eear <= #1 ex_dslot ? ex_pc : delayed1_ex_dslot ? id_pc : delayed2_ex_dslot ? id_pc : id_pc;
 							epcr <= #1 ex_dslot ? wb_pc : delayed1_ex_dslot ? id_pc : delayed2_ex_dslot ? id_pc : id_pc;
 						end
 `endif
 `ifdef OR1200_EXCEPT_BUSERR
-						13'b0_0001_xxxx_xxxx: begin
+						13'b0_01xx_xxxx_xxxx: begin
 							except_type <= #1 `OR1200_EXCEPT_BUSERR;
 							eear <= #1 ex_dslot ? wb_pc : ex_pc;
 							epcr <= #1 ex_dslot ? wb_pc : ex_pc;
 						end
 `endif
 `ifdef OR1200_EXCEPT_ILLEGAL
-						13'b0_0000_1xxx_xxxx: begin
+						13'b0_001x_xxxx_xxxx: begin
 							except_type <= #1 `OR1200_EXCEPT_ILLEGAL;
 							eear <= #1 ex_pc;
 							epcr <= #1 ex_dslot ? wb_pc : ex_pc;
 						end
 `endif
 `ifdef OR1200_EXCEPT_ALIGN
-						13'b0_0000_01xx_xxxx: begin
+						13'b0_0001_xxxx_xxxx: begin
 							except_type <= #1 `OR1200_EXCEPT_ALIGN;
 							eear <= #1 lsu_addr;
 							epcr <= #1 ex_dslot ? wb_pc : ex_pc;
 						end
 `endif
 `ifdef OR1200_EXCEPT_DTLBMISS
-						13'b0_0000_001x_xxxx: begin
+						13'b0_0000_1xxx_xxxx: begin
 							except_type <= #1 `OR1200_EXCEPT_DTLBMISS;
 							eear <= #1 lsu_addr;
 							epcr <= #1 ex_dslot ? wb_pc : delayed1_ex_dslot ? dl_pc : ex_pc;
+						end
+`endif
+`ifdef OR1200_EXCEPT_TRAP			13'b0_0000_01xx_xxxx: begin
+							except_type <= #1 `OR1200_EXCEPT_TRAP;
+							epcr <= #1 ex_dslot ? wb_pc : delayed1_ex_dslot ? id_pc : ex_pc;
+						end
+`endif
+`ifdef OR1200_EXCEPT_SYSCALL
+						13'b0_0000_001x_xxxx: begin
+							except_type <= #1 `OR1200_EXCEPT_SYSCALL;
+							epcr <= #1 ex_dslot ? wb_pc : delayed1_ex_dslot ? id_pc : delayed2_ex_dslot ? id_pc : id_pc;
 						end
 `endif
 `ifdef OR1200_EXCEPT_DPF
@@ -572,17 +569,21 @@ always @(posedge clk or posedge rst) begin
 							epcr <= #1 ex_dslot ? wb_pc : delayed1_ex_dslot ? id_pc : delayed2_ex_dslot ? id_pc : id_pc;
 						end
 `endif
-`ifdef OR1200_EXCEPT_TRAP			13'b0_0000_0000_001x: begin
-							except_type <= #1 `OR1200_EXCEPT_TRAP;
-							epcr <= #1 ex_dslot ? wb_pc : delayed1_ex_dslot ? id_pc : ex_pc;
+`ifdef OR1200_EXCEPT_INT
+						13'b0_0000_0000_001x: begin
+							except_type <= #1 `OR1200_EXCEPT_INT;
+							epcr <= #1 id_pc;
+							//epcr <= #1 ex_dslot ? wb_pc : delayed1_ex_dslot ? id_pc : delayed2_ex_dslot ? id_pc : id_pc;
 						end
 `endif
-`ifdef OR1200_EXCEPT_SYSCALL
+`ifdef OR1200_EXCEPT_TICK
 						13'b0_0000_0000_0001: begin
-							except_type <= #1 `OR1200_EXCEPT_SYSCALL;
-							epcr <= #1 ex_dslot ? wb_pc : delayed1_ex_dslot ? id_pc : delayed2_ex_dslot ? id_pc : id_pc;
+							except_type <= #1 `OR1200_EXCEPT_TICK;
+							epcr <= #1 id_pc;
+							//epcr <= #1 ex_dslot ? wb_pc : delayed1_ex_dslot ? id_pc : delayed2_ex_dslot ? id_pc : id_pc;
 						end
 `endif
+					  
 						default:
 							except_type <= #1 `OR1200_EXCEPT_NONE;
 					endcase

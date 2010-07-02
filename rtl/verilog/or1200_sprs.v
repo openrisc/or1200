@@ -251,7 +251,8 @@ assign du_dat_cpu = du_read ? to_wbmux : du_write ? du_dat_du : dat_i;
 //
 // Write into SPRs when DU or l.mtspr
 //
-assign spr_we = du_write | ex_spr_write;
+assign spr_we = du_write | ( ex_spr_write & !du_access );
+
 
 //
 // Qualify chip selects
