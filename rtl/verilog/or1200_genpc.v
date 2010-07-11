@@ -3,7 +3,7 @@
 ////  OR1200's generate PC                                        ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://www.opencores.org/project,or1k                       ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  PC, interface to IC.                                        ////
@@ -41,71 +41,10 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
-//
 // $Log: or1200_genpc.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Major update: 
 // Structure reordered and bugs fixed. 
-//
-// Revision 1.10  2004/06/08 18:17:36  lampret
-// Non-functional changes. Coding style fixes.
-//
-// Revision 1.9  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.7.4.3  2003/12/17 13:43:38  simons
-// Exception prefix configuration changed.
-//
-// Revision 1.7.4.2  2003/12/04 23:44:31  lampret
-// Static exception prefix.
-//
-// Revision 1.7.4.1  2003/07/08 15:36:37  lampret
-// Added embedded memory QMEM.
-//
-// Revision 1.7  2003/04/20 22:23:57  lampret
-// No functional change. Only added customization for exception vectors.
-//
-// Revision 1.6  2002/03/29 15:16:55  lampret
-// Some of the warnings fixed.
-//
-// Revision 1.5  2002/02/11 04:33:17  lampret
-// Speed optimizations (removed duplicate _cyc_ and _stb_). Fixed D/IMMU cache-inhibit attr.
-//
-// Revision 1.4  2002/01/28 01:16:00  lampret
-// Changed 'void' nop-ops instead of insn[0] to use insn[16]. Debug unit stalls the tick timer. Prepared new flag generation for add and and insns. Blocked DC/IC while they are turned off. Fixed I/D MMU SPRs layout except WAYs. TODO: smart IC invalidate, l.j 2 and TLB ways.
-//
-// Revision 1.3  2002/01/18 07:56:00  lampret
-// No more low/high priority interrupts (PICPR removed). Added tick timer exception. Added exception prefix (SR[EPH]). Fixed single-step bug whenreading NPC.
-//
-// Revision 1.2  2002/01/14 06:18:22  lampret
-// Fixed mem2reg bug in FAST implementation. Updated debug unit to work with new genpc/if.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.10  2001/11/20 18:46:15  simons
-// Break point bug fixed
-//
-// Revision 1.9  2001/11/18 09:58:28  lampret
-// Fixed some l.trap typos.
-//
-// Revision 1.8  2001/11/18 08:36:28  lampret
-// For GDB changed single stepping and disabled trap exception.
-//
-// Revision 1.7  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.6  2001/10/14 13:12:09  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:36  igorm
-// no message
-//
-// Revision 1.1  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-//
 
 // synopsys translate_off
 `include "timescale.v"
@@ -178,158 +117,175 @@ wire	[31:0]			pcreg_boot;
 reg				pcreg_select;
 reg	[31:2]			pcreg;
 reg	[31:0]			pc;
-reg				ex_branch_taken;	/* Set to in case of jump or taken branch */
+// Set in event of jump or taken branch   
+reg				ex_branch_taken;
 reg				genpc_refetch_r;
 
-//
-// Address of insn to be fecthed
-//
-assign icpu_adr_o = !no_more_dslot & !except_start & !spr_pc_we & (icpu_rty_i | genpc_refetch) ? icpu_adr_i : {pc[31:2], 1'b0, ex_branch_taken|spr_pc_we};
+   //
+   // Address of insn to be fecthed
+   //
+   assign icpu_adr_o = !no_more_dslot & !except_start & !spr_pc_we 
+		       & (icpu_rty_i | genpc_refetch) ? 
+		       icpu_adr_i : {pc[31:2], 1'b0, ex_branch_taken|spr_pc_we};
 
-//
-// Control access to IC subsystem
-//
-assign icpu_cycstb_o = ~(genpc_freeze | (|pre_branch_op && !icpu_rty_i));
-assign icpu_sel_o = 4'b1111;
-assign icpu_tag_o = `OR1200_ITAG_NI;
+   //
+   // Control access to IC subsystem
+   //
+   assign icpu_cycstb_o = ~(genpc_freeze | (|pre_branch_op && !icpu_rty_i));
+   assign icpu_sel_o = 4'b1111;
+   assign icpu_tag_o = `OR1200_ITAG_NI;
 
-//
-// genpc_freeze_r
-//
-always @(posedge clk or posedge rst)
-	if (rst)
-		genpc_refetch_r <= #1 1'b0;
-	else if (genpc_refetch)
-		genpc_refetch_r <= #1 1'b1;
-	else
-		genpc_refetch_r <= #1 1'b0;
+   //
+   // genpc_freeze_r
+   //
+   always @(posedge clk or posedge rst)
+     if (rst)
+       genpc_refetch_r <= #1 1'b0;
+     else if (genpc_refetch)
+       genpc_refetch_r <= #1 1'b1;
+     else
+       genpc_refetch_r <= #1 1'b0;
 
-//
-// Async calculation of new PC value. This value is used for addressing the IC.
-//
-always @(pcreg or ex_branch_addrtarget or flag or branch_op or except_type
-	or except_start or operand_b or epcr or spr_pc_we or spr_dat_i or except_prefix) begin
-	casex ({spr_pc_we, except_start, branch_op})	// synopsys parallel_case
-		{2'b00, `OR1200_BRANCHOP_NOP}: begin
-			pc = {pcreg + 30'd1, 2'b0};
-			ex_branch_taken = 1'b0;
-		end
-		{2'b00, `OR1200_BRANCHOP_J}: begin
+   //
+   // Async calculation of new PC value. This value is used for addressing the
+   // IC.
+   //
+   always @(pcreg or ex_branch_addrtarget or flag or branch_op or except_type
+	    or except_start or operand_b or epcr or spr_pc_we or spr_dat_i or 
+	    except_prefix) 
+     begin
+	casex ({spr_pc_we, except_start, branch_op}) // synopsys parallel_case
+	  {2'b00, `OR1200_BRANCHOP_NOP}: begin
+	     pc = {pcreg + 30'd1, 2'b0};
+	     ex_branch_taken = 1'b0;
+	  end
+	  {2'b00, `OR1200_BRANCHOP_J}: begin
 `ifdef OR1200_VERBOSE
-// synopsys translate_off
-			$display("%t: BRANCHOP_J: pc <= ex_branch_addrtarget %h", $time, ex_branch_addrtarget);
-// synopsys translate_on
+	     // synopsys translate_off
+	     $display("%t: BRANCHOP_J: pc <= ex_branch_addrtarget %h"
+		      , $time, ex_branch_addrtarget);
+	     // synopsys translate_on
 `endif
-			pc = {ex_branch_addrtarget, 2'b00};
-			ex_branch_taken = 1'b1;
-		end
-		{2'b00, `OR1200_BRANCHOP_JR}: begin
+	     pc = {ex_branch_addrtarget, 2'b00};
+	     ex_branch_taken = 1'b1;
+	  end
+	  {2'b00, `OR1200_BRANCHOP_JR}: begin
 `ifdef OR1200_VERBOSE
-// synopsys translate_off
-			$display("%t: BRANCHOP_JR: pc <= operand_b %h", $time, operand_b);
-// synopsys translate_on
+	     // synopsys translate_off
+	     $display("%t: BRANCHOP_JR: pc <= operand_b %h", 
+		      $time, operand_b);
+	     // synopsys translate_on
 `endif
-			pc = operand_b;
-			ex_branch_taken = 1'b1;
-		end
-		{2'b00, `OR1200_BRANCHOP_BF}:
-			if (flag) begin
+	     pc = operand_b;
+	     ex_branch_taken = 1'b1;
+	  end
+	  {2'b00, `OR1200_BRANCHOP_BF}:
+	    if (flag) begin
 `ifdef OR1200_VERBOSE
-// synopsys translate_off
-				$display("%t: BRANCHOP_BF: pc <= ex_branch_addrtarget %h", $time, ex_branch_addrtarget);
-// synopsys translate_on
+	       // synopsys translate_off
+	       $display("%t: BRANCHOP_BF: pc <= ex_branch_addrtarget %h", 
+			$time, ex_branch_addrtarget);
+	       // synopsys translate_on
 `endif
-				pc = {ex_branch_addrtarget, 2'b00};
-				ex_branch_taken = 1'b1;
-			end
-			else begin
+	       pc = {ex_branch_addrtarget, 2'b00};
+	       ex_branch_taken = 1'b1;
+	    end
+	    else begin
 `ifdef OR1200_VERBOSE
-// synopsys translate_off
-				$display("%t: BRANCHOP_BF: not taken", $time);
-// synopsys translate_on
+	       // synopsys translate_off
+	       $display("%t: BRANCHOP_BF: not taken", $time);
+	       // synopsys translate_on
 `endif
-				pc = {pcreg + 30'd1, 2'b0};
-				ex_branch_taken = 1'b0;
-			end
-		{2'b00, `OR1200_BRANCHOP_BNF}:
-			if (flag) begin
+	       pc = {pcreg + 30'd1, 2'b0};
+	       ex_branch_taken = 1'b0;
+	    end
+	  {2'b00, `OR1200_BRANCHOP_BNF}:
+	    if (flag) begin
 `ifdef OR1200_VERBOSE
-// synopsys translate_off
-				$display("%t: BRANCHOP_BNF: not taken", $time);
-// synopsys translate_on
+	       // synopsys translate_off
+	       $display("%t: BRANCHOP_BNF: not taken", $time);
+	       // synopsys translate_on
 `endif
-				pc = {pcreg + 30'd1, 2'b0};
-				ex_branch_taken = 1'b0;
-			end
-			else begin
+	       pc = {pcreg + 30'd1, 2'b0};
+	       ex_branch_taken = 1'b0;
+	    end
+	    else begin
 `ifdef OR1200_VERBOSE
-// synopsys translate_off
-				$display("%t: BRANCHOP_BNF: pc <= ex_branch_addrtarget %h", $time, ex_branch_addrtarget);
-// synopsys translate_on
+	       // synopsys translate_off
+	       $display("%t: BRANCHOP_BNF: pc <= ex_branch_addrtarget %h", 
+			$time, ex_branch_addrtarget);
+	       // synopsys translate_on
 `endif
-				pc = {ex_branch_addrtarget, 2'b00};
-				ex_branch_taken = 1'b1;
-			end
-		{2'b00, `OR1200_BRANCHOP_RFE}: begin
+	       pc = {ex_branch_addrtarget, 2'b00};
+	       ex_branch_taken = 1'b1;
+	    end
+	  {2'b00, `OR1200_BRANCHOP_RFE}: begin
 `ifdef OR1200_VERBOSE
-// synopsys translate_off
-			$display("%t: BRANCHOP_RFE: pc <= epcr %h", $time, epcr);
-// synopsys translate_on
+	     // synopsys translate_off
+	     $display("%t: BRANCHOP_RFE: pc <= epcr %h", 
+		      $time, epcr);
+	     // synopsys translate_on
 `endif
-			pc = epcr;
-			ex_branch_taken = 1'b1;
-		end
-		{2'b01, 3'bxxx}: begin
+	     pc = epcr;
+	     ex_branch_taken = 1'b1;
+	  end
+	  {2'b01, 3'bxxx}: begin
 `ifdef OR1200_VERBOSE
-// synopsys translate_off
-			$display("Starting exception: %h.", except_type);
-// synopsys translate_on
+	     // synopsys translate_off
+	     $display("Starting exception: %h.", except_type);
+	     // synopsys translate_on
 `endif
-			pc = {(except_prefix ? `OR1200_EXCEPT_EPH1_P : `OR1200_EXCEPT_EPH0_P), except_type, `OR1200_EXCEPT_V};
-			ex_branch_taken = 1'b1;
-		end
-		default: begin
+	     pc = {(except_prefix ? 
+		    `OR1200_EXCEPT_EPH1_P : `OR1200_EXCEPT_EPH0_P), 
+		   except_type, `OR1200_EXCEPT_V};
+	     ex_branch_taken = 1'b1;
+	  end
+	  default: begin
 `ifdef OR1200_VERBOSE
-// synopsys translate_off
-			$display("l.mtspr writing into PC: %h.", spr_dat_i);
-// synopsys translate_on
+	     // synopsys translate_off
+	     $display("l.mtspr writing into PC: %h.", spr_dat_i);
+	     // synopsys translate_on
 `endif
-			pc = spr_dat_i;
-			ex_branch_taken = 1'b0;
-		end
+	     pc = spr_dat_i;
+	     ex_branch_taken = 1'b0;
+	  end
 	endcase
-end
+     end
 
-//
-// PC register
-//
-always @(posedge clk or posedge rst)
-	// default value 
-	if (rst) begin
-	   //pcreg_default <= #1 30'd63;
-	   pcreg_default <= #1 /*30'd63 */ `OR1200_BOOT_PCREG_DEFAULT; // jb
-	   pcreg_select <= #1 1'b1;		// select async. value due to reset state
-	end
-	// selected value (different from default) is written into FF after reset state
-	else if (pcreg_select) begin
-		pcreg_default <= #1 pcreg_boot[31:2];	// dynamic value can only be assigned to FF out of reset! 
-		pcreg_select <= #1 1'b0;		// select FF value 
-	end
-	else if (spr_pc_we) begin
-		pcreg_default <= #1 spr_dat_i[31:2];
-	end
-	else if (no_more_dslot | except_start | !genpc_freeze & !icpu_rty_i & !genpc_refetch) begin
-		pcreg_default <= #1 pc[31:2];
-	end
+   //
+   // PC register
+   //
+   always @(posedge clk or posedge rst)
+     // default value 
+     if (rst) begin
+	pcreg_default <= #1 `OR1200_BOOT_PCREG_DEFAULT; // jb
+	pcreg_select <= #1 1'b1;// select async. value due to reset state
+     end
+   // selected value (different from default) is written into FF after
+   // reset state
+     else if (pcreg_select) begin
+	// dynamic value can only be assigned to FF out of reset! 
+	pcreg_default <= #1 pcreg_boot[31:2];	
+	pcreg_select <= #1 1'b0;		// select FF value 
+     end
+     else if (spr_pc_we) begin
+	pcreg_default <= #1 spr_dat_i[31:2];
+     end
+     else if (no_more_dslot | except_start | !genpc_freeze & !icpu_rty_i 
+	      & !genpc_refetch) begin
+	pcreg_default <= #1 pc[31:2];
+     end
 
-// select async. value for pcreg after reset - PC jumps to the address selected after boot! 
-//assign  pcreg_boot = {(except_prefix ? `OR1200_EXCEPT_EPH1_P : `OR1200_EXCEPT_EPH0_P), `OR1200_EXCEPT_RESET, `OR1200_EXCEPT_V} - 1;
+   // select async. value for pcreg after reset - PC jumps to the address selected
+   // after boot.
    assign  pcreg_boot = `OR1200_BOOT_ADR; // changed JB
 
-always @(pcreg_boot or pcreg_default or pcreg_select)
-    if (pcreg_select)
-        pcreg = pcreg_boot[31:2];	// async. value is selected due to reset state 
-    else
-        pcreg = pcreg_default ;		// FF value is selected 2nd clock after reset state 
+   always @(pcreg_boot or pcreg_default or pcreg_select)
+     if (pcreg_select)
+       // async. value is selected due to reset state 
+       pcreg = pcreg_boot[31:2];
+     else
+       // FF value is selected 2nd clock after reset state 
+       pcreg = pcreg_default ;
 
 endmodule

@@ -116,6 +116,19 @@ module or1200_fpu(
    input [31:0] 			spr_dat_i;
    output [31:0] 			spr_dat_o;
 
+
+`ifndef OR1200_FPU_IMPLEMENTED
+   
+   // No FPU needed
+   assign result = 0;
+   assign flagforw  = 0;
+   assign flag_we = 0;
+   assign sig_fp = 0;
+   assign spr_dat_o = 0;
+   
+`else
+
+   
    //
    // Internals
    //
@@ -131,6 +144,7 @@ module or1200_fpu(
    wire 				altb, blta, aeqb, cmp_inf, cmp_zero, 
 					unordered ;
    reg 					flag;
+
    
    assign fpcsr = fpcsr_r;
    
@@ -277,5 +291,6 @@ module or1200_fpu(
       .inf(cmp_inf), 
       .zero(cmp_zero));
    
-
+`endif // !`ifndef OR1200_FPU_IMPLEMENTED
+   
 endmodule // or1200_fpu

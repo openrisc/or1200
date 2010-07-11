@@ -3,7 +3,7 @@
 ////  OR1200's register file inside CPU                           ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://www.opencores.org/project,or1k                       ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Instantiation of register file memories                     ////
@@ -41,52 +41,10 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
-//
 // $Log: or1200_rf.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Minor update: 
 // Bugs fixed, coding style changed. 
-//
-// Revision 1.3  2003/04/07 01:21:56  lampret
-// RFRAM type always need to be defined.
-//
-// Revision 1.2  2002/06/08 16:19:09  lampret
-// Added generic flip-flop based memory macro instantiation.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.13  2001/11/20 18:46:15  simons
-// Break point bug fixed
-//
-// Revision 1.12  2001/11/13 10:02:21  lampret
-// Added 'setpc'. Renamed some signals (except_flushpipe into flushpipe etc)
-//
-// Revision 1.11  2001/11/12 01:45:40  lampret
-// Moved flag bit into SR. Changed RF enable from constant enable to dynamic enable for read ports.
-//
-// Revision 1.10  2001/11/10 03:43:57  lampret
-// Fixed exceptions.
-//
-// Revision 1.9  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.8  2001/10/14 13:12:10  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:36  igorm
-// no message
-//
-// Revision 1.3  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-// Revision 1.2  2001/07/22 03:31:54  lampret
-// Fixed RAM's oen bug. Cache bypass under development.
-//
-// Revision 1.1  2001/07/20 00:46:21  lampret
-// Development version of RTL. Libraries are missing.
-//
 //
 
 // synopsys translate_off

@@ -64,7 +64,7 @@ module or1200_sprs(
 		boot_adr_sel_i,
 		
 		// Floating point control register and SPR input
-		fpcsr, fpcsr_we, spr_dat_fpu
+		fpcsr, fpcsr_we, spr_dat_fpu,
 
 		// From/to other RISC units
 		spr_dat_pic, spr_dat_tt, spr_dat_pm,

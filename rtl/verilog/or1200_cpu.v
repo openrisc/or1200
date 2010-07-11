@@ -581,8 +581,6 @@ or1200_alu or1200_alu(
 );
 
    
-`ifdef OR1200_FPU_IMPLEMENTED
-
 //
 // FPU's exception is being dealt with
 //    
@@ -611,10 +609,6 @@ or1200_fpu or1200_fpu(
 	.spr_dat_i(spr_dat_cpu),
 	.spr_dat_o(spr_dat_fpu)
 );
-`else
-   assign sig_fp = 0;
-   assign fpcsr = 0;
-`endif		    
 
    
 //
