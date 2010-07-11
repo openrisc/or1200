@@ -320,8 +320,7 @@ assign sys_data = (spr_dat_cfgr & {32{cfgr_sel}}) |
 		  (epcr & {32{epcr_sel}}) |
 		  (eear & {32{eear_sel}}) |
 `ifdef OR1200_FPU_IMPLEMENTED
-		  ({{32-`OR1200_FPCSR_WIDTH{1'b0}},fpcsr} & 
-		   {32{read_spr & fpcsr_sel}}) |
+		  ({{32-`OR1200_FPCSR_WIDTH{1'b0}},fpcsr} & {32{fpcsr_sel}}) |
 `endif
 		  ({{32-`OR1200_SR_WIDTH{1'b0}},esr} & {32{esr_sel}});
 
