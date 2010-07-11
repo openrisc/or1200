@@ -3,7 +3,7 @@
 ////  OR1200's Debug Unit                                         ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://www.opencores.org/project,or1k                       ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Basic OR1200 debug unit.                                    ////
@@ -41,83 +41,11 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
 //
 // $Log: or1200_du.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Minor update: 
 // Bugs fixed. 
-//
-// Revision 1.12  2005/10/19 11:37:56  jcastillo
-// Added support for RAMB16 Xilinx4/Spartan3 primitives
-//
-// Revision 1.11  2005/01/07 09:35:08  andreje
-// du_hwbkpt disabled when debug unit not implemented
-//
-// Revision 1.10  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.9.4.4  2004/02/11 01:40:11  lampret
-// preliminary HW breakpoints support in debug unit (by default disabled). To enable define OR1200_DU_HWBKPTS.
-//
-// Revision 1.9.4.3  2004/01/18 10:08:00  simons
-// Error fixed.
-//
-// Revision 1.9.4.2  2004/01/17 21:14:14  simons
-// Errors fixed.
-//
-// Revision 1.9.4.1  2004/01/15 06:46:38  markom
-// interface to debug changed; no more opselect; stb-ack protocol
-//
-// Revision 1.9  2003/01/22 03:23:47  lampret
-// Updated sensitivity list for trace buffer [only relevant for Xilinx FPGAs]
-//
-// Revision 1.8  2002/09/08 19:31:52  lampret
-// Fixed a typo, reported by Taylor Su.
-//
-// Revision 1.7  2002/07/14 22:17:17  lampret
-// Added simple trace buffer [only for Xilinx Virtex target]. Fixed instruction fetch abort when new exception is recognized.
-//
-// Revision 1.6  2002/03/14 00:30:24  lampret
-// Added alternative for critical path in DU.
-//
-// Revision 1.5  2002/02/11 04:33:17  lampret
-// Speed optimizations (removed duplicate _cyc_ and _stb_). Fixed D/IMMU cache-inhibit attr.
-//
-// Revision 1.4  2002/01/28 01:16:00  lampret
-// Changed 'void' nop-ops instead of insn[0] to use insn[16]. Debug unit stalls the tick timer. Prepared new flag generation for add and and insns. Blocked DC/IC while they are turned off. Fixed I/D MMU SPRs layout except WAYs. TODO: smart IC invalidate, l.j 2 and TLB ways.
-//
-// Revision 1.3  2002/01/18 07:56:00  lampret
-// No more low/high priority interrupts (PICPR removed). Added tick timer exception. Added exception prefix (SR[EPH]). Fixed single-step bug whenreading NPC.
-//
-// Revision 1.2  2002/01/14 06:18:22  lampret
-// Fixed mem2reg bug in FAST implementation. Updated debug unit to work with new genpc/if.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.12  2001/11/30 18:58:00  simons
-// Trap insn couses break after exits ex_insn.
-//
-// Revision 1.11  2001/11/23 08:38:51  lampret
-// Changed DSR/DRR behavior and exception detection.
-//
-// Revision 1.10  2001/11/20 21:25:44  lampret
-// Fixed dbg_is_o assignment width.
-//
-// Revision 1.9  2001/11/20 18:46:14  simons
-// Break point bug fixed
-//
-// Revision 1.8  2001/11/18 08:36:28  lampret
-// For GDB changed single stepping and disabled trap exception.
-//
-// Revision 1.7  2001/10/21 18:09:53  lampret
-// Fixed sensitivity list.
-//
-// Revision 1.6  2001/10/14 13:12:09  lampret
-// MP3 version.
-//
-//
 
 // synopsys translate_off
 `include "timescale.v"
@@ -176,7 +104,7 @@ input	[dw-1:0]		du_dat_i;	// Debug Unit Data In
 output	[dw-1:0]		du_dat_o;	// Debug Unit Data Out
 output				du_read;	// Debug Unit Read Enable
 output				du_write;	// Debug Unit Write Enable
-input	[12:0]			du_except_stop;	// Exception masked by DSR
+input	[13:0]			du_except_stop;	// Exception masked by DSR
 output				du_hwbkpt;	// Cause trap exception (HW Breakpoints)
 input				spr_cs;		// SPR Chip Select
 input				spr_write;	// SPR Read/Write
@@ -604,50 +532,49 @@ assign dwcr1_sel = (spr_cs && (spr_addr[`OR1200_DUOFS_BITS] == `OR1200_DU_DWCR1)
 //
 // Decode started exception
 //
+// du_except_stop comes from or1200_except
+//   
 always @(du_except_stop) begin
-	except_stop = 14'b0000_0000_0000;
+	except_stop = 14'b00_0000_0000_0000;
 	casex (du_except_stop)
-		13'b1_xxxx_xxxx_xxxx: begin
+	        14'b1x_xxxx_xxxx_xxxx:
 			except_stop[`OR1200_DU_DRR_TTE] = 1'b1;
-		end
-		13'b0_1xxx_xxxx_xxxx: begin
+		14'b01_xxxx_xxxx_xxxx: begin
 			except_stop[`OR1200_DU_DRR_IE] = 1'b1;
 		end
-		13'b0_01xx_xxxx_xxxx: begin
+		14'b00_1xxx_xxxx_xxxx: begin
 			except_stop[`OR1200_DU_DRR_IME] = 1'b1;
 		end
-		13'b0_001x_xxxx_xxxx: begin
+		14'b00_01xx_xxxx_xxxx:
 			except_stop[`OR1200_DU_DRR_IPFE] = 1'b1;
-		end
-		13'b0_0001_xxxx_xxxx: begin
+		14'b00_001x_xxxx_xxxx: begin
 			except_stop[`OR1200_DU_DRR_BUSEE] = 1'b1;
 		end
-		13'b0_0000_1xxx_xxxx: begin
+		14'b00_0001_xxxx_xxxx:
 			except_stop[`OR1200_DU_DRR_IIE] = 1'b1;
-		end
-		13'b0_0000_01xx_xxxx: begin
+		14'b00_0000_1xxx_xxxx: begin
 			except_stop[`OR1200_DU_DRR_AE] = 1'b1;
 		end
-		13'b0_0000_001x_xxxx: begin
+		14'b00_0000_01xx_xxxx: begin
 			except_stop[`OR1200_DU_DRR_DME] = 1'b1;
 		end
-		13'b0_0000_0001_xxxx: begin
+		14'b00_0000_001x_xxxx:
 			except_stop[`OR1200_DU_DRR_DPFE] = 1'b1;
-		end
-		13'b0_0000_0000_1xxx: begin
+		14'b00_0000_0001_xxxx:
 			except_stop[`OR1200_DU_DRR_BUSEE] = 1'b1;
-		end
-		13'b0_0000_0000_01xx: begin
+		14'b00_0000_0000_1xxx: begin
 			except_stop[`OR1200_DU_DRR_RE] = 1'b1;
 		end
-		13'b0_0000_0000_001x: begin
+		14'b00_0000_0000_01xx: begin
 			except_stop[`OR1200_DU_DRR_TE] = 1'b1;
 		end
-		13'b0_0000_0000_0001: begin
+		14'b00_0000_0000_001x: begin
+		        except_stop[`OR1200_DU_DRR_FPE] = 1'b1;
+		end	  
+		14'b00_0000_0000_0001:
 			except_stop[`OR1200_DU_DRR_SCE] = 1'b1;
-		end
 		default:
-			except_stop = 14'b0000_0000_0000;
+			except_stop = 14'b00_0000_0000_0000;
 	endcase
 end
 

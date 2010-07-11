@@ -3,7 +3,7 @@
 ////  OR1200's ALU                                                ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://www.opencores.org/project,or1k                       ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  ALU                                                         ////
@@ -41,80 +41,10 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
-//
 // $Log: or1200_alu.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Minor update: 
 // Defines added, flags are corrected. 
-//
-// Revision 1.15  2005/01/07 09:23:39  andreje
-// l.ff1 and l.cmov instructions added
-//
-// Revision 1.14  2004/06/08 18:17:36  lampret
-// Non-functional changes. Coding style fixes.
-//
-// Revision 1.13  2004/05/09 19:49:03  lampret
-// Added some l.cust5 custom instructions as example
-//
-// Revision 1.12  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.11  2003/04/24 00:16:07  lampret
-// No functional changes. Added defines to disable implementation of multiplier/MAC
-//
-// Revision 1.10  2002/09/08 05:52:16  lampret
-// Added optional l.div/l.divu insns. By default they are disabled.
-//
-// Revision 1.9  2002/09/07 19:16:10  lampret
-// If SR[CY] implemented with OR1200_IMPL_ADDC enabled, l.add/l.addi also set SR[CY].
-//
-// Revision 1.8  2002/09/07 05:42:02  lampret
-// Added optional SR[CY]. Added define to enable additional (compare) flag modifiers. Defines are OR1200_IMPL_ADDC and OR1200_ADDITIONAL_FLAG_MODIFIERS.
-//
-// Revision 1.7  2002/09/03 22:28:21  lampret
-// As per Taylor Su suggestion all case blocks are full case by default and optionally (OR1200_CASE_DEFAULT) can be disabled to increase clock frequncy.
-//
-// Revision 1.6  2002/03/29 16:40:10  lampret
-// Added a directive to ignore signed division variables that are only used in simulation.
-//
-// Revision 1.5  2002/03/29 16:33:59  lampret
-// Added again just recently removed full_case directive
-//
-// Revision 1.4  2002/03/29 15:16:53  lampret
-// Some of the warnings fixed.
-//
-// Revision 1.3  2002/01/28 01:15:59  lampret
-// Changed 'void' nop-ops instead of insn[0] to use insn[16]. Debug unit stalls the tick timer. Prepared new flag generation for add and and insns. Blocked DC/IC while they are turned off. Fixed I/D MMU SPRs layout except WAYs. TODO: smart IC invalidate, l.j 2 and TLB ways.
-//
-// Revision 1.2  2002/01/14 06:18:22  lampret
-// Fixed mem2reg bug in FAST implementation. Updated debug unit to work with new genpc/if.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.10  2001/11/12 01:45:40  lampret
-// Moved flag bit into SR. Changed RF enable from constant enable to dynamic enable for read ports.
-//
-// Revision 1.9  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.8  2001/10/19 23:28:45  lampret
-// Fixed some synthesis warnings. Configured with caches and MMUs.
-//
-// Revision 1.7  2001/10/14 13:12:09  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:35  igorm
-// no message
-//
-// Revision 1.2  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-// Revision 1.1  2001/07/20 00:46:03  lampret
-// Development version of RTL. Libraries are missing.
-//
-//
 
 // synopsys translate_off
 `include "timescale.v"

@@ -3,7 +3,7 @@
 ////  OR1200's CPU                                                ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://www.opencores.org/project,or1k                       ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Instantiation of internal CPU blocks. IFETCH, SPRS, FRZ,    ////
@@ -42,113 +42,10 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
-//
 // $Log: or1200_cpu.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Major update: 
 // Structure reordered and bugs fixed. 
-//
-// Revision 1.16  2005/01/07 09:28:37  andreje
-// flag for l.cmov instruction added
-//
-// Revision 1.15  2004/05/09 19:49:04  lampret
-// Added some l.cust5 custom instructions as example
-//
-// Revision 1.14  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.12.4.2  2004/02/11 01:40:11  lampret
-// preliminary HW breakpoints support in debug unit (by default disabled). To enable define OR1200_DU_HWBKPTS.
-//
-// Revision 1.12.4.1  2003/12/09 11:46:48  simons
-// Mbist nameing changed, Artisan ram instance signal names fixed, some synthesis waning fixed.
-//
-// Revision 1.12  2002/09/07 05:42:02  lampret
-// Added optional SR[CY]. Added define to enable additional (compare) flag modifiers. Defines are OR1200_IMPL_ADDC and OR1200_ADDITIONAL_FLAG_MODIFIERS.
-//
-// Revision 1.11  2002/08/28 01:44:25  lampret
-// Removed some commented RTL. Fixed SR/ESR flag bug.
-//
-// Revision 1.10  2002/07/14 22:17:17  lampret
-// Added simple trace buffer [only for Xilinx Virtex target]. Fixed instruction fetch abort when new exception is recognized.
-//
-// Revision 1.9  2002/03/29 16:29:37  lampret
-// Fixed some ports in instnatiations that were removed from the modules
-//
-// Revision 1.8  2002/03/29 15:16:54  lampret
-// Some of the warnings fixed.
-//
-// Revision 1.7  2002/02/11 04:33:17  lampret
-// Speed optimizations (removed duplicate _cyc_ and _stb_). Fixed D/IMMU cache-inhibit attr.
-//
-// Revision 1.6  2002/02/01 19:56:54  lampret
-// Fixed combinational loops.
-//
-// Revision 1.5  2002/01/28 01:15:59  lampret
-// Changed 'void' nop-ops instead of insn[0] to use insn[16]. Debug unit stalls the tick timer. Prepared new flag generation for add and and insns. Blocked DC/IC while they are turned off. Fixed I/D MMU SPRs layout except WAYs. TODO: smart IC invalidate, l.j 2 and TLB ways.
-//
-// Revision 1.4  2002/01/18 14:21:43  lampret
-// Fixed 'the NPC single-step fix'.
-//
-// Revision 1.3  2002/01/18 07:56:00  lampret
-// No more low/high priority interrupts (PICPR removed). Added tick timer exception. Added exception prefix (SR[EPH]). Fixed single-step bug whenreading NPC.
-//
-// Revision 1.2  2002/01/14 06:18:22  lampret
-// Fixed mem2reg bug in FAST implementation. Updated debug unit to work with new genpc/if.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.19  2001/11/30 18:59:47  simons
-// *** empty log message ***
-//
-// Revision 1.18  2001/11/23 21:42:31  simons
-// Program counter divided to PPC and NPC.
-//
-// Revision 1.17  2001/11/23 08:38:51  lampret
-// Changed DSR/DRR behavior and exception detection.
-//
-// Revision 1.16  2001/11/20 00:57:22  lampret
-// Fixed width of du_except.
-//
-// Revision 1.15  2001/11/18 09:58:28  lampret
-// Fixed some l.trap typos.
-//
-// Revision 1.14  2001/11/18 08:36:28  lampret
-// For GDB changed single stepping and disabled trap exception.
-//
-// Revision 1.13  2001/11/13 10:02:21  lampret
-// Added 'setpc'. Renamed some signals (except_flushpipe into flushpipe etc)
-//
-// Revision 1.12  2001/11/12 01:45:40  lampret
-// Moved flag bit into SR. Changed RF enable from constant enable to dynamic enable for read ports.
-//
-// Revision 1.11  2001/11/10 03:43:57  lampret
-// Fixed exceptions.
-//
-// Revision 1.10  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.9  2001/10/14 13:12:09  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:35  igorm
-// no message
-//
-// Revision 1.4  2001/08/17 08:01:19  lampret
-// IC enable/disable.
-//
-// Revision 1.3  2001/08/13 03:36:20  lampret
-// Added cfg regs. Moved all defines into one defines.v file. More cleanup.
-//
-// Revision 1.2  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-// Revision 1.1  2001/07/20 00:46:03  lampret
-// Development version of RTL. Libraries are missing.
-//
-//
 
 // synopsys translate_off
 `include "timescale.v"
@@ -248,8 +145,8 @@ input	[`OR1200_DU_DSR_WIDTH-1:0]	du_dsr;
 input	[24:0]			du_dmr1;
 input				du_hwbkpt;
 input				du_hwbkpt_ls_r;
-output	[12:0]			du_except_trig;
-output	[12:0]			du_except_stop;
+output	[13:0]			du_except_trig;
+output	[13:0]			du_except_stop;
 output	[dw-1:0]		du_dat_cpu;
 output	[dw-1:0]		rf_dataw;
 output	[dw-1:0]		du_lsu_store_dat;
@@ -334,6 +231,7 @@ wire				wb_freeze;
 wire	[`OR1200_SEL_WIDTH-1:0]	sel_a;
 wire	[`OR1200_SEL_WIDTH-1:0]	sel_b;
 wire	[`OR1200_RFWBOP_WIDTH-1:0]	rfwb_op;
+wire    [`OR1200_FPUOP_WIDTH-1:0]       fpu_op;
 wire	[dw-1:0]		rf_dataw;
 wire	[dw-1:0]		rf_dataa;
 wire	[dw-1:0]		rf_datab;
@@ -346,6 +244,7 @@ wire	[dw-1:0]		operand_b;
 wire	[dw-1:0]		alu_dataout;
 wire	[dw-1:0]		lsu_dataout;
 wire	[dw-1:0]		sprs_dataout;
+wire	[dw-1:0]		fpu_dataout;
 wire	[31:0]			ex_simm;
 wire	[`OR1200_MULTICYCLE_WIDTH-1:0]	multicycle;
 wire	[`OR1200_EXCEPT_WIDTH-1:0]	except_type;
@@ -360,7 +259,10 @@ wire				ex_branch_taken;
 wire				flag;
 wire				flagforw;
 wire				flag_we;
+wire				flagforw_alu;   
 wire				flag_we_alu;
+wire				flagforw_fpu;
+wire				flag_we_fpu;
 wire				carry;
 wire				cyforw;
 wire				cy_we_alu;
@@ -373,20 +275,25 @@ wire				pc_we;
 wire	[31:0]			epcr;
 wire	[31:0]			eear;
 wire	[`OR1200_SR_WIDTH-1:0]	esr;
+wire 	[`OR1200_FPCSR_WIDTH-1:0]       fpcsr;
+wire 				fpcsr_we;
 wire				sr_we;
 wire	[`OR1200_SR_WIDTH-1:0]	to_sr;
 wire	[`OR1200_SR_WIDTH-1:0]	sr;
 wire				except_flushpipe;
 wire				except_start;
 wire				except_started;
+wire    			fpu_except_started;   
 wire	[31:0]			wb_insn;
 wire				sig_syscall;
 wire				sig_trap;
+wire				sig_fp;
 wire	[31:0]			spr_dat_cfgr;
 wire	[31:0]			spr_dat_rf;
 wire    [31:0]                  spr_dat_npc;
 wire	[31:0]			spr_dat_ppc;
 wire	[31:0]			spr_dat_mac;
+wire [31:0] 			spr_dat_fpu;  
 wire				force_dslot_fetch;
 wire				no_more_dslot;
 wire				ex_void;
@@ -399,8 +306,8 @@ wire	[`OR1200_MACOP_WIDTH-1:0] id_mac_op;
 wire	[`OR1200_MACOP_WIDTH-1:0] mac_op;
 wire	[31:0]			mult_mac_result;
 wire				mac_stall;
-wire	[12:0]			except_trig;
-wire	[12:0]			except_stop;
+wire	[13:0]			except_trig;
+wire	[13:0]			except_stop;
 wire				genpc_refetch;
 wire				rfe;
 wire				lsu_unstall;
@@ -476,7 +383,8 @@ assign supv = sr[`OR1200_SR_SM];
 //
 // FLAG write enable
 //
-assign flag_we = flag_we_alu && ~abort_mvspr;
+assign flagforw = (flag_we_alu & flagforw_alu) | (flagforw_fpu & flag_we_fpu);
+assign flag_we = (flag_we_alu | flag_we_fpu) & ~abort_mvspr;
 
 //
 // Instantiation of instruction fetch block
@@ -569,6 +477,7 @@ or1200_ctrl or1200_ctrl(
 	.comp_op(comp_op),
 	.rf_addrw(rf_addrw),
 	.rfwb_op(rfwb_op),
+	.fpu_op(fpu_op),			
 	.pc_we(pc_we),
 	.wb_insn(wb_insn),
 	.id_simm(id_simm),
@@ -663,7 +572,7 @@ or1200_alu or1200_alu(
 	.cust5_op(cust5_op),
 	.cust5_limm(cust5_limm),
 	.result(alu_dataout),
-	.flagforw(flagforw),
+	.flagforw(flagforw_alu),
 	.flag_we(flag_we_alu),
 	.cyforw(cyforw),
 	.cy_we(cy_we_alu),
@@ -671,8 +580,45 @@ or1200_alu or1200_alu(
 	.carry(carry)
 );
 
+   
+`ifdef OR1200_FPU_IMPLEMENTED
+
 //
-// Instantiation of CPU's ALU
+// FPU's exception is being dealt with
+//    
+assign fpu_except_started = except_started && (except_type == `OR1200_EXCEPT_FLOAT);
+   
+//
+// Instantiation of FPU
+//
+or1200_fpu or1200_fpu(
+	.clk(clk),
+	.rst(rst),
+	.ex_freeze(ex_freeze),
+	.a(operand_a),
+	.b(operand_b),
+	.fpu_op(fpu_op),
+	.result(fpu_dataout),
+	.flagforw(flagforw_fpu),
+	.flag_we(flag_we_fpu),
+        .sig_fp(sig_fp),
+	.except_started(fpu_except_started),		      
+	.fpcsr_we(fpcsr_we),
+	.fpcsr(fpcsr),
+	.spr_cs(spr_cs[`OR1200_SPR_GROUP_FPU]),
+	.spr_write(spr_we),
+	.spr_addr(spr_addr),
+	.spr_dat_i(spr_dat_cpu),
+	.spr_dat_o(spr_dat_fpu)
+);
+`else
+   assign sig_fp = 0;
+   assign fpcsr = 0;
+`endif		    
+
+   
+//
+// Instantiation of CPU's multiply unit
 //
 or1200_mult_mac or1200_mult_mac(
 	.clk(clk),
@@ -743,6 +689,10 @@ or1200_sprs or1200_sprs(
 	.esr(esr),
 	.except_started(except_started),
 
+	.fpcsr(fpcsr),
+	.fpcsr_we(fpcsr_we),
+	.spr_dat_fpu(spr_dat_fpu),
+			
 	.sr_we(sr_we),
 	.to_sr(to_sr),
 	.sr(sr),
@@ -798,6 +748,7 @@ or1200_wbmux or1200_wbmux(
 	.muxin_b(lsu_dataout),
 	.muxin_c(sprs_dataout),
 	.muxin_d(ex_pc),
+        .muxin_e(fpu_dataout),
 	.muxout(rf_dataw),
 	.muxreg(wb_forw),
 	.muxreg_valid(wbforw_valid)
@@ -848,6 +799,8 @@ or1200_except or1200_except(
 	.sig_itlbmiss(except_itlbmiss),
 	.sig_immufault(except_immufault),
 	.sig_tick(sig_tick),
+	.sig_fp(sig_fp),
+	.fpcsr_fpee(fpcsr[`OR1200_FPCSR_FPEE]),			    
 	.ex_branch_taken(ex_branch_taken),
 	.icpu_ack_i(icpu_ack_i),
 	.icpu_err_i(icpu_err_i),

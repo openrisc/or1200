@@ -3,7 +3,7 @@
 ////  OR1200's interface to SPRs                                  ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://www.opencores.org/project,or1k                       ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Decoding of SPR addresses and access to SPRs                ////
@@ -41,74 +41,10 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
-//
 // $Log: or1200_sprs.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Major update: 
 // Structure reordered and bugs fixed. 
-//
-// Revision 1.11  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.9.4.1  2003/12/17 13:43:38  simons
-// Exception prefix configuration changed.
-//
-// Revision 1.9  2002/09/07 05:42:02  lampret
-// Added optional SR[CY]. Added define to enable additional (compare) flag modifiers. Defines are OR1200_IMPL_ADDC and OR1200_ADDITIONAL_FLAG_MODIFIERS.
-//
-// Revision 1.8  2002/08/28 01:44:25  lampret
-// Removed some commented RTL. Fixed SR/ESR flag bug.
-//
-// Revision 1.7  2002/03/29 15:16:56  lampret
-// Some of the warnings fixed.
-//
-// Revision 1.6  2002/03/11 01:26:57  lampret
-// Changed generation of SPR address. Now it is ORed from base and offset instead of a sum.
-//
-// Revision 1.5  2002/02/01 19:56:54  lampret
-// Fixed combinational loops.
-//
-// Revision 1.4  2002/01/23 07:52:36  lampret
-// Changed default reset values for SR and ESR to match or1ksim's. Fixed flop model in or1200_dpram_32x32 when OR1200_XILINX_RAM32X1D is defined.
-//
-// Revision 1.3  2002/01/19 09:27:49  lampret
-// SR[TEE] should be zero after reset.
-//
-// Revision 1.2  2002/01/18 07:56:00  lampret
-// No more low/high priority interrupts (PICPR removed). Added tick timer exception. Added exception prefix (SR[EPH]). Fixed single-step bug whenreading NPC.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.12  2001/11/23 21:42:31  simons
-// Program counter divided to PPC and NPC.
-//
-// Revision 1.11  2001/11/23 08:38:51  lampret
-// Changed DSR/DRR behavior and exception detection.
-//
-// Revision 1.10  2001/11/12 01:45:41  lampret
-// Moved flag bit into SR. Changed RF enable from constant enable to dynamic enable for read ports.
-//
-// Revision 1.9  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.8  2001/10/14 13:12:10  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:36  igorm
-// no message
-//
-// Revision 1.3  2001/08/13 03:36:20  lampret
-// Added cfg regs. Moved all defines into one defines.v file. More cleanup.
-//
-// Revision 1.2  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-// Revision 1.1  2001/07/20 00:46:21  lampret
-// Development version of RTL. Libraries are missing.
-//
-//
 
 // synopsys translate_off
 `include "timescale.v"
@@ -126,6 +62,9 @@ module or1200_sprs(
 		to_wbmux, epcr_we, eear_we, esr_we, pc_we, sr_we, to_sr, sr,
 		spr_dat_cfgr, spr_dat_rf, spr_dat_npc, spr_dat_ppc, spr_dat_mac,
 		boot_adr_sel_i,
+		
+		// Floating point control register and SPR input
+		fpcsr, fpcsr_we, spr_dat_fpu
 
 		// From/to other RISC units
 		spr_dat_pic, spr_dat_tt, spr_dat_pm,
@@ -179,6 +118,10 @@ input	[31:0]			spr_dat_ppc;	// Data from PPC
 input	[31:0]			spr_dat_mac;	// Data from MAC
 input				boot_adr_sel_i;
 
+input 	[`OR1200_FPCSR_WIDTH-1:0]       fpcsr;	// FPCSR
+output 				fpcsr_we;	// Write enable FPCSR   
+input [31:0] 			spr_dat_fpu;    // Data from FPU
+   
 //
 // To/from other RISC units
 //
@@ -219,6 +162,7 @@ wire 				sr_sel;		// Select for SR
 wire 				epcr_sel;	// Select for EPCR0
 wire 				eear_sel;	// Select for EEAR0
 wire 				esr_sel;	// Select for ESR0
+wire 				fpcsr_sel;	// Select for FPCSR   
 wire	[31:0]			sys_data;	// Read data from system SPRs
 wire				du_access;	// Debug unit access
 reg	[31:0]			unqualified_cs;	// Unqualified chip selects
@@ -344,6 +288,12 @@ assign sr_sel = (spr_cs[`OR1200_SPR_GROUP_SYS] && (spr_addr[10:0] == `OR1200_SPR
 assign epcr_sel = (spr_cs[`OR1200_SPR_GROUP_SYS] && (spr_addr[10:0] == `OR1200_SPR_EPCR));
 assign eear_sel = (spr_cs[`OR1200_SPR_GROUP_SYS] && (spr_addr[10:0] == `OR1200_SPR_EEAR));
 assign esr_sel = (spr_cs[`OR1200_SPR_GROUP_SYS] && (spr_addr[10:0] == `OR1200_SPR_ESR));
+`ifdef OR1200_FPU_IMPLEMENTED
+assign fpcsr_sel = (spr_cs[`OR1200_SPR_GROUP_SYS] && (spr_addr[10:0] == `OR1200_SPR_FPCSR));
+`else
+assign fpcsr_sel = 0;
+`endif
+   
 
 //
 // Write enables for system SPRs
@@ -353,6 +303,11 @@ assign pc_we = (du_write && (npc_sel | ppc_sel));
 assign epcr_we = (spr_we && epcr_sel);
 assign eear_we = (spr_we && eear_sel);
 assign esr_we = (spr_we && esr_sel);
+`ifdef OR1200_FPU_IMPLEMENTED   
+assign fpcsr_we = (spr_we && fpcsr_sel);
+`else
+assign fpcsr_we = 0;
+`endif
 
 //
 // Output from system SPRs
@@ -364,6 +319,10 @@ assign sys_data = (spr_dat_cfgr & {32{cfgr_sel}}) |
 		  ({{32-`OR1200_SR_WIDTH{1'b0}},sr} & {32{sr_sel}}) |
 		  (epcr & {32{epcr_sel}}) |
 		  (eear & {32{eear_sel}}) |
+`ifdef OR1200_FPU_IMPLEMENTED
+		  ({{32-`OR1200_FPCSR_WIDTH{1'b0}},fpcsr} & 
+		   {32{read_spr & fpcsr_sel}}) |
+`endif
 		  ({{32-`OR1200_SR_WIDTH{1'b0}},esr} & {32{esr_sel}});
 
 //
@@ -414,6 +373,9 @@ always @(sr_reg or sr_reg_bit_eph_muxed)
 // MTSPR/MFSPR interface
 //
 always @(spr_addr or sys_data or spr_dat_mac or spr_dat_pic or spr_dat_pm or
+`ifdef OR1200_FPU_IMPLEMENTED
+	 spr_dat_fpu or
+`endif	 
 	spr_dat_dmmu or spr_dat_immu or spr_dat_du or spr_dat_tt) begin
 		casex (spr_addr[`OR1200_SPR_GROUP_BITS]) // synopsys parallel_case
 			`OR1200_SPR_GROUP_SYS:
@@ -430,6 +392,10 @@ always @(spr_addr or sys_data or spr_dat_mac or spr_dat_pic or spr_dat_pm or
 				to_wbmux = spr_dat_immu;
 			`OR1200_SPR_GROUP_MAC:
 				to_wbmux = spr_dat_mac;
+`ifdef OR1200_FPU_IMPLEMENTED
+		        `OR1200_SPR_GROUP_FPU:
+			         to_wbmux = spr_dat_fpu;
+`endif
 			default: //`OR1200_SPR_GROUP_DU:
 				to_wbmux = spr_dat_du;
 		endcase

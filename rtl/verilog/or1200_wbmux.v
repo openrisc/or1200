@@ -3,7 +3,7 @@
 ////  OR1200's Write-back Mux                                     ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://www.opencores.org/project,or1k                       ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  CPU's write-back stage of the pipeline                      ////
@@ -41,37 +41,10 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
 //
 // $Log: or1200_wbmux.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // No update 
-//
-// Revision 1.3  2004/06/08 18:17:36  lampret
-// Non-functional changes. Coding style fixes.
-//
-// Revision 1.2  2002/03/29 15:16:56  lampret
-// Some of the warnings fixed.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.8  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.7  2001/10/14 13:12:10  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:36  igorm
-// no message
-//
-// Revision 1.2  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-// Revision 1.1  2001/07/20 00:46:23  lampret
-// Development version of RTL. Libraries are missing.
-//
-//
 
 // synopsys translate_off
 `include "timescale.v"
@@ -84,7 +57,7 @@ module or1200_wbmux(
 
 	// Internal i/f
 	wb_freeze, rfwb_op,
-	muxin_a, muxin_b, muxin_c, muxin_d,
+	muxin_a, muxin_b, muxin_c, muxin_d, muxin_e,
 	muxout, muxreg, muxreg_valid
 );
 
@@ -109,6 +82,7 @@ input	[width-1:0]		muxin_a;
 input	[width-1:0]		muxin_b;
 input	[width-1:0]		muxin_c;
 input	[width-1:0]		muxin_d;
+input	[width-1:0]		muxin_e;   
 output	[width-1:0]		muxout;
 output	[width-1:0]		muxreg;
 output				muxreg_valid;
@@ -137,14 +111,14 @@ end
 //
 // Write-back multiplexer
 //
-always @(muxin_a or muxin_b or muxin_c or muxin_d or rfwb_op) begin
+always @(muxin_a or muxin_b or muxin_c or muxin_d or muxin_e or rfwb_op) begin
 `ifdef OR1200_ADDITIONAL_SYNOPSYS_DIRECTIVES
 	case(rfwb_op[`OR1200_RFWBOP_WIDTH-1:1]) // synopsys parallel_case infer_mux
 `else
 	case(rfwb_op[`OR1200_RFWBOP_WIDTH-1:1]) // synopsys parallel_case
 `endif
-		2'b00: muxout = muxin_a;
-		2'b01: begin
+		`OR1200_RFWBOP_ALU: muxout = muxin_a;
+		`OR1200_RFWBOP_LSU: begin
 			muxout = muxin_b;
 `ifdef OR1200_VERBOSE
 // synopsys translate_off
@@ -152,7 +126,7 @@ always @(muxin_a or muxin_b or muxin_c or muxin_d or rfwb_op) begin
 // synopsys translate_on
 `endif
 		end
-		2'b10: begin
+		`OR1200_RFWBOP_SPRS: begin
 			muxout = muxin_c;
 `ifdef OR1200_VERBOSE
 // synopsys translate_off
@@ -160,7 +134,7 @@ always @(muxin_a or muxin_b or muxin_c or muxin_d or rfwb_op) begin
 // synopsys translate_on
 `endif
 		end
-		2'b11: begin
+		`OR1200_RFWBOP_LR: begin
 			muxout = muxin_d + 32'h8;
 `ifdef OR1200_VERBOSE
 // synopsys translate_off
@@ -168,6 +142,16 @@ always @(muxin_a or muxin_b or muxin_c or muxin_d or rfwb_op) begin
 // synopsys translate_on
 `endif
 		end
+`ifdef OR1200_FPU_IMPLEMENTED
+	        `OR1200_RFWBOP_FPU : begin
+	     muxout = muxin_e;	     
+ `ifdef OR1200_VERBOSE
+// synopsys translate_off
+			$display("  WBMUX: muxin_e %h", muxin_e);
+// synopsys translate_on
+`endif
+	       end		      
+`endif	  	  
 	endcase
 end
 

@@ -3,7 +3,7 @@
 ////  OR1200's Instruction decode                                 ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://www.opencores.org/project,or1k                       ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Majority of instruction decoding is performed here.         ////
@@ -41,110 +41,37 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
 //
 // $Log: or1200_ctrl.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Major update: 
 // Structure reordered and bugs fixed. 
-//
-// Revision 1.13  2005/01/13 11:03:43  phoenix
-// revert to the old l.sfxxi behavior
-//
-// Revision 1.12  2005/01/07 09:31:07  andreje
-// sign/zero extension for l.sfxxi instructions corrected
-//
-// Revision 1.11  2004/06/08 18:17:36  lampret
-// Non-functional changes. Coding style fixes.
-//
-// Revision 1.10  2004/05/09 19:49:04  lampret
-// Added some l.cust5 custom instructions as example
-//
-// Revision 1.9  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.8.4.1  2004/02/11 01:40:11  lampret
-// preliminary HW breakpoints support in debug unit (by default disabled). To enable define OR1200_DU_HWBKPTS.
-//
-// Revision 1.8  2003/04/24 00:16:07  lampret
-// No functional changes. Added defines to disable implementation of multiplier/MAC
-//
-// Revision 1.7  2002/09/07 05:42:02  lampret
-// Added optional SR[CY]. Added define to enable additional (compare) flag modifiers. Defines are OR1200_IMPL_ADDC and OR1200_ADDITIONAL_FLAG_MODIFIERS.
-//
-// Revision 1.6  2002/03/29 15:16:54  lampret
-// Some of the warnings fixed.
-//
-// Revision 1.5  2002/02/01 19:56:54  lampret
-// Fixed combinational loops.
-//
-// Revision 1.4  2002/01/28 01:15:59  lampret
-// Changed 'void' nop-ops instead of insn[0] to use insn[16]. Debug unit stalls the tick timer. Prepared new flag generation for add and and insns. Blocked DC/IC while they are turned off. Fixed I/D MMU SPRs layout except WAYs. TODO: smart IC invalidate, l.j 2 and TLB ways.
-//
-// Revision 1.3  2002/01/18 14:21:43  lampret
-// Fixed 'the NPC single-step fix'.
-//
-// Revision 1.2  2002/01/14 06:18:22  lampret
-// Fixed mem2reg bug in FAST implementation. Updated debug unit to work with new genpc/if.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.14  2001/11/30 18:59:17  simons
-// force_dslot_fetch does not work -  allways zero.
-//
-// Revision 1.13  2001/11/20 18:46:15  simons
-// Break point bug fixed
-//
-// Revision 1.12  2001/11/18 08:36:28  lampret
-// For GDB changed single stepping and disabled trap exception.
-//
-// Revision 1.11  2001/11/13 10:02:21  lampret
-// Added 'setpc'. Renamed some signals (except_flushpipe into flushpipe etc)
-//
-// Revision 1.10  2001/11/12 01:45:40  lampret
-// Moved flag bit into SR. Changed RF enable from constant enable to dynamic enable for read ports.
-//
-// Revision 1.9  2001/11/10 03:43:57  lampret
-// Fixed exceptions.
-//
-// Revision 1.8  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.7  2001/10/14 13:12:09  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:36  igorm
-// no message
-//
-// Revision 1.2  2001/08/13 03:36:20  lampret
-// Added cfg regs. Moved all defines into one defines.v file. More cleanup.
-//
-// Revision 1.1  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-//
 
 // synopsys translate_off
 `include "timescale.v"
 // synopsys translate_on
 `include "or1200_defines.v"
 
-module or1200_ctrl(
-	// Clock and reset
-	clk, rst,
-
-	// Internal i/f
-	except_flushpipe, extend_flush, if_flushpipe, id_flushpipe, ex_flushpipe, wb_flushpipe,
-	id_freeze, ex_freeze, wb_freeze, if_insn, id_insn, ex_insn, abort_mvspr, 
-	id_branch_op, ex_branch_op, ex_branch_taken, pc_we, 
-	rf_addra, rf_addrb, rf_rda, rf_rdb, alu_op, mac_op, shrot_op, comp_op, rf_addrw, rfwb_op,
-	wb_insn, id_simm, ex_simm, id_branch_addrtarget, ex_branch_addrtarget, sel_a, sel_b, id_lsu_op,
-	cust5_op, cust5_limm, id_pc, ex_pc, du_hwbkpt, 
-	multicycle, wbforw_valid, sig_syscall, sig_trap,
-	force_dslot_fetch, no_more_dslot, id_void, ex_void, ex_spr_read, ex_spr_write, 
-        id_mac_op, id_macrc_op, ex_macrc_op, rfe, except_illegal
-);
+module or1200_ctrl
+  (
+   // Clock and reset
+   clk, rst,
+   
+   // Internal i/f
+   except_flushpipe, extend_flush, if_flushpipe, id_flushpipe, ex_flushpipe, 
+   wb_flushpipe,
+   id_freeze, ex_freeze, wb_freeze, if_insn, id_insn, ex_insn, abort_mvspr, 
+   id_branch_op, ex_branch_op, ex_branch_taken, pc_we, 
+   rf_addra, rf_addrb, rf_rda, rf_rdb, alu_op, mac_op, shrot_op, comp_op, 
+   rf_addrw, rfwb_op, fpu_op,
+   wb_insn, id_simm, ex_simm, id_branch_addrtarget, ex_branch_addrtarget, sel_a,
+   sel_b, id_lsu_op,
+   cust5_op, cust5_limm, id_pc, ex_pc, du_hwbkpt, 
+   multicycle, wbforw_valid, sig_syscall, sig_trap,
+   force_dslot_fetch, no_more_dslot, id_void, ex_void, ex_spr_read, 
+   ex_spr_write, 
+   id_mac_op, id_macrc_op, ex_macrc_op, rfe, except_illegal
+   );
 
 //
 // I/O
@@ -176,6 +103,7 @@ output	[`OR1200_ALUOP_WIDTH-1:0]		alu_op;
 output	[`OR1200_MACOP_WIDTH-1:0]		mac_op;
 output	[`OR1200_SHROTOP_WIDTH-1:0]		shrot_op;
 output	[`OR1200_RFWBOP_WIDTH-1:0]		rfwb_op;
+output [`OR1200_FPUOP_WIDTH-1:0] 		fpu_op;      
 input					pc_we;
 output	[31:0]				wb_insn;
 output	[31:2]				id_branch_addrtarget;
@@ -516,6 +444,12 @@ always @(id_insn) begin
     
     `OR1200_OR32_MULI:
       multicycle = 2'h3;
+
+`ifdef OR1200_FPU_IMPLEMENTED
+    `OR1200_OR32_FLOAT:
+      multicycle = `OR1200_FPUOP_CYCLES;    
+`endif
+
     
     // Single cycle instructions
     default: begin
@@ -666,7 +600,11 @@ always @(posedge clk or posedge rst) begin
 	    `OR1200_OR32_CUST5:
 	      sel_imm <= #1 1'b0;
 `endif
-	    
+`ifdef OR1200_FPU_IMPLEMENTED
+	    // FPU instructions
+	    `OR1200_OR32_FLOAT:
+	      sel_imm <= #1 1'b0;
+`endif
 	    // l.nop
 	    `OR1200_OR32_NOP:
 	      sel_imm <= #1 1'b0;
@@ -733,6 +671,11 @@ always @(posedge clk or posedge rst) begin
 `endif
 	`OR1200_OR32_NOP:
 			except_illegal <= #1 1'b0;
+`ifdef OR1200_FPU_IMPLEMENTED
+	    `OR1200_OR32_FLOAT:
+	                // Check it's not a double precision instruction
+	                except_illegal <= #1 id_insn[`OR1200_FPUOP_DOUBLE_BIT];
+`endif	      
 
 	`OR1200_OR32_ALU:
 			except_illegal <= #1 1'b0 
@@ -1020,7 +963,11 @@ always @(posedge clk or posedge rst) begin
 		`OR1200_OR32_CUST5:
 			rfwb_op <= #1 `OR1200_RFWBOP_ALU;
 `endif
-
+`ifdef OR1200_FPU_IMPLEMENTED
+		  // FPU instructions, lf.XXX.s, except sfxx
+		  `OR1200_OR32_FLOAT:
+		    rfwb_op <= #1 {`OR1200_RFWBOP_FPU,!id_insn[3]};
+`endif
 		// Instructions w/o register-file write-back
 		default: 
 			rfwb_op <= #1 `OR1200_RFWBOP_NOP;
@@ -1145,6 +1092,16 @@ always @(posedge clk or posedge rst) begin
 		comp_op <= #1 id_insn[24:21];
 end
 
+`ifdef OR1200_FPU_IMPLEMENTED
+//
+// Decode of FPU ops
+//
+   assign fpu_op = {(id_insn[31:26] == `OR1200_OR32_FLOAT), id_insn[`OR1200_FPUOP_WIDTH-2:0]};
+`else
+   assign fpu_op = {`OR1200_FPUOP_WIDTH{1'b0}};
+`endif
+
+   
 //
 // Decode of l.sys
 //
