@@ -382,15 +382,6 @@
 //
 //`define OR1200_FPU_IMPLEMENTED
 //
-// Select modules for FPU
-`ifdef OR1200_FPU_IMPLEMENTED
-// FPU arithmetic module (add,sub,mul,div)
- `define OR1200_FPU_ARITH_FPU100
-// FPU conversion module (int-float,float-int)
- `define OR1200_FPU_CONV_USSELMANN
-// FPU comparison module
- `define OR1200_FPU_COMP_USSELMANN
-`endif
 
 //
 // Clock ratio RISC clock versus WB clock
