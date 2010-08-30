@@ -3,7 +3,7 @@
 ////  OR1200's IC FSM                                             ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://opencores.org/project,or1k                           ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Insn cache state machine                                    ////
@@ -41,68 +41,10 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
-//
 // $Log: or1200_ic_fsm.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Minor update: 
 // Bugs fixed. 
-//
-// Revision 1.10  2004/06/08 18:17:36  lampret
-// Non-functional changes. Coding style fixes.
-//
-// Revision 1.9  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.8.4.1  2003/07/08 15:36:37  lampret
-// Added embedded memory QMEM.
-//
-// Revision 1.8  2003/06/06 02:54:47  lampret
-// When OR1200_NO_IMMU and OR1200_NO_IC are not both defined or undefined at the same time, results in a IC bug. Fixed.
-//
-// Revision 1.7  2002/03/29 15:16:55  lampret
-// Some of the warnings fixed.
-//
-// Revision 1.6  2002/03/28 19:10:40  lampret
-// Optimized cache controller FSM.
-//
-// Revision 1.1.1.1  2002/03/21 16:55:45  lampret
-// First import of the "new" XESS XSV environment.
-//
-//
-// Revision 1.5  2002/02/11 04:33:17  lampret
-// Speed optimizations (removed duplicate _cyc_ and _stb_). Fixed D/IMMU cache-inhibit attr.
-//
-// Revision 1.4  2002/02/01 19:56:54  lampret
-// Fixed combinational loops.
-//
-// Revision 1.3  2002/01/28 01:16:00  lampret
-// Changed 'void' nop-ops instead of insn[0] to use insn[16]. Debug unit stalls the tick timer. Prepared new flag generation for add and and insns. Blocked DC/IC while they are turned off. Fixed I/D MMU SPRs layout except WAYs. TODO: smart IC invalidate, l.j 2 and TLB ways.
-//
-// Revision 1.2  2002/01/14 06:18:22  lampret
-// Fixed mem2reg bug in FAST implementation. Updated debug unit to work with new genpc/if.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.9  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from ic.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.8  2001/10/19 23:28:46  lampret
-// Fixed some synthesis warnings. Configured with caches and MMUs.
-//
-// Revision 1.7  2001/10/14 13:12:09  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:35  igorm
-// no message
-//
-// Revision 1.2  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-// Revision 1.1  2001/07/20 00:46:03  lampret
-// Development version of RTL. Libraries are missing.
-//
 //
 
 // synopsys translate_off
@@ -161,117 +103,130 @@ reg				hitmiss_eval;
 reg				load;
 reg				cache_inhibit;
 
-//
-// Generate of ICRAM write enables
-//
-assign icram_we = {4{biu_read & biudata_valid & !cache_inhibit}};
-assign tag_we = biu_read & biudata_valid & !cache_inhibit;
+   //
+   // Generate of ICRAM write enables
+   //
+   assign icram_we = {4{biu_read & biudata_valid & !cache_inhibit}};
+   assign tag_we = biu_read & biudata_valid & !cache_inhibit;
 
-//
-// BIU read and write
-//
-assign biu_read = (hitmiss_eval & tagcomp_miss) | (!hitmiss_eval & load);
+   //
+   // BIU read and write
+   //
+   assign biu_read = (hitmiss_eval & tagcomp_miss) | (!hitmiss_eval & load);
 
-//assign saved_addr = hitmiss_eval ? start_addr : saved_addr_r;
-assign saved_addr = saved_addr_r;
+   //assign saved_addr = hitmiss_eval ? start_addr : saved_addr_r;
+   assign saved_addr = saved_addr_r;
 
-//
-// Assert for cache hit first word ready
-// Assert for cache miss first word stored/loaded OK
-// Assert for cache miss first word stored/loaded with an error
-//
-assign first_hit_ack = (state == `OR1200_ICFSM_CFETCH) & hitmiss_eval & !tagcomp_miss & !cache_inhibit;
-assign first_miss_ack = (state == `OR1200_ICFSM_CFETCH) & biudata_valid;
-assign first_miss_err = (state == `OR1200_ICFSM_CFETCH) & biudata_error;
+   //
+   // Assert for cache hit first word ready
+   // Assert for cache miss first word stored/loaded OK
+   // Assert for cache miss first word stored/loaded with an error
+   //
+   assign first_hit_ack = (state == `OR1200_ICFSM_CFETCH) & hitmiss_eval & 
+			  !tagcomp_miss & !cache_inhibit;
+   assign first_miss_ack = (state == `OR1200_ICFSM_CFETCH) & biudata_valid;
+   assign first_miss_err = (state == `OR1200_ICFSM_CFETCH) & biudata_error;
 
-//
-// Assert burst when doing reload of complete cache line
-//
-assign burst = (state == `OR1200_ICFSM_CFETCH) & tagcomp_miss & !cache_inhibit
-		| (state == `OR1200_ICFSM_LREFILL3);
+   //
+   // Assert burst when doing reload of complete cache line
+   //
+   assign burst = (state == `OR1200_ICFSM_CFETCH) & tagcomp_miss & 
+		  !cache_inhibit | (state == `OR1200_ICFSM_LREFILL3);
 
-//
-// Main IC FSM
-//
-always @(posedge clk or posedge rst) begin
-	if (rst) begin
-		state <= #1 `OR1200_ICFSM_IDLE;
-		saved_addr_r <= #1 32'b0;
-		hitmiss_eval <= #1 1'b0;
-		load <= #1 1'b0;
-		cnt <= #1 3'b000;
-		cache_inhibit <= #1 1'b0;
-	end
-	else
+   //
+   // Main IC FSM
+   //
+   always @(posedge clk or posedge rst) begin
+      if (rst) begin
+	 state <=  `OR1200_ICFSM_IDLE;
+	 saved_addr_r <=  32'b0;
+	 hitmiss_eval <=  1'b0;
+	 load <=  1'b0;
+	 cnt <=  3'b000;
+	 cache_inhibit <=  1'b0;
+      end
+      else
 	case (state)	// synopsys parallel_case
-		`OR1200_ICFSM_IDLE :
-			if (ic_en & icqmem_cycstb_i) begin		// fetch
-				state <= #1 `OR1200_ICFSM_CFETCH;
-				saved_addr_r <= #1 start_addr;
-				hitmiss_eval <= #1 1'b1;
-				load <= #1 1'b1;
-				cache_inhibit <= #1 icqmem_ci_i;
-			end
-			else begin							// idle
-				hitmiss_eval <= #1 1'b0;
-				load <= #1 1'b0;
-				cache_inhibit <= #1 1'b0;
-			end
-		`OR1200_ICFSM_CFETCH: begin	// fetch
-			if (icqmem_cycstb_i & icqmem_ci_i)
-				cache_inhibit <= #1 1'b1;
-			if (hitmiss_eval)
-				saved_addr_r[31:13] <= #1 start_addr[31:13];
-			if ((!ic_en) ||
-			    (hitmiss_eval & !icqmem_cycstb_i) ||	// fetch aborted (usually caused by IMMU)
-			    (biudata_error) ||						// fetch terminated with an error
-			    (cache_inhibit & biudata_valid)) begin	// fetch from cache-inhibited page
-				state <= #1 `OR1200_ICFSM_IDLE;
-				hitmiss_eval <= #1 1'b0;
-				load <= #1 1'b0;
-				cache_inhibit <= #1 1'b0;
-			end
-			else if (tagcomp_miss & biudata_valid) begin	// fetch missed, finish current external fetch and refill
-				state <= #1 `OR1200_ICFSM_LREFILL3;
-				saved_addr_r[3:2] <= #1 saved_addr_r[3:2] + 1'd1;
-				hitmiss_eval <= #1 1'b0;
-				cnt <= #1 `OR1200_ICLS-2;
-				cache_inhibit <= #1 1'b0;
-			end
-			else if (!icqmem_cycstb_i) begin	// fetch aborted (usually caused by exception)
-				state <= #1 `OR1200_ICFSM_IDLE;
-				hitmiss_eval <= #1 1'b0;
-				load <= #1 1'b0;
-				cache_inhibit <= #1 1'b0;
-			end
-			else if (!tagcomp_miss & !icqmem_ci_i) begin	// fetch hit, finish immediately
-				saved_addr_r <= #1 start_addr;
-				cache_inhibit <= #1 1'b0;
-			end
-			else						// fetch in-progress
-				hitmiss_eval <= #1 1'b0;
-		end
-		`OR1200_ICFSM_LREFILL3 : begin
-            if (!ic_en) begin           	// abort because IC has just been turned off
-				state <= #1 `OR1200_ICFSM_IDLE;	// invalidate before IC can be turned on
-                saved_addr_r <= #1 start_addr;
-                hitmiss_eval <= #1 1'b0;
-                load <= #1 1'b0;
-            end
-			else if (biudata_valid && (|cnt)) begin		// refill ack, more fetchs to come
-				cnt <= #1 cnt - 3'd1;
-				saved_addr_r[3:2] <= #1 saved_addr_r[3:2] + 1'd1;
-			end
-			else if (biudata_valid) begin			// last fetch of line refill
-				state <= #1 `OR1200_ICFSM_IDLE;
-				saved_addr_r <= #1 start_addr;
-				hitmiss_eval <= #1 1'b0;
-				load <= #1 1'b0;
-			end
-		end
-		default:
-			state <= #1 `OR1200_ICFSM_IDLE;
+	  `OR1200_ICFSM_IDLE :
+	    if (ic_en & icqmem_cycstb_i) begin		// fetch
+	       state <=  `OR1200_ICFSM_CFETCH;
+	       saved_addr_r <=  start_addr;
+	       hitmiss_eval <=  1'b1;
+	       load <=  1'b1;
+	       cache_inhibit <=  icqmem_ci_i;
+	    end
+	    else begin			// idle
+	       hitmiss_eval <=  1'b0;
+	       load <=  1'b0;
+	       cache_inhibit <=  1'b0;
+	    end
+	  `OR1200_ICFSM_CFETCH: begin	// fetch
+	     
+	     if (icqmem_cycstb_i & icqmem_ci_i)
+	       cache_inhibit <=  1'b1;
+	     
+	     if (hitmiss_eval)
+	       saved_addr_r[31:13] <=  start_addr[31:13];
+	     
+	     if ((!ic_en) ||
+		 // fetch aborted (usually caused by IMMU)
+		 (hitmiss_eval & !icqmem_cycstb_i) ||	
+		 (biudata_error) ||  // fetch terminated with an error
+		 // fetch from cache-inhibited page
+		 (cache_inhibit & biudata_valid)) begin	
+		state <=  `OR1200_ICFSM_IDLE;
+		hitmiss_eval <=  1'b0;
+		load <=  1'b0;
+		cache_inhibit <=  1'b0;
+	     end // if ((!ic_en) ||...	     
+	     // fetch missed, finish current external fetch and refill
+	     else if (tagcomp_miss & biudata_valid) begin	
+		state <=  `OR1200_ICFSM_LREFILL3;
+		saved_addr_r[3:2] <=  saved_addr_r[3:2] + 1'd1;
+		hitmiss_eval <=  1'b0;
+		cnt <=  `OR1200_ICLS-2;
+		cache_inhibit <=  1'b0;
+	     end
+	     // fetch aborted (usually caused by exception)
+	     else if (!icqmem_cycstb_i) begin	
+		state <=  `OR1200_ICFSM_IDLE;
+		hitmiss_eval <=  1'b0;
+		load <=  1'b0;
+		cache_inhibit <=  1'b0;
+	     end
+	     // fetch hit, finish immediately
+	     else if (!tagcomp_miss & !icqmem_ci_i) begin 
+		saved_addr_r <=  start_addr;
+		cache_inhibit <=  1'b0;
+	     end
+	     else   // fetch in-progress
+	       hitmiss_eval <=  1'b0;
+	  end
+	  `OR1200_ICFSM_LREFILL3 : begin
+	     // abort because IC has just been turned off
+             if (!ic_en) begin
+		// invalidate before IC can be turned on
+		state <=  `OR1200_ICFSM_IDLE;	
+                saved_addr_r <=  start_addr;
+                hitmiss_eval <=  1'b0;
+                load <=  1'b0;
+             end
+	     // refill ack, more fetchs to come
+	     else if (biudata_valid && (|cnt)) begin	
+		cnt <=  cnt - 3'd1;
+		saved_addr_r[3:2] <=  saved_addr_r[3:2] + 1'd1;
+	     end
+	     // last fetch of line refill
+	     else if (biudata_valid) begin
+		state <=  `OR1200_ICFSM_IDLE;
+		saved_addr_r <=  start_addr;
+		hitmiss_eval <=  1'b0;
+		load <=  1'b0;
+	     end
+	  end
+	  default:
+	    state <=  `OR1200_ICFSM_IDLE;
 	endcase
-end
+   end
 
 endmodule

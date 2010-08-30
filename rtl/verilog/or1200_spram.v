@@ -104,7 +104,7 @@ module or1200_spram
    //
    // Generic RAM's registers and wires
    //
-`ifdef OR1200_ACTEL   
+`ifdef OR1200_GENERIC   
    reg [dw-1:0] 			  mem [(1<<aw)-1:0] /*synthesis syn_ramstyle = "no_rw_check"*/;
 `else
    reg [dw-1:0] 			  mem [(1<<aw)-1:0];
@@ -122,13 +122,13 @@ module or1200_spram
    //
    always @(posedge clk)
      if (ce)
-       addr_reg <= #1 addr;
+       addr_reg <=  addr;
    
    //
    // RAM write
    //
    always @(posedge clk)
      if (we && ce)
-       mem[addr] <= #1 di;
+       mem[addr] <=  di;
    
 endmodule // or1200_spram

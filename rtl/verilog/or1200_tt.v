@@ -155,9 +155,9 @@ always @(posedge clk or posedge rst)
 	if (rst)
 		ttmr <= 32'b0;
 	else if (ttmr_sel && spr_write)
-		ttmr <= #1 spr_dat_i;
+		ttmr <=  spr_dat_i;
 	else if (ttmr[`OR1200_TT_TTMR_IE])
-		ttmr[`OR1200_TT_TTMR_IP] <= #1 ttmr[`OR1200_TT_TTMR_IP] | (match & ttmr[`OR1200_TT_TTMR_IE]);
+		ttmr[`OR1200_TT_TTMR_IP] <=  ttmr[`OR1200_TT_TTMR_IP] | (match & ttmr[`OR1200_TT_TTMR_IE]);
 `else
 assign ttmr = {2'b11, 30'b0};	// TTMR[M] = 0x3
 `endif
@@ -170,11 +170,11 @@ always @(posedge clk or posedge rst)
 	if (rst)
 		ttcr <= 32'b0;
 	else if (restart)
-		ttcr <= #1 32'b0;
+		ttcr <=  32'b0;
 	else if (ttcr_sel && spr_write)
-		ttcr <= #1 spr_dat_i;
+		ttcr <=  spr_dat_i;
 	else if (!stop)
-		ttcr <= #1 ttcr + 32'd1;
+		ttcr <=  ttcr + 32'd1;
 `else
 assign ttcr = 32'b0;
 `endif

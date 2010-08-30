@@ -254,16 +254,16 @@ reg				dis_spr_access_scnd_clk;
 always @(posedge rst or posedge clk)
 	// default value 
 	if (rst) begin
-		icpu_adr_default <= #1 32'h0000_0100;
-		icpu_adr_select  <= #1 1'b1;		// select async. value due to reset state
+		icpu_adr_default <=  32'h0000_0100;
+		icpu_adr_select  <=  1'b1;		// select async. value due to reset state
 	end
 	// selected value (different from default) is written into FF after reset state
 	else if (icpu_adr_select) begin
-		icpu_adr_default <= #1 icpu_adr_boot;	// dynamic value can only be assigned to FF out of reset! 
-		icpu_adr_select  <= #1 1'b0;		// select FF value 
+		icpu_adr_default <=  icpu_adr_boot;	// dynamic value can only be assigned to FF out of reset! 
+		icpu_adr_select  <=  1'b0;		// select FF value 
 	end
 	else begin
-		icpu_adr_default <= #1 icpu_adr_i;
+		icpu_adr_default <=  icpu_adr_i;
 	end
 
 // select async. value for boot address after reset - PC jumps to the address selected after boot! 
@@ -292,9 +292,9 @@ assign page_cross = icpu_adr_i[31:`OR1200_IMMU_PS] != icpu_vpn_r;
 //
 always @(posedge clk or posedge rst)
 	if (rst)
-		icpu_vpn_r <= #1 {32-`OR1200_IMMU_PS{1'b0}};
+		icpu_vpn_r <=  {32-`OR1200_IMMU_PS{1'b0}};
 	else
-		icpu_vpn_r <= #1 icpu_adr_i[31:`OR1200_IMMU_PS];
+		icpu_vpn_r <=  icpu_adr_i[31:`OR1200_IMMU_PS];
 
 `ifdef OR1200_NO_IMMU
 
@@ -339,19 +339,19 @@ assign itlb_spr_access = spr_cs & ~dis_spr_access_scnd_clk;
 //
 always @(posedge clk or posedge rst)
 	if (rst)
-		dis_spr_access_frst_clk  <= #1 1'b0;
+		dis_spr_access_frst_clk  <=  1'b0;
 	else if (!icpu_rty_o)
-		dis_spr_access_frst_clk  <= #1 1'b0;
+		dis_spr_access_frst_clk  <=  1'b0;
 	else if (spr_cs)
-		dis_spr_access_frst_clk  <= #1 1'b1;
+		dis_spr_access_frst_clk  <=  1'b1;
 
 always @(posedge clk or posedge rst)
 	if (rst)
-		dis_spr_access_scnd_clk  <= #1 1'b0;
+		dis_spr_access_scnd_clk  <=  1'b0;
 	else if (!icpu_rty_o)
-		dis_spr_access_scnd_clk  <= #1 1'b0;
+		dis_spr_access_scnd_clk  <=  1'b0;
 	else if (dis_spr_access_frst_clk)
-		dis_spr_access_scnd_clk  <= #1 1'b1;
+		dis_spr_access_scnd_clk  <=  1'b1;
 
 //
 // Tags:
@@ -379,9 +379,9 @@ assign icpu_err_o = miss | fault | qmemimmu_err_i;
 //
 always @(posedge clk or posedge rst)
 	if (rst)
-		itlb_en_r <= #1 1'b0;
+		itlb_en_r <=  1'b0;
 	else
-		itlb_en_r <= #1 itlb_en & ~itlb_spr_access;
+		itlb_en_r <=  itlb_en & ~itlb_spr_access;
 
 //
 // ITLB lookup successful
@@ -424,9 +424,9 @@ reg     [31:0]                  spr_dat_reg;
 // so itlb can continue with process during execution of mfspr.
 always @(posedge clk or posedge rst)
 	if (rst)
-		spr_dat_reg <= #1 32'h0000_0000;
+		spr_dat_reg <=  32'h0000_0000;
 	else if (spr_cs & !dis_spr_access_scnd_clk)
-		spr_dat_reg <= #1 itlb_dat_o;
+		spr_dat_reg <=  itlb_dat_o;
 
 assign spr_dat_o = itlb_spr_access ? itlb_dat_o : spr_dat_reg; 
 

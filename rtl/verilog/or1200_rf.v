@@ -63,7 +63,7 @@ module or1200_rf(
 	id_freeze, addra, addrb, dataa, datab, rda, rdb,
 
 	// Debug
-	spr_cs, spr_write, spr_addr, spr_dat_i, spr_dat_o
+	spr_cs, spr_write, spr_addr, spr_dat_i, spr_dat_o, du_read
 );
 
 parameter dw = `OR1200_OPERAND_WIDTH;
@@ -110,7 +110,8 @@ input				spr_write;
 input	[31:0]			spr_addr;
 input	[31:0]			spr_dat_i;
 output	[31:0]			spr_dat_o;
-
+input    			du_read;
+   
 //
 // Internal wires and regs
 //
@@ -125,6 +126,31 @@ wire				rf_ena;
 wire				rf_enb;
 reg				rf_we_allow;
 
+   // Logic to restore output on RFA after debug unit has read out via SPR if.
+   // Problem was that the incorrect output would be on RFA after debug unit
+   // had read out  - this is bad if that output is relied upon by execute
+   // stage for next instruction. We simply save the last address for rf A and
+   // and re-read it whenever the SPR select goes low, so we must remember
+   // the last address and generate a signal for falling edge of SPR cs.
+   // -- Julius
+   
+   // Detect falling edge of SPR select 
+   reg 				spr_du_cs;
+   wire 			spr_cs_fe;
+   // Track RF A's address each time it's enabled
+   reg	[aw-1:0]		addra_last;
+
+
+   always @(posedge clk)
+     if (rf_ena & !(spr_cs_fe | (du_read & spr_cs)))
+       addra_last <= addra;
+
+   always @(posedge clk)
+     spr_du_cs <= spr_cs & du_read;
+
+   assign spr_cs_fe = spr_du_cs & !(spr_cs & du_read);
+
+   
 //
 // SPR access is valid when spr_cs is asserted and
 // SPR address matches GPR addresses
@@ -149,7 +175,8 @@ assign datab = from_rfb;
 //
 // RF A read address is either from SPRS or normal from CPU control
 //
-assign rf_addra = (spr_valid & !spr_write) ? spr_addr[4:0] : addra;
+assign rf_addra = (spr_valid & !spr_write) ? spr_addr[4:0] : 
+		  spr_cs_fe ? addra_last : addra;
 
 //
 // RF write address is either from SPRS or normal from CPU control
@@ -166,21 +193,22 @@ assign rf_dataw = (spr_valid & spr_write) ? spr_dat_i : dataw;
 //
 always @(posedge rst or posedge clk)
 	if (rst)
-		rf_we_allow <= #1 1'b1;
+		rf_we_allow <=  1'b1;
 	else if (~wb_freeze)
-		rf_we_allow <= #1 ~flushpipe;
+		rf_we_allow <=  ~flushpipe;
 
 //assign rf_we = ((spr_valid & spr_write) | (we & ~wb_freeze)) & rf_we_allow & (supv | (|rf_addrw));
 assign rf_we = ((spr_valid & spr_write) | (we & ~wb_freeze)) & rf_we_allow;
 //assign cy_we_o = cy_we_i && rf_we;
 assign cy_we_o = cy_we_i && ~wb_freeze && rf_we_allow;
-
+   
+   
 //
 // CS RF A asserted when instruction reads operand A and ID stage
 // is not stalled
 //
 //assign rf_ena = rda & ~id_freeze | spr_valid;	// probably works with fixed binutils
-assign rf_ena = (rda & ~id_freeze) | (spr_valid & !spr_write);	// probably works with fixed binutils
+assign rf_ena = (rda & ~id_freeze) | (spr_valid & !spr_write) | spr_cs_fe;	// probably works with fixed binutils
 // assign rf_ena = 1'b1;			// does not work with single-stepping
 //assign rf_ena = ~id_freeze | spr_valid;	// works with broken binutils 
 

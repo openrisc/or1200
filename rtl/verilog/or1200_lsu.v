@@ -3,7 +3,7 @@
 ////  OR1200's Load/Store unit                                    ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://opencores.org/project,or1k                           ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Interface between CPU and DC.                               ////
@@ -41,46 +41,11 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
 //
 // $Log: or1200_lsu.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Major update: 
 // Structure reordered and bugs fixed. 
-//
-// Revision 1.5  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.4  2002/03/29 15:16:56  lampret
-// Some of the warnings fixed.
-//
-// Revision 1.3  2002/02/11 04:33:17  lampret
-// Speed optimizations (removed duplicate _cyc_ and _stb_). Fixed D/IMMU cache-inhibit attr.
-//
-// Revision 1.2  2002/01/18 07:56:00  lampret
-// No more low/high priority interrupts (PICPR removed). Added tick timer exception. Added exception prefix (SR[EPH]). Fixed single-step bug whenreading NPC.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.9  2001/11/30 18:59:47  simons
-// *** empty log message ***
-//
-// Revision 1.8  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.7  2001/10/14 13:12:09  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:36  igorm
-// no message
-//
-// Revision 1.2  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-// Revision 1.1  2001/07/20 00:46:03  lampret
-// Development version of RTL. Libraries are missing.
-//
 //
 
 // synopsys translate_off
@@ -167,11 +132,11 @@ reg				except_align;
 //
 always @(posedge clk or posedge rst) begin
     if (rst)
-        ex_lsu_op <= #1 `OR1200_LSUOP_NOP;
+        ex_lsu_op <=  `OR1200_LSUOP_NOP;
     else if (!ex_freeze & id_freeze | flushpipe)
-        ex_lsu_op <= #1 `OR1200_LSUOP_NOP;
+        ex_lsu_op <=  `OR1200_LSUOP_NOP;
     else if (!ex_freeze)
-        ex_lsu_op <= #1 id_lsu_op;
+        ex_lsu_op <=  id_lsu_op;
 end
 
 //
@@ -182,9 +147,9 @@ assign id_precalc_sum = id_addrbase[`OR1200_LSUEA_PRECALC-1:0] +
 
 always @(posedge clk or posedge rst) begin
     if (rst)
-        dcpu_adr_r <= #1 {`OR1200_LSUEA_PRECALC{1'b0}};
+        dcpu_adr_r <=  {`OR1200_LSUEA_PRECALC{1'b0}};
     else if (!ex_freeze)
-        dcpu_adr_r <= #1 id_precalc_sum;
+        dcpu_adr_r <=  id_precalc_sum;
 end
 
 //
@@ -192,11 +157,11 @@ end
 //
 always @(posedge clk or posedge rst) begin
     if (rst)
-        except_align <= #1 1'b0;
+        except_align <=  1'b0;
     else if (!ex_freeze & id_freeze | flushpipe)
-        except_align <= #1 1'b0;
+        except_align <=  1'b0;
     else if (!ex_freeze)
-        except_align <= #1 ((id_lsu_op == `OR1200_LSUOP_SH) |
+        except_align <=  ((id_lsu_op == `OR1200_LSUOP_SH) |
                             (id_lsu_op == `OR1200_LSUOP_LHZ) |
                             (id_lsu_op == `OR1200_LSUOP_LHS)) & id_precalc_sum[0]
 		        |  ((id_lsu_op == `OR1200_LSUOP_SW) |
@@ -216,11 +181,10 @@ assign except_dbuserr = dcpu_err_i & (dcpu_tag_i == `OR1200_DTAG_BE);
 //
 // External I/F assignments
 //
-assign dcpu_adr_o[31:`OR1200_LSUEA_PRECALC] = ex_addrbase[31:`OR1200_LSUEA_PRECALC] +
-                                              ex_addrofs[31:`OR1200_LSUEA_PRECALC] +
-                                              dcpu_adr_r[`OR1200_LSUEA_PRECALC]; // carry
+assign dcpu_adr_o[31:`OR1200_LSUEA_PRECALC] = ex_addrbase[31:`OR1200_LSUEA_PRECALC] + ex_addrofs[31:`OR1200_LSUEA_PRECALC] +  dcpu_adr_r[`OR1200_LSUEA_PRECALC]; // carry
 assign dcpu_adr_o[`OR1200_LSUEA_PRECALC-1:0] = dcpu_adr_r[`OR1200_LSUEA_PRECALC-1:0];
-assign dcpu_cycstb_o = du_stall | lsu_unstall | except_align ? 1'b0 : |ex_lsu_op;
+assign dcpu_cycstb_o = du_stall | lsu_unstall | except_align ? 
+		       1'b0 : |ex_lsu_op;
 assign dcpu_we_o = ex_lsu_op[3];
 assign dcpu_tag_o = dcpu_cycstb_o ? `OR1200_DTAG_ND : `OR1200_DTAG_IDLE;
 always @(ex_lsu_op or dcpu_adr_o)

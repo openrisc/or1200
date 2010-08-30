@@ -139,14 +139,14 @@ always @(posedge clk or posedge rst)
 	if (rst)
 		{dcge, sme, dme, sdf} <= 7'b0;
 	else if (pmr_sel && spr_write) begin
-		sdf <= #1 spr_dat_i[`OR1200_PM_PMR_SDF];
-		dme <= #1 spr_dat_i[`OR1200_PM_PMR_DME];
-		sme <= #1 spr_dat_i[`OR1200_PM_PMR_SME];
-		dcge <= #1 spr_dat_i[`OR1200_PM_PMR_DCGE];
+		sdf <=  spr_dat_i[`OR1200_PM_PMR_SDF];
+		dme <=  spr_dat_i[`OR1200_PM_PMR_DME];
+		sme <=  spr_dat_i[`OR1200_PM_PMR_SME];
+		dcge <=  spr_dat_i[`OR1200_PM_PMR_DCGE];
 	end
 	else if (pic_wakeup) begin
-		dme <= #1 1'b0;
-		sme <= #1 1'b0;
+		dme <=  1'b0;
+		sme <=  1'b0;
 	end
 
 //

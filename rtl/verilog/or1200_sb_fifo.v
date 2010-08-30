@@ -96,55 +96,55 @@ reg			full_o;
 
 always @(posedge clk_i or posedge rst_i)
 	if (rst_i) begin
-		full_o <= #1 1'b0;
-		empty_o <= #1 1'b1;
-		wr_pntr <= #1 {fw{1'b0}};
-		rd_pntr <= #1 {fw{1'b0}};
-		cntr <= #1 {fw+2{1'b0}};
-		dat_o <= #1 {dw{1'b0}};
+		full_o <=  1'b0;
+		empty_o <=  1'b1;
+		wr_pntr <=  {fw{1'b0}};
+		rd_pntr <=  {fw{1'b0}};
+		cntr <=  {fw+2{1'b0}};
+		dat_o <=  {dw{1'b0}};
 	end
 	else if (wr_i && rd_i) begin		// FIFO Read and Write
-		mem[wr_pntr] <= #1 dat_i;
+		mem[wr_pntr] <=  dat_i;
 		if (wr_pntr >= fl-1)
-			wr_pntr <= #1 {fw{1'b0}};
+			wr_pntr <=  {fw{1'b0}};
 		else
-			wr_pntr <= #1 wr_pntr + 1'b1;
+			wr_pntr <=  wr_pntr + 1'b1;
 		if (empty_o) begin
-			dat_o <= #1 dat_i;
+			dat_o <=  dat_i;
 		end
 		else begin
-			dat_o <= #1 mem[rd_pntr];
+			dat_o <=  mem[rd_pntr];
 		end
 		if (rd_pntr >= fl-1)
-			rd_pntr <= #1 {fw{1'b0}};
+			rd_pntr <=  {fw{1'b0}};
 		else
-			rd_pntr <= #1 rd_pntr + 1'b1;
+			rd_pntr <=  rd_pntr + 1'b1;
 	end
 	else if (wr_i && !full_o) begin		// FIFO Write
-		mem[wr_pntr] <= #1 dat_i;
-		cntr <= #1 cntr + 1'b1;
-		empty_o <= #1 1'b0;
+		mem[wr_pntr] <=  dat_i;
+		cntr <=  cntr + 1'b1;
+		empty_o <=  1'b0;
 		if (cntr >= (fl-1)) begin
-			full_o <= #1 1'b1;
-			cntr <= #1 fl;
+			full_o <=  1'b1;
+			cntr <=  fl;
 		end
 		if (wr_pntr >= fl-1)
-			wr_pntr <= #1 {fw{1'b0}};
+			wr_pntr <=  {fw{1'b0}};
 		else
-			wr_pntr <= #1 wr_pntr + 1'b1;
+			wr_pntr <=  wr_pntr + 1'b1;
 	end
 	else if (rd_i && !empty_o) begin	// FIFO Read
-		dat_o <= #1 mem[rd_pntr];
-		cntr <= #1 cntr - 1'b1;
-		full_o <= #1 1'b0;
+		dat_o <=  mem[rd_pntr];
+		cntr <=  cntr - 1'b1;
+		full_o <=  1'b0;
 		if (cntr <= 1) begin
-			empty_o <= #1 1'b1;
-			cntr <= #1 {fw+2{1'b0}};
+			empty_o <=  1'b1;
+			cntr <=  {fw+2{1'b0}};
 		end
 		if (rd_pntr >= fl-1)
-			rd_pntr <= #1 {fw{1'b0}};
+			rd_pntr <=  {fw{1'b0}};
 		else
-			rd_pntr <= #1 rd_pntr + 1'b1;
+			rd_pntr <=  rd_pntr + 1'b1;
 	end
 
 endmodule

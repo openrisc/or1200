@@ -156,45 +156,45 @@ reg	[dw-1:0]		do_b;
 //
 always @(posedge clk or posedge rst)
 	if (rst) begin
-		mem <= #1 {512'h0, 512'h0};
+		mem <=  {512'h0, 512'h0};
 	end
 	else if (ce_w & we_w)
 		case (addr_w)	// synopsys parallel_case
-			5'd01: mem[32*1+31:32*1] <= #1 di_w;
-			5'd02: mem[32*2+31:32*2] <= #1 di_w;
-			5'd03: mem[32*3+31:32*3] <= #1 di_w;
-			5'd04: mem[32*4+31:32*4] <= #1 di_w;
-			5'd05: mem[32*5+31:32*5] <= #1 di_w;
-			5'd06: mem[32*6+31:32*6] <= #1 di_w;
-			5'd07: mem[32*7+31:32*7] <= #1 di_w;
-			5'd08: mem[32*8+31:32*8] <= #1 di_w;
-			5'd09: mem[32*9+31:32*9] <= #1 di_w;
-			5'd10: mem[32*10+31:32*10] <= #1 di_w;
-			5'd11: mem[32*11+31:32*11] <= #1 di_w;
-			5'd12: mem[32*12+31:32*12] <= #1 di_w;
-			5'd13: mem[32*13+31:32*13] <= #1 di_w;
-			5'd14: mem[32*14+31:32*14] <= #1 di_w;
-			5'd15: mem[32*15+31:32*15] <= #1 di_w;
+			5'd01: mem[32*1+31:32*1] <=  di_w;
+			5'd02: mem[32*2+31:32*2] <=  di_w;
+			5'd03: mem[32*3+31:32*3] <=  di_w;
+			5'd04: mem[32*4+31:32*4] <=  di_w;
+			5'd05: mem[32*5+31:32*5] <=  di_w;
+			5'd06: mem[32*6+31:32*6] <=  di_w;
+			5'd07: mem[32*7+31:32*7] <=  di_w;
+			5'd08: mem[32*8+31:32*8] <=  di_w;
+			5'd09: mem[32*9+31:32*9] <=  di_w;
+			5'd10: mem[32*10+31:32*10] <=  di_w;
+			5'd11: mem[32*11+31:32*11] <=  di_w;
+			5'd12: mem[32*12+31:32*12] <=  di_w;
+			5'd13: mem[32*13+31:32*13] <=  di_w;
+			5'd14: mem[32*14+31:32*14] <=  di_w;
+			5'd15: mem[32*15+31:32*15] <=  di_w;
 `ifdef OR1200_RFRAM_16REG
 `else
-			5'd16: mem[32*16+31:32*16] <= #1 di_w;
-			5'd17: mem[32*17+31:32*17] <= #1 di_w;
-			5'd18: mem[32*18+31:32*18] <= #1 di_w;
-			5'd19: mem[32*19+31:32*19] <= #1 di_w;
-			5'd20: mem[32*20+31:32*20] <= #1 di_w;
-			5'd21: mem[32*21+31:32*21] <= #1 di_w;
-			5'd22: mem[32*22+31:32*22] <= #1 di_w;
-			5'd23: mem[32*23+31:32*23] <= #1 di_w;
-			5'd24: mem[32*24+31:32*24] <= #1 di_w;
-			5'd25: mem[32*25+31:32*25] <= #1 di_w;
-			5'd26: mem[32*26+31:32*26] <= #1 di_w;
-			5'd27: mem[32*27+31:32*27] <= #1 di_w;
-			5'd28: mem[32*28+31:32*28] <= #1 di_w;
-			5'd29: mem[32*29+31:32*29] <= #1 di_w;
-			5'd30: mem[32*30+31:32*30] <= #1 di_w;
-			5'd31: mem[32*31+31:32*31] <= #1 di_w;
+			5'd16: mem[32*16+31:32*16] <=  di_w;
+			5'd17: mem[32*17+31:32*17] <=  di_w;
+			5'd18: mem[32*18+31:32*18] <=  di_w;
+			5'd19: mem[32*19+31:32*19] <=  di_w;
+			5'd20: mem[32*20+31:32*20] <=  di_w;
+			5'd21: mem[32*21+31:32*21] <=  di_w;
+			5'd22: mem[32*22+31:32*22] <=  di_w;
+			5'd23: mem[32*23+31:32*23] <=  di_w;
+			5'd24: mem[32*24+31:32*24] <=  di_w;
+			5'd25: mem[32*25+31:32*25] <=  di_w;
+			5'd26: mem[32*26+31:32*26] <=  di_w;
+			5'd27: mem[32*27+31:32*27] <=  di_w;
+			5'd28: mem[32*28+31:32*28] <=  di_w;
+			5'd29: mem[32*29+31:32*29] <=  di_w;
+			5'd30: mem[32*30+31:32*30] <=  di_w;
+			5'd31: mem[32*31+31:32*31] <=  di_w;
 `endif
-			default: mem[32*0+31:32*0] <= #1 32'h0000_0000;
+			default: mem[32*0+31:32*0] <=  32'h0000_0000;
 		endcase
 
 //
@@ -202,10 +202,10 @@ always @(posedge clk or posedge rst)
 //
 always @(posedge clk or posedge rst)
 	if (rst) begin
-		intaddr_a <= #1 5'h00;
+		intaddr_a <=  5'h00;
 	end
 	else if (ce_a)
-		intaddr_a <= #1 addr_a;
+		intaddr_a <=  addr_a;
 
 always @(mem or intaddr_a)
 	case (intaddr_a)	// synopsys parallel_case
@@ -251,10 +251,10 @@ always @(mem or intaddr_a)
 //
 always @(posedge clk or posedge rst)
 	if (rst) begin
-		intaddr_b <= #1 5'h00;
+		intaddr_b <=  5'h00;
 	end
 	else if (ce_b)
-		intaddr_b <= #1 addr_b;
+		intaddr_b <=  addr_b;
 
 always @(mem or intaddr_b)
 	case (intaddr_b)	// synopsys parallel_case

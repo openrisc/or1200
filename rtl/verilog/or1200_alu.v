@@ -192,7 +192,7 @@ always @(alu_op or a or b or result_sum or result_and or macrc_op or shifted_rot
 				end
 		end
 `ifdef OR1200_MULT_IMPLEMENTED
-`ifdef OR1200_IMPL_DIV
+`ifdef OR1200_DIV_IMPLEMENTED
 		`OR1200_ALUOP_DIV,
 		`OR1200_ALUOP_DIVU,
 `endif

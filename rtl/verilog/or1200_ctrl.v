@@ -67,10 +67,10 @@ module or1200_ctrl
    wb_insn, id_simm, ex_simm, id_branch_addrtarget, ex_branch_addrtarget, sel_a,
    sel_b, id_lsu_op,
    cust5_op, cust5_limm, id_pc, ex_pc, du_hwbkpt, 
-   multicycle, wbforw_valid, sig_syscall, sig_trap,
+   multicycle, wait_on, wbforw_valid, sig_syscall, sig_trap,
    force_dslot_fetch, no_more_dslot, id_void, ex_void, ex_spr_read, 
    ex_spr_write, 
-   id_mac_op, id_macrc_op, ex_macrc_op, rfe, except_illegal
+   id_mac_op, id_macrc_op, ex_macrc_op, rfe, except_illegal, dc_no_writethrough
    );
 
 //
@@ -103,7 +103,7 @@ output	[`OR1200_ALUOP_WIDTH-1:0]		alu_op;
 output	[`OR1200_MACOP_WIDTH-1:0]		mac_op;
 output	[`OR1200_SHROTOP_WIDTH-1:0]		shrot_op;
 output	[`OR1200_RFWBOP_WIDTH-1:0]		rfwb_op;
-output [`OR1200_FPUOP_WIDTH-1:0] 		fpu_op;      
+output  [`OR1200_FPUOP_WIDTH-1:0] 		fpu_op;      
 input					pc_we;
 output	[31:0]				wb_insn;
 output	[31:2]				id_branch_addrtarget;
@@ -113,6 +113,7 @@ output	[`OR1200_SEL_WIDTH-1:0]		sel_b;
 output	[`OR1200_LSUOP_WIDTH-1:0]		id_lsu_op;
 output	[`OR1200_COMPOP_WIDTH-1:0]		comp_op;
 output	[`OR1200_MULTICYCLE_WIDTH-1:0]		multicycle;
+output  [`OR1200_WAIT_ON_WIDTH-1:0] 		wait_on;   
 output	[4:0]				cust5_op;
 output	[5:0]				cust5_limm;
 input   [31:0]                          id_pc;
@@ -134,7 +135,9 @@ output					id_macrc_op;
 output					ex_macrc_op;
 output					rfe;
 output					except_illegal;
-
+output  				dc_no_writethrough;
+   
+				
 //
 // Internal wires and regs
 //
@@ -164,6 +167,7 @@ reg					sel_imm;
 reg	[`OR1200_LSUOP_WIDTH-1:0]		id_lsu_op;
 reg	[`OR1200_COMPOP_WIDTH-1:0]		comp_op;
 reg	[`OR1200_MULTICYCLE_WIDTH-1:0]		multicycle;
+reg     [`OR1200_WAIT_ON_WIDTH-1:0] 		wait_on;      
 reg 	[31:0]				id_simm;
 reg 	[31:0]				ex_simm;
 reg					sig_syscall;
@@ -177,7 +181,10 @@ reg                                     ex_delayslot_nop;
 reg					spr_read;
 reg					spr_write;
 reg     [31:2]				ex_branch_addrtarget;
-
+`ifdef OR1200_DC_NOSTACKWRITETHROUGH
+reg 					dc_no_writethrough;
+`endif
+   
 //
 // Register file read addresses
 //
@@ -211,21 +218,21 @@ assign ex_spr_read = spr_read && !abort_mvspr;
 //
 always @(posedge clk or posedge rst) begin
         if (rst) begin
-		ex_delayslot_nop <= #1 1'b0;
-		ex_delayslot_dsi <= #1 1'b0;
+		ex_delayslot_nop <=  1'b0;
+		ex_delayslot_dsi <=  1'b0;
 	end
 	else if (!ex_freeze & !ex_delayslot_dsi & ex_delayslot_nop) begin
-		ex_delayslot_nop <= #1 id_void;
-		ex_delayslot_dsi <= #1 !id_void;
+		ex_delayslot_nop <=  id_void;
+		ex_delayslot_dsi <=  !id_void;
 	end
 	else if (!ex_freeze & ex_delayslot_dsi & !ex_delayslot_nop) begin
-		ex_delayslot_nop <= #1 1'b0;
-		ex_delayslot_dsi <= #1 1'b0;
+		ex_delayslot_nop <=  1'b0;
+		ex_delayslot_dsi <=  1'b0;
 	end
 	else if (!ex_freeze) begin
-		ex_delayslot_nop <= #1 id_void && ex_branch_taken && (ex_branch_op != `OR1200_BRANCHOP_NOP) && 
+		ex_delayslot_nop <=  id_void && ex_branch_taken && (ex_branch_op != `OR1200_BRANCHOP_NOP) && 
 								(ex_branch_op != `OR1200_BRANCHOP_RFE);
-		ex_delayslot_dsi <= #1 !id_void && ex_branch_taken && (ex_branch_op != `OR1200_BRANCHOP_NOP) && 
+		ex_delayslot_dsi <=  !id_void && ex_branch_taken && (ex_branch_op != `OR1200_BRANCHOP_NOP) && 
 								 (ex_branch_op != `OR1200_BRANCHOP_RFE);
 	end
 end
@@ -243,9 +250,9 @@ assign wb_flushpipe = except_flushpipe | pc_we | extend_flush;
 //
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		ex_simm <= #1 32'h0000_0000;
+		ex_simm <=  32'h0000_0000;
 	else if (!ex_freeze) begin
-		ex_simm <= #1 id_simm;
+		ex_simm <=  id_simm;
 	end
 end
 
@@ -314,9 +321,9 @@ assign id_branch_addrtarget = {{4{id_insn[25]}}, id_insn[25:0]} + id_pc[31:2];
 // pipeline ID and EX branch target address 
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		ex_branch_addrtarget <= #1 32'h00000000;
+		ex_branch_addrtarget <=  32'h00000000;
 	else if (!ex_freeze) 
-		ex_branch_addrtarget <= #1 id_branch_addrtarget;
+		ex_branch_addrtarget <=  id_branch_addrtarget;
 end
 // not pipelined
 //assign ex_branch_addrtarget = {{4{ex_insn[25]}}, ex_insn[25:0]} + ex_pc[31:2];
@@ -345,11 +352,11 @@ assign id_macrc_op = 1'b0;
 `ifdef OR1200_MAC_IMPLEMENTED
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		ex_macrc_op <= #1 1'b0;
+		ex_macrc_op <=  1'b0;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
-		ex_macrc_op <= #1 1'b0;
+		ex_macrc_op <=  1'b0;
 	else if (!ex_freeze)
-		ex_macrc_op <= #1 id_macrc_op;
+		ex_macrc_op <=  id_macrc_op;
 end
 `else
 assign ex_macrc_op = 1'b0;
@@ -444,35 +451,53 @@ always @(id_insn) begin
     
     `OR1200_OR32_MULI:
       multicycle = 2'h3;
-
-`ifdef OR1200_FPU_IMPLEMENTED
-    `OR1200_OR32_FLOAT:
-      multicycle = `OR1200_FPUOP_CYCLES;    
-`endif
-
     
     // Single cycle instructions
     default: begin
       multicycle = `OR1200_ONE_CYCLE;
-    end
-    
+    end    
   endcase
-end
+end // always @ (id_insn)
 
+//
+// Encode wait_on signal
+//    
+always @(id_insn) begin
+   case (id_insn[31:26])		// synopsys parallel_case
+`ifdef OR1200_FPU_IMPLEMENTED
+       `OR1200_OR32_FLOAT: begin
+	 wait_on = id_insn[`OR1200_FPUOP_DOUBLE_BIT] ? 0 : `OR1200_WAIT_ON_FPU;
+       end
+`endif
+`ifndef OR1200_DC_WRITHROUGH
+     // l.mtspr
+     `OR1200_OR32_MTSPR: begin
+	wait_on = `OR1200_WAIT_ON_MTSPR;
+     end
+`endif
+     default: begin
+	wait_on = 0;
+     end
+   endcase // case (id_insn[31:26])
+end // always @ (id_insn)
+   
+   
+   
+   
 //
 // Register file write address
 //
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		rf_addrw <= #1 5'd0;
+		rf_addrw <=  5'd0;
 	else if (!ex_freeze & id_freeze)
-		rf_addrw <= #1 5'd00;
+		rf_addrw <=  5'd00;
 	else if (!ex_freeze)
 		case (id_insn[31:26])	// synopsys parallel_case
 			`OR1200_OR32_JAL, `OR1200_OR32_JALR:
-				rf_addrw <= #1 5'd09;	// link register r9
+				rf_addrw <=  5'd09;	// link register r9
 			default:
-				rf_addrw <= #1 id_insn[25:21];
+				rf_addrw <=  id_insn[25:21];
 		endcase
 end
 
@@ -481,9 +506,9 @@ end
 //
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		wb_rfaddrw <= #1 5'd0;
+		wb_rfaddrw <=  5'd0;
 	else if (!wb_freeze)
-		wb_rfaddrw <= #1 rf_addrw;
+		wb_rfaddrw <=  rf_addrw;
 end
 
 //
@@ -491,11 +516,11 @@ end
 //
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		id_insn <= #1 {`OR1200_OR32_NOP, 26'h041_0000};
+		id_insn <=  {`OR1200_OR32_NOP, 26'h041_0000};
         else if (id_flushpipe)
-                id_insn <= #1 {`OR1200_OR32_NOP, 26'h041_0000};        // NOP -> id_insn[16] must be 1
+                id_insn <=  {`OR1200_OR32_NOP, 26'h041_0000};        // NOP -> id_insn[16] must be 1
 	else if (!id_freeze) begin
-		id_insn <= #1 if_insn;
+		id_insn <=  if_insn;
 `ifdef OR1200_VERBOSE
 // synopsys translate_off
 		$display("%t: id_insn <= %h", $time, if_insn);
@@ -509,11 +534,11 @@ end
 //
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		ex_insn <= #1 {`OR1200_OR32_NOP, 26'h041_0000};
+		ex_insn <=  {`OR1200_OR32_NOP, 26'h041_0000};
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
-		ex_insn <= #1 {`OR1200_OR32_NOP, 26'h041_0000};	// NOP -> ex_insn[16] must be 1
+		ex_insn <=  {`OR1200_OR32_NOP, 26'h041_0000};	// NOP -> ex_insn[16] must be 1
 	else if (!ex_freeze) begin
-		ex_insn <= #1 id_insn;
+		ex_insn <=  id_insn;
 `ifdef OR1200_VERBOSE
 // synopsys translate_off
 		$display("%t: ex_insn <= %h", $time, id_insn);
@@ -521,18 +546,18 @@ always @(posedge clk or posedge rst) begin
 `endif
 	end
 end
-
+   
 //
 // Instruction latch in wb_insn
 //
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		wb_insn <= #1 {`OR1200_OR32_NOP, 26'h041_0000};
+		wb_insn <=  {`OR1200_OR32_NOP, 26'h041_0000};
 	// wb_insn should not be changed by exceptions due to correct 
 	// recording of display_arch_state in the or1200_monitor! 
 	// wb_insn changed by exception is not used elsewhere! 
 	else if (!wb_freeze) begin
-		wb_insn <= #1 ex_insn;
+		wb_insn <=  ex_insn;
 	end
 end
 
@@ -541,77 +566,77 @@ end
 //
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		sel_imm <= #1 1'b0;
+		sel_imm <=  1'b0;
 	else if (!id_freeze) begin
 	  case (if_insn[31:26])		// synopsys parallel_case
 
 	    // j.jalr
 	    `OR1200_OR32_JALR:
-	      sel_imm <= #1 1'b0;
+	      sel_imm <=  1'b0;
 	    
 	    // l.jr
 	    `OR1200_OR32_JR:
-	      sel_imm <= #1 1'b0;
+	      sel_imm <=  1'b0;
 	    
 	    // l.rfe
 	    `OR1200_OR32_RFE:
-	      sel_imm <= #1 1'b0;
+	      sel_imm <=  1'b0;
 	    
 	    // l.mfspr
 	    `OR1200_OR32_MFSPR:
-	      sel_imm <= #1 1'b0;
+	      sel_imm <=  1'b0;
 	    
 	    // l.mtspr
 	    `OR1200_OR32_MTSPR:
-	      sel_imm <= #1 1'b0;
+	      sel_imm <=  1'b0;
 	    
 	    // l.sys, l.brk and all three sync insns
 	    `OR1200_OR32_XSYNC:
-	      sel_imm <= #1 1'b0;
+	      sel_imm <=  1'b0;
 	    
 	    // l.mac/l.msb
 `ifdef OR1200_MAC_IMPLEMENTED
 	    `OR1200_OR32_MACMSB:
-	      sel_imm <= #1 1'b0;
+	      sel_imm <=  1'b0;
 `endif
 
 	    // l.sw
 	    `OR1200_OR32_SW:
-	      sel_imm <= #1 1'b0;
+	      sel_imm <=  1'b0;
 	    
 	    // l.sb
 	    `OR1200_OR32_SB:
-	      sel_imm <= #1 1'b0;
+	      sel_imm <=  1'b0;
 	    
 	    // l.sh
 	    `OR1200_OR32_SH:
-	      sel_imm <= #1 1'b0;
+	      sel_imm <=  1'b0;
 	    
 	    // ALU instructions except the one with immediate
 	    `OR1200_OR32_ALU:
-	      sel_imm <= #1 1'b0;
+	      sel_imm <=  1'b0;
 	    
 	    // SFXX instructions
 	    `OR1200_OR32_SFXX:
-	      sel_imm <= #1 1'b0;
+	      sel_imm <=  1'b0;
 
 `ifdef OR1200_OR32_CUST5
 	    // l.cust5 instructions
 	    `OR1200_OR32_CUST5:
-	      sel_imm <= #1 1'b0;
+	      sel_imm <=  1'b0;
 `endif
 `ifdef OR1200_FPU_IMPLEMENTED
 	    // FPU instructions
 	    `OR1200_OR32_FLOAT:
-	      sel_imm <= #1 1'b0;
+	      sel_imm <=  1'b0;
 `endif
 	    // l.nop
 	    `OR1200_OR32_NOP:
-	      sel_imm <= #1 1'b0;
+	      sel_imm <=  1'b0;
 
 	    // All instructions with immediates
 	    default: begin
-	      sel_imm <= #1 1'b1;
+	      sel_imm <=  1'b1;
 	    end
 	    
 	  endcase
@@ -624,9 +649,9 @@ end
 //
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		except_illegal <= #1 1'b0;
+		except_illegal <=  1'b0;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
-		except_illegal <= #1 1'b0;
+		except_illegal <=  1'b0;
 	else if (!ex_freeze) begin
 		case (id_insn[31:26])		// synopsys parallel_case
 
@@ -670,18 +695,18 @@ always @(posedge clk or posedge rst) begin
 		`OR1200_OR32_CUST5,
 `endif
 	`OR1200_OR32_NOP:
-			except_illegal <= #1 1'b0;
+			except_illegal <=  1'b0;
 `ifdef OR1200_FPU_IMPLEMENTED
 	    `OR1200_OR32_FLOAT:
 	                // Check it's not a double precision instruction
-	                except_illegal <= #1 id_insn[`OR1200_FPUOP_DOUBLE_BIT];
+	                except_illegal <=  id_insn[`OR1200_FPUOP_DOUBLE_BIT];
 `endif	      
 
 	`OR1200_OR32_ALU:
-			except_illegal <= #1 1'b0 
+			except_illegal <=  1'b0 
 
 `ifdef OR1200_MULT_IMPLEMENTED
-`ifdef OR1200_IMPL_DIV
+`ifdef OR1200_DIV_IMPLEMENTED
 `else 
 				| ({1'b0, id_insn[3:0]} == `OR1200_ALUOP_DIV)
 				| ({1'b0, id_insn[3:0]} == `OR1200_ALUOP_DIVU)
@@ -710,7 +735,7 @@ always @(posedge clk or posedge rst) begin
 
 		// Illegal and OR1200 unsupported instructions
 		default:
-			except_illegal <= #1 1'b1;
+			except_illegal <=  1'b1;
 
 		endcase
 	  
@@ -722,67 +747,67 @@ end
 //
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		alu_op <= #1 `OR1200_ALUOP_NOP;
+		alu_op <=  `OR1200_ALUOP_NOP;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
-		alu_op <= #1 `OR1200_ALUOP_NOP;
+		alu_op <=  `OR1200_ALUOP_NOP;
 	else if (!ex_freeze) begin
 	  case (id_insn[31:26])		// synopsys parallel_case
 	    
 	    // l.movhi
 	    `OR1200_OR32_MOVHI:
-	      alu_op <= #1 `OR1200_ALUOP_MOVHI;
+	      alu_op <=  `OR1200_ALUOP_MOVHI;
 	    
 	    // l.addi
 	    `OR1200_OR32_ADDI:
-	      alu_op <= #1 `OR1200_ALUOP_ADD;
+	      alu_op <=  `OR1200_ALUOP_ADD;
 	    
 	    // l.addic
 	    `OR1200_OR32_ADDIC:
-	      alu_op <= #1 `OR1200_ALUOP_ADDC;
+	      alu_op <=  `OR1200_ALUOP_ADDC;
 	    
 	    // l.andi
 	    `OR1200_OR32_ANDI:
-	      alu_op <= #1 `OR1200_ALUOP_AND;
+	      alu_op <=  `OR1200_ALUOP_AND;
 	    
 	    // l.ori
 	    `OR1200_OR32_ORI:
-	      alu_op <= #1 `OR1200_ALUOP_OR;
+	      alu_op <=  `OR1200_ALUOP_OR;
 	    
 	    // l.xori
 	    `OR1200_OR32_XORI:
-	      alu_op <= #1 `OR1200_ALUOP_XOR;
+	      alu_op <=  `OR1200_ALUOP_XOR;
 	    
 	    // l.muli
 `ifdef OR1200_MULT_IMPLEMENTED
 	    `OR1200_OR32_MULI:
-	      alu_op <= #1 `OR1200_ALUOP_MUL;
+	      alu_op <=  `OR1200_ALUOP_MUL;
 `endif
 	    
 	    // Shift and rotate insns with immediate
 	    `OR1200_OR32_SH_ROTI:
-	      alu_op <= #1 `OR1200_ALUOP_SHROT;
+	      alu_op <=  `OR1200_ALUOP_SHROT;
 	    
 	    // SFXX insns with immediate
 	    `OR1200_OR32_SFXXI:
-	      alu_op <= #1 `OR1200_ALUOP_COMP;
+	      alu_op <=  `OR1200_ALUOP_COMP;
 	    
 	    // ALU instructions except the one with immediate
 	    `OR1200_OR32_ALU:
-	      alu_op <= #1 id_insn[3:0];
+	      alu_op <=  id_insn[3:0];
 	    
 	    // SFXX instructions
 	    `OR1200_OR32_SFXX:
-	      alu_op <= #1 `OR1200_ALUOP_COMP;
+	      alu_op <=  `OR1200_ALUOP_COMP;
 
 `ifdef OR1200_OR32_CUST5
 	    // l.cust5 instructions
 	    `OR1200_OR32_CUST5:
-	      alu_op <= #1 `OR1200_ALUOP_CUST5;
+	      alu_op <=  `OR1200_ALUOP_CUST5;
 `endif
 	    
 	    // Default
 	    default: begin
-	      alu_op <= #1 `OR1200_ALUOP_NOP;
+	      alu_op <=  `OR1200_ALUOP_NOP;
 	    end
 	      
 	  endcase
@@ -795,32 +820,32 @@ end
 //
 always @(posedge clk or posedge rst) begin
 	if (rst) begin
-		spr_read <= #1 1'b0;
-		spr_write <= #1 1'b0;
+		spr_read <=  1'b0;
+		spr_write <=  1'b0;
 	end
 	else if (!ex_freeze & id_freeze | ex_flushpipe) begin
-		spr_read <= #1 1'b0;
-		spr_write <= #1 1'b0;
+		spr_read <=  1'b0;
+		spr_write <=  1'b0;
 	end
 	else if (!ex_freeze) begin
 		case (id_insn[31:26])     // synopsys parallel_case
 
 		// l.mfspr
 		`OR1200_OR32_MFSPR: begin
-			spr_read <= #1 1'b1;
-			spr_write <= #1 1'b0;
+			spr_read <=  1'b1;
+			spr_write <=  1'b0;
 		end
 
 		// l.mtspr
 		`OR1200_OR32_MTSPR: begin
-			spr_read <= #1 1'b0;
-			spr_write <= #1 1'b1;
+			spr_read <=  1'b0;
+			spr_write <=  1'b1;
 		end
 
 		// Default
 		default: begin
-			spr_read <= #1 1'b0;
-			spr_write <= #1 1'b0;
+			spr_read <=  1'b0;
+			spr_write <=  1'b0;
 		end
 
 		endcase
@@ -836,26 +861,26 @@ always @(id_insn) begin
 
 	// l.maci
 	`OR1200_OR32_MACI:
-		id_mac_op <= #1 `OR1200_MACOP_MAC;
+		id_mac_op <=  `OR1200_MACOP_MAC;
 
 	// l.mac, l.msb
 	`OR1200_OR32_MACMSB:
-		id_mac_op <= #1 id_insn[2:0];
+		id_mac_op <=  id_insn[2:0];
 
 	// Illegal and OR1200 unsupported instructions
 	default:
-		id_mac_op <= #1 `OR1200_MACOP_NOP;
+		id_mac_op <=  `OR1200_MACOP_NOP;
 
 	endcase
 end
 
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		ex_mac_op <= #1 `OR1200_MACOP_NOP;
+		ex_mac_op <=  `OR1200_MACOP_NOP;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
-		ex_mac_op <= #1 `OR1200_MACOP_NOP;
+		ex_mac_op <=  `OR1200_MACOP_NOP;
 	else if (!ex_freeze)
-		ex_mac_op <= #1 id_mac_op;
+		ex_mac_op <=  id_mac_op;
 end
 
 assign mac_op = abort_mvspr ? `OR1200_MACOP_NOP : ex_mac_op;
@@ -869,11 +894,11 @@ assign mac_op = `OR1200_MACOP_NOP;
 //
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		shrot_op <= #1 `OR1200_SHROTOP_NOP;
+		shrot_op <=  `OR1200_SHROTOP_NOP;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
-		shrot_op <= #1 `OR1200_SHROTOP_NOP;
+		shrot_op <=  `OR1200_SHROTOP_NOP;
 	else if (!ex_freeze) begin
-		shrot_op <= #1 id_insn[`OR1200_SHROTOP_POS];
+		shrot_op <=  id_insn[`OR1200_SHROTOP_POS];
 	end
 end
 
@@ -882,95 +907,95 @@ end
 //
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		rfwb_op <= #1 `OR1200_RFWBOP_NOP;
+		rfwb_op <=  `OR1200_RFWBOP_NOP;
 	else  if (!ex_freeze & id_freeze | ex_flushpipe)
-		rfwb_op <= #1 `OR1200_RFWBOP_NOP;
+		rfwb_op <=  `OR1200_RFWBOP_NOP;
 	else  if (!ex_freeze) begin
 		case (id_insn[31:26])		// synopsys parallel_case
 
 		// j.jal
 		`OR1200_OR32_JAL:
-			rfwb_op <= #1 {`OR1200_RFWBOP_LR, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_LR, 1'b1};
 		  
 		// j.jalr
 		`OR1200_OR32_JALR:
-			rfwb_op <= #1 {`OR1200_RFWBOP_LR, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_LR, 1'b1};
 		  
 		// l.movhi
 		`OR1200_OR32_MOVHI:
-			rfwb_op <= #1 {`OR1200_RFWBOP_ALU, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_ALU, 1'b1};
 		  
 		// l.mfspr
 		`OR1200_OR32_MFSPR:
-			rfwb_op <= #1 {`OR1200_RFWBOP_SPRS, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_SPRS, 1'b1};
 		  
 		// l.lwz
 		`OR1200_OR32_LWZ:
-			rfwb_op <= #1 {`OR1200_RFWBOP_LSU, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_LSU, 1'b1};
 		  
 		// l.lbz
 		`OR1200_OR32_LBZ:
-			rfwb_op <= #1 {`OR1200_RFWBOP_LSU, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_LSU, 1'b1};
 		  
 		// l.lbs
 		`OR1200_OR32_LBS:
-			rfwb_op <= #1 {`OR1200_RFWBOP_LSU, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_LSU, 1'b1};
 		  
 		// l.lhz
 		`OR1200_OR32_LHZ:
-			rfwb_op <= #1 {`OR1200_RFWBOP_LSU, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_LSU, 1'b1};
 		  
 		// l.lhs
 		`OR1200_OR32_LHS:
-			rfwb_op <= #1 {`OR1200_RFWBOP_LSU, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_LSU, 1'b1};
 		  
 		// l.addi
 		`OR1200_OR32_ADDI:
-			rfwb_op <= #1 {`OR1200_RFWBOP_ALU, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_ALU, 1'b1};
 		  
 		// l.addic
 		`OR1200_OR32_ADDIC:
-			rfwb_op <= #1 {`OR1200_RFWBOP_ALU, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_ALU, 1'b1};
 		  
 		// l.andi
 		`OR1200_OR32_ANDI:
-			rfwb_op <= #1 {`OR1200_RFWBOP_ALU, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_ALU, 1'b1};
 		  
 		// l.ori
 		`OR1200_OR32_ORI:
-			rfwb_op <= #1 {`OR1200_RFWBOP_ALU, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_ALU, 1'b1};
 		  
 		// l.xori
 		`OR1200_OR32_XORI:
-			rfwb_op <= #1 {`OR1200_RFWBOP_ALU, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_ALU, 1'b1};
 		  
 		// l.muli
 `ifdef OR1200_MULT_IMPLEMENTED
 		`OR1200_OR32_MULI:
-			rfwb_op <= #1 {`OR1200_RFWBOP_ALU, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_ALU, 1'b1};
 `endif
 		  
 		// Shift and rotate insns with immediate
 		`OR1200_OR32_SH_ROTI:
-			rfwb_op <= #1 {`OR1200_RFWBOP_ALU, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_ALU, 1'b1};
 		  
 		// ALU instructions except the one with immediate
 		`OR1200_OR32_ALU:
-			rfwb_op <= #1 {`OR1200_RFWBOP_ALU, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_ALU, 1'b1};
 
 `ifdef OR1200_OR32_CUST5
 		// l.cust5 instructions
 		`OR1200_OR32_CUST5:
-			rfwb_op <= #1 {`OR1200_RFWBOP_ALU, 1'b1};
+			rfwb_op <=  {`OR1200_RFWBOP_ALU, 1'b1};
 `endif
 `ifdef OR1200_FPU_IMPLEMENTED
 		  // FPU instructions, lf.XXX.s, except sfxx
 		  `OR1200_OR32_FLOAT:
-		    rfwb_op <= #1 {`OR1200_RFWBOP_FPU,!id_insn[3]};
+		    rfwb_op <=  {`OR1200_RFWBOP_FPU,!id_insn[3]};
 `endif
 		// Instructions w/o register-file write-back
 		default: 
-			rfwb_op <= #1 `OR1200_RFWBOP_NOP;
+			rfwb_op <=  `OR1200_RFWBOP_NOP;
 
 
 		endcase
@@ -982,43 +1007,43 @@ end
 //
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		id_branch_op <= #1 `OR1200_BRANCHOP_NOP;
+		id_branch_op <=  `OR1200_BRANCHOP_NOP;
 	else if (id_flushpipe)
-		id_branch_op <= #1 `OR1200_BRANCHOP_NOP;
+		id_branch_op <=  `OR1200_BRANCHOP_NOP;
 	else if (!id_freeze) begin
 		case (if_insn[31:26])		// synopsys parallel_case
 
 		// l.j
 		`OR1200_OR32_J:
-			id_branch_op <= #1 `OR1200_BRANCHOP_J;
+			id_branch_op <=  `OR1200_BRANCHOP_J;
 		  
 		// j.jal
 		`OR1200_OR32_JAL:
-			id_branch_op <= #1 `OR1200_BRANCHOP_J;
+			id_branch_op <=  `OR1200_BRANCHOP_J;
 		  
 		// j.jalr
 		`OR1200_OR32_JALR:
-			id_branch_op <= #1 `OR1200_BRANCHOP_JR;
+			id_branch_op <=  `OR1200_BRANCHOP_JR;
 		  
 		// l.jr
 		`OR1200_OR32_JR:
-			id_branch_op <= #1 `OR1200_BRANCHOP_JR;
+			id_branch_op <=  `OR1200_BRANCHOP_JR;
 		  
 		// l.bnf
 		`OR1200_OR32_BNF:
-			id_branch_op <= #1 `OR1200_BRANCHOP_BNF;
+			id_branch_op <=  `OR1200_BRANCHOP_BNF;
 		  
 		// l.bf
 		`OR1200_OR32_BF:
-			id_branch_op <= #1 `OR1200_BRANCHOP_BF;
+			id_branch_op <=  `OR1200_BRANCHOP_BF;
 		  
 		// l.rfe
 		`OR1200_OR32_RFE:
-			id_branch_op <= #1 `OR1200_BRANCHOP_RFE;
+			id_branch_op <=  `OR1200_BRANCHOP_RFE;
 		  
 		// Non branch instructions
 		default:
-			id_branch_op <= #1 `OR1200_BRANCHOP_NOP;
+			id_branch_op <=  `OR1200_BRANCHOP_NOP;
 
 		endcase
 	end
@@ -1029,11 +1054,11 @@ end
 //
 always @(posedge clk or posedge rst)
 	if (rst)
-		ex_branch_op <= #1 `OR1200_BRANCHOP_NOP;
+		ex_branch_op <=  `OR1200_BRANCHOP_NOP;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
-		ex_branch_op <= #1 `OR1200_BRANCHOP_NOP;		
+		ex_branch_op <=  `OR1200_BRANCHOP_NOP;		
 	else if (!ex_freeze)
-		ex_branch_op <= #1 id_branch_op;
+		ex_branch_op <=  id_branch_op;
 
 //
 // Decode of id_lsu_op
@@ -1043,39 +1068,39 @@ always @(id_insn) begin
 
 	// l.lwz
 	`OR1200_OR32_LWZ:
-		id_lsu_op <= #1 `OR1200_LSUOP_LWZ;
+		id_lsu_op <=  `OR1200_LSUOP_LWZ;
 
 	// l.lbz
 	`OR1200_OR32_LBZ:
-		id_lsu_op <= #1 `OR1200_LSUOP_LBZ;
+		id_lsu_op <=  `OR1200_LSUOP_LBZ;
 
 	// l.lbs
 	`OR1200_OR32_LBS:
-		id_lsu_op <= #1 `OR1200_LSUOP_LBS;
+		id_lsu_op <=  `OR1200_LSUOP_LBS;
 
 	// l.lhz
 	`OR1200_OR32_LHZ:
-		id_lsu_op <= #1 `OR1200_LSUOP_LHZ;
+		id_lsu_op <=  `OR1200_LSUOP_LHZ;
 
 	// l.lhs
 	`OR1200_OR32_LHS:
-		id_lsu_op <= #1 `OR1200_LSUOP_LHS;
+		id_lsu_op <=  `OR1200_LSUOP_LHS;
 
 	// l.sw
 	`OR1200_OR32_SW:
-		id_lsu_op <= #1 `OR1200_LSUOP_SW;
+		id_lsu_op <=  `OR1200_LSUOP_SW;
 
 	// l.sb
 	`OR1200_OR32_SB:
-		id_lsu_op <= #1 `OR1200_LSUOP_SB;
+		id_lsu_op <=  `OR1200_LSUOP_SB;
 
 	// l.sh
 	`OR1200_OR32_SH:
-		id_lsu_op <= #1 `OR1200_LSUOP_SH;
+		id_lsu_op <=  `OR1200_LSUOP_SH;
 
 	// Non load/store instructions
 	default:
-		id_lsu_op <= #1 `OR1200_LSUOP_NOP;
+		id_lsu_op <=  `OR1200_LSUOP_NOP;
 
 	endcase
 end
@@ -1085,18 +1110,19 @@ end
 //
 always @(posedge clk or posedge rst) begin
 	if (rst) begin
-		comp_op <= #1 4'd0;
+		comp_op <=  4'd0;
 	end else if (!ex_freeze & id_freeze | ex_flushpipe)
-		comp_op <= #1 4'd0;
+		comp_op <=  4'd0;
 	else if (!ex_freeze)
-		comp_op <= #1 id_insn[24:21];
+		comp_op <=  id_insn[24:21];
 end
 
 `ifdef OR1200_FPU_IMPLEMENTED
 //
 // Decode of FPU ops
 //
-   assign fpu_op = {(id_insn[31:26] == `OR1200_OR32_FLOAT), id_insn[`OR1200_FPUOP_WIDTH-2:0]};
+   assign fpu_op = {(id_insn[31:26] == `OR1200_OR32_FLOAT), 
+		    id_insn[`OR1200_FPUOP_WIDTH-2:0]};
 `else
    assign fpu_op = {`OR1200_FPUOP_WIDTH{1'b0}};
 `endif
@@ -1107,9 +1133,9 @@ end
 //
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		sig_syscall <= #1 1'b0;
+		sig_syscall <=  1'b0;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
-		sig_syscall <= #1 1'b0;
+		sig_syscall <=  1'b0;
 	else if (!ex_freeze) begin
 `ifdef OR1200_VERBOSE
 // synopsys translate_off
@@ -1117,7 +1143,7 @@ always @(posedge clk or posedge rst) begin
 			$display("Generating sig_syscall");
 // synopsys translate_on
 `endif
-		sig_syscall <= #1 (id_insn[31:23] == {`OR1200_OR32_XSYNC, 3'b000});
+		sig_syscall <=  (id_insn[31:23] == {`OR1200_OR32_XSYNC, 3'b000});
 	end
 end
 
@@ -1126,9 +1152,9 @@ end
 //
 always @(posedge clk or posedge rst) begin
 	if (rst)
-		sig_trap <= #1 1'b0;
+		sig_trap <=  1'b0;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
-		sig_trap <= #1 1'b0;
+		sig_trap <=  1'b0;
 	else if (!ex_freeze) begin
 `ifdef OR1200_VERBOSE
 // synopsys translate_off
@@ -1136,9 +1162,24 @@ always @(posedge clk or posedge rst) begin
 			$display("Generating sig_trap");
 // synopsys translate_on
 `endif
-		sig_trap <= #1 (id_insn[31:23] == {`OR1200_OR32_XSYNC, 3'b010})
+		sig_trap <=  (id_insn[31:23] == {`OR1200_OR32_XSYNC, 3'b010})
 			| du_hwbkpt;
 	end
 end
 
+// Decode destination register address for data cache to check if store ops
+// are being done from the stack register (r1) or frame pointer register (r2)
+`ifdef OR1200_DC_NOSTACKWRITETHROUGH   
+always @(posedge clk or posedge rst) begin
+   if (rst)
+     dc_no_writethrough <= 0;
+   else if (!ex_freeze)
+     dc_no_writethrough <= (id_insn[20:16] == 5'd1) | (id_insn[20:16] == 5'd2);
+end
+`else
+   
+   assign dc_no_writethrough = 0;
+  
+`endif      
+   
 endmodule

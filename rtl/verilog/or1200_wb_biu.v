@@ -3,7 +3,7 @@
 ////  OR1200's WISHBONE BIU                                       ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://opencores.org/project,or1k                           ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Implements WISHBONE interface                               ////
@@ -46,64 +46,11 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
 //
 // $Log: or1200_wb_biu.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Major update: 
 // Structure reordered and bugs fixed. 
-//
-// Revision 1.7  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.6.4.1  2003/07/08 15:36:37  lampret
-// Added embedded memory QMEM.
-//
-// Revision 1.6  2003/04/07 20:57:46  lampret
-// Fixed OR1200_CLKDIV_x_SUPPORTED defines. Fixed order of ifdefs.
-//
-// Revision 1.5  2002/12/08 08:57:56  lampret
-// Added optional support for WB B3 specification (xwb_cti_o, xwb_bte_o). Made xwb_cab_o optional.
-//
-// Revision 1.4  2002/09/16 03:09:16  lampret
-// Fixed a combinational loop.
-//
-// Revision 1.3  2002/08/12 05:31:37  lampret
-// Added optional retry counter for wb_rty_i. Added graceful termination for aborted transfers.
-//
-// Revision 1.2  2002/07/14 22:17:17  lampret
-// Added simple trace buffer [only for Xilinx Virtex target]. Fixed instruction fetch abort when new exception is recognized.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.12  2001/11/22 13:42:51  lampret
-// Added wb_cyc_o assignment after it was removed by accident.
-//
-// Revision 1.11  2001/11/20 21:28:10  lampret
-// Added optional sampling of inputs.
-//
-// Revision 1.10  2001/11/18 11:32:00  lampret
-// OR1200_REGISTERED_OUTPUTS can now be enabled.
-//
-// Revision 1.9  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.8  2001/10/14 13:12:10  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:35  igorm
-// no message
-//
-// Revision 1.3  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-// Revision 1.2  2001/07/22 03:31:54  lampret
-// Fixed RAM's oen bug. Cache bypass under development.
-//
-// Revision 1.1  2001/07/20 00:46:23  lampret
-// Development version of RTL. Libraries are missing.
-//
 //
 
 // synopsys translate_off
@@ -112,338 +59,358 @@
 `include "or1200_defines.v"
 
 module or1200_wb_biu(
-	// RISC clock, reset and clock control
-	clk, rst, clmode,
+		     // RISC clock, reset and clock control
+		     clk, rst, clmode,
 
-	// WISHBONE interface
-	wb_clk_i, wb_rst_i, wb_ack_i, wb_err_i, wb_rty_i, wb_dat_i,
-	wb_cyc_o, wb_adr_o, wb_stb_o, wb_we_o, wb_sel_o, wb_dat_o,
+		     // WISHBONE interface
+		     wb_clk_i, wb_rst_i, wb_ack_i, wb_err_i, wb_rty_i, wb_dat_i,
+		     wb_cyc_o, wb_adr_o, wb_stb_o, wb_we_o, wb_sel_o, wb_dat_o,
 `ifdef OR1200_WB_CAB
-	wb_cab_o,
+		     wb_cab_o,
 `endif
 `ifdef OR1200_WB_B3
-	wb_cti_o, wb_bte_o,
+		     wb_cti_o, wb_bte_o,
 `endif
 
-	// Internal RISC bus
-	biu_dat_i, biu_adr_i, biu_cyc_i, biu_stb_i, biu_we_i, biu_sel_i, biu_cab_i,
-	biu_dat_o, biu_ack_o, biu_err_o
-);
+		     // Internal RISC bus
+		     biu_dat_i, biu_adr_i, biu_cyc_i, biu_stb_i, biu_we_i, biu_sel_i, biu_cab_i,
+		     biu_dat_o, biu_ack_o, biu_err_o
+		     );
 
-parameter dw = `OR1200_OPERAND_WIDTH;
-parameter aw = `OR1200_OPERAND_WIDTH;
+   parameter dw = `OR1200_OPERAND_WIDTH;
+   parameter aw = `OR1200_OPERAND_WIDTH;
 
-//
-// RISC clock, reset and clock control
-//
-input				clk;		// RISC clock
-input				rst;		// RISC reset
-input	[1:0]			clmode;		// 00 WB=RISC, 01 WB=RISC/2, 10 N/A, 11 WB=RISC/4
+   //
+   // RISC clock, reset and clock control
+   //
+   input				clk;		// RISC clock
+   input				rst;		// RISC reset
+   input [1:0] 				clmode;		// 00 WB=RISC, 01 WB=RISC/2, 10 N/A, 11 WB=RISC/4
 
-//
-// WISHBONE interface
-//
-input				wb_clk_i;	// clock input
-input				wb_rst_i;	// reset input
-input				wb_ack_i;	// normal termination
-input				wb_err_i;	// termination w/ error
-input				wb_rty_i;	// termination w/ retry
-input	[dw-1:0]		wb_dat_i;	// input data bus
-output				wb_cyc_o;	// cycle valid output
-output	[aw-1:0]		wb_adr_o;	// address bus outputs
-output				wb_stb_o;	// strobe output
-output				wb_we_o;	// indicates write transfer
-output	[3:0]			wb_sel_o;	// byte select outputs
-output	[dw-1:0]		wb_dat_o;	// output data bus
+   //
+   // WISHBONE interface
+   //
+   input				wb_clk_i;	// clock input
+   input				wb_rst_i;	// reset input
+   input				wb_ack_i;	// normal termination
+   input				wb_err_i;	// termination w/ error
+   input				wb_rty_i;	// termination w/ retry
+   input [dw-1:0] 			wb_dat_i;	// input data bus
+   output				wb_cyc_o;	// cycle valid output
+   output [aw-1:0] 			wb_adr_o;	// address bus outputs
+   output				wb_stb_o;	// strobe output
+   output				wb_we_o;	// indicates write transfer
+   output [3:0] 			wb_sel_o;	// byte select outputs
+   output [dw-1:0] 			wb_dat_o;	// output data bus
 `ifdef OR1200_WB_CAB
-output				wb_cab_o;	// consecutive address burst
+   output				wb_cab_o;	// consecutive address burst
 `endif
 `ifdef OR1200_WB_B3
-output	[2:0]			wb_cti_o;	// cycle type identifier
-output	[1:0]			wb_bte_o;	// burst type extension
+   output [2:0] 			wb_cti_o;	// cycle type identifier
+   output [1:0] 			wb_bte_o;	// burst type extension
 `endif
 
-//
-// Internal RISC interface
-//
-input	[dw-1:0]		biu_dat_i;	// input data bus
-input	[aw-1:0]		biu_adr_i;	// address bus
-input				biu_cyc_i;	// WB cycle
-input				biu_stb_i;	// WB strobe
-input				biu_we_i;	// WB write enable
-input				biu_cab_i;	// CAB input
-input	[3:0]			biu_sel_i;	// byte selects
-output	[31:0]			biu_dat_o;	// output data bus
-output				biu_ack_o;	// ack output
-output				biu_err_o;	// err output
+   //
+   // Internal RISC interface
+   //
+   input [dw-1:0] 			biu_dat_i;	// input data bus
+   input [aw-1:0] 			biu_adr_i;	// address bus
+   input				biu_cyc_i;	// WB cycle
+   input				biu_stb_i;	// WB strobe
+   input				biu_we_i;	// WB write enable
+   input				biu_cab_i;	// CAB input
+   input [3:0] 				biu_sel_i;	// byte selects
+   output [31:0] 			biu_dat_o;	// output data bus
+   output				biu_ack_o;	// ack output
+   output				biu_err_o;	// err output
 
-//
-// Registers
-//
-wire				wb_ack;		// normal termination
-reg	[aw-1:0]		wb_adr_o;	// address bus outputs
-reg				wb_cyc_o;	// cycle output
-reg				wb_stb_o;	// strobe output
-reg				wb_we_o;	// indicates write transfer
-reg	[3:0]			wb_sel_o;	// byte select outputs
+   //
+   // Registers
+   //
+   wire 				wb_ack;		// normal termination
+   reg [aw-1:0] 			wb_adr_o;	// address bus outputs
+   reg 					wb_cyc_o;	// cycle output
+   reg 					wb_stb_o;	// strobe output
+   reg 					wb_we_o;	// indicates write transfer
+   reg [3:0] 				wb_sel_o;	// byte select outputs
 `ifdef OR1200_WB_CAB
-reg				wb_cab_o;	// CAB output
+   reg 					wb_cab_o;	// CAB output
 `endif
 `ifdef OR1200_WB_B3
-reg	[2:0]			wb_cti_o;	// cycle type identifier
-reg	[1:0]			wb_bte_o;	// burst type extension
+   reg [2:0] 				wb_cti_o;	// cycle type identifier
+   reg [1:0] 				wb_bte_o;	// burst type extension
 `endif
-reg	[dw-1:0]		wb_dat_o;	// output data bus
-
+`ifdef OR1200_NO_DC   
+   reg [dw-1:0] 			wb_dat_o;	// output data bus
+`else   
+   assign wb_dat_o = biu_dat_i;    // No register on this - straight from DCRAM
+`endif
+   
 `ifdef OR1200_WB_RETRY
-reg	[`OR1200_WB_RETRY-1:0]	retry_cnt;	// Retry counter
+   reg [`OR1200_WB_RETRY-1:0] 		retry_cnt;	// Retry counter
 `else
-wire				retry_cnt	= 1'b0;
+   wire 				retry_cnt;
+   assign retry_cnt = 1'b0;
 `endif
 `ifdef OR1200_WB_B3
-reg	[1:0]			burst_len;	// burst counter
+   reg [1:0] 				burst_len;	// burst counter
 `endif
 
-reg  				biu_stb_reg;	// WB strobe
-wire  				biu_stb;	// WB strobe
-reg				wb_cyc_nxt;	// next WB cycle value
-reg				wb_stb_nxt;	// next WB strobe value
-reg	[2:0]			wb_cti_nxt;	// next cycle type identifier value
+   reg  				biu_stb_reg;	// WB strobe
+   wire  				biu_stb;	// WB strobe
+   reg 					wb_cyc_nxt;	// next WB cycle value
+   reg 					wb_stb_nxt;	// next WB strobe value
+   reg [2:0] 				wb_cti_nxt;	// next cycle type identifier value
 
-reg				wb_ack_cnt;	// WB ack toggle counter
-reg				wb_err_cnt;	// WB err toggle counter
-reg				wb_rty_cnt;	// WB rty toggle counter
-reg				biu_ack_cnt;	// BIU ack toggle counter
-reg				biu_err_cnt;	// BIU err toggle counter
-reg				biu_rty_cnt;	// BIU rty toggle counter
-wire				biu_rty;	// BIU rty indicator
+   reg 					wb_ack_cnt;	// WB ack toggle counter
+   reg 					wb_err_cnt;	// WB err toggle counter
+   reg 					wb_rty_cnt;	// WB rty toggle counter
+   reg 					biu_ack_cnt;	// BIU ack toggle counter
+   reg 					biu_err_cnt;	// BIU err toggle counter
+   reg 					biu_rty_cnt;	// BIU rty toggle counter
+   wire 				biu_rty;	// BIU rty indicator
 
-reg	[1:0]			wb_fsm_state_cur;	// WB FSM - surrent state
-reg	[1:0]			wb_fsm_state_nxt;	// WB FSM - next state
-wire	[1:0]			wb_fsm_idle	= 2'h0;	// WB FSM state - IDLE
-wire	[1:0]			wb_fsm_trans	= 2'h1;	// WB FSM state - normal TRANSFER
-wire	[1:0]			wb_fsm_last	= 2'h2;	// EB FSM state - LAST transfer
+   reg [1:0] 				wb_fsm_state_cur;	// WB FSM - surrent state
+   reg [1:0] 				wb_fsm_state_nxt;	// WB FSM - next state
+   wire [1:0] 				wb_fsm_idle	= 2'h0;	// WB FSM state - IDLE
+   wire [1:0] 				wb_fsm_trans	= 2'h1;	// WB FSM state - normal TRANSFER
+   wire [1:0] 				wb_fsm_last	= 2'h2;	// EB FSM state - LAST transfer
 
-//
-// WISHBONE I/F <-> Internal RISC I/F conversion
-//
-//assign wb_ack = wb_ack_i;
-assign wb_ack = wb_ack_i && !wb_err_i && !wb_rty_i;
+   //
+   // WISHBONE I/F <-> Internal RISC I/F conversion
+   //
+   //assign wb_ack = wb_ack_i;
+   assign wb_ack = wb_ack_i & !wb_err_i & !wb_rty_i;
 
-//
-// WB FSM - register part
-// 
-always @(posedge wb_clk_i or posedge wb_rst_i) begin
-	if (wb_rst_i) 
-		wb_fsm_state_cur <= #1 wb_fsm_idle;
-	else 
-		wb_fsm_state_cur <= #1 wb_fsm_state_nxt;
-end
+   //
+   // WB FSM - register part
+   // 
+   always @(posedge wb_clk_i or posedge wb_rst_i) begin
+      if (wb_rst_i) 
+	wb_fsm_state_cur <=  wb_fsm_idle;
+      else 
+	wb_fsm_state_cur <=  wb_fsm_state_nxt;
+   end
 
-//
-// WB burst tength counter
-// 
-always @(posedge wb_clk_i or posedge wb_rst_i) begin
-	if (wb_rst_i) begin
-		burst_len <= #1 2'h0;
-	end
-	else begin
-		// burst counter
-		if (wb_fsm_state_cur == wb_fsm_idle)
-			burst_len <= #1 2'h2;
-		else if (wb_stb_o && wb_ack)
-			burst_len <= #1 burst_len - 1'b1;
-	end
-end
+   //
+   // WB burst tength counter
+   // 
+   always @(posedge wb_clk_i or posedge wb_rst_i) begin
+      if (wb_rst_i) begin
+	 burst_len <=  2'h0;
+      end
+      else begin
+	 // burst counter
+	 if (wb_fsm_state_cur == wb_fsm_idle)
+	   burst_len <=  2'h2;
+	 else if (wb_stb_o & wb_ack)
+	   burst_len <=  burst_len - 1'b1;
+      end
+   end
 
-// 
-// WB FSM - combinatorial part
-// 
-always @(wb_fsm_state_cur or burst_len or
-	 wb_err_i or wb_rty_i or wb_ack or wb_cti_o or wb_sel_o or wb_stb_o or wb_we_o or
-	 biu_cyc_i or biu_stb or biu_cab_i or biu_sel_i or biu_we_i) begin
-// States of WISHBONE Finite State Machine
-	case(wb_fsm_state_cur)
+   // 
+   // WB FSM - combinatorial part
+   // 
+   always @(wb_fsm_state_cur or burst_len or wb_err_i or wb_rty_i or wb_ack or 
+	    wb_cti_o or wb_sel_o or wb_stb_o or wb_we_o or biu_cyc_i or 
+	    biu_stb or biu_cab_i or biu_sel_i or biu_we_i) begin
+      // States of WISHBONE Finite State Machine
+      case(wb_fsm_state_cur)
 	// IDLE 
 	wb_fsm_idle : begin
-	    	wb_cyc_nxt = biu_cyc_i && biu_stb;
-	    	wb_stb_nxt = biu_cyc_i && biu_stb;
-	    	wb_cti_nxt = {!biu_cab_i, 1'b1, !biu_cab_i};
-	    	if (biu_cyc_i && biu_stb)
-	    		wb_fsm_state_nxt = wb_fsm_trans;
-	    	else
-	    		wb_fsm_state_nxt = wb_fsm_idle;
+	   wb_cyc_nxt = biu_cyc_i & biu_stb;
+	   wb_stb_nxt = biu_cyc_i & biu_stb;
+	   wb_cti_nxt = {!biu_cab_i, 1'b1, !biu_cab_i};
+	   if (biu_cyc_i & biu_stb)
+	     wb_fsm_state_nxt = wb_fsm_trans;
+	   else
+	     wb_fsm_state_nxt = wb_fsm_idle;
 	end
 	// normal TRANSFER
 	wb_fsm_trans : begin
-		wb_cyc_nxt = !wb_stb_o || !wb_err_i && !wb_rty_i && !(wb_ack && wb_cti_o == 3'b111);
-		wb_stb_nxt = !wb_stb_o || !wb_err_i && !wb_rty_i && !wb_ack || !wb_err_i && !wb_rty_i && wb_cti_o == 3'b010 && !wb_we_o;
-		wb_cti_nxt[2] = wb_stb_o && wb_ack && burst_len == 'h0 || wb_cti_o[2];
-		wb_cti_nxt[1] = 1'b1  ;
-		wb_cti_nxt[0] = wb_stb_o && wb_ack && burst_len == 'h0 || wb_cti_o[0];
-		//if ((!biu_cyc_i || !biu_stb || !biu_cab_i) && wb_cti_o == 3'b010  || biu_sel_i != wb_sel_o || biu_we_i != wb_we_o)
-		if ((!biu_cyc_i || !biu_stb || !biu_cab_i || biu_sel_i != wb_sel_o || biu_we_i != wb_we_o) && wb_cti_o == 3'b010)
-			wb_fsm_state_nxt = wb_fsm_last;
-		else if ((wb_err_i || wb_rty_i || wb_ack && wb_cti_o == 3'b111) && wb_stb_o)
-			wb_fsm_state_nxt = wb_fsm_idle;
-		else
-			wb_fsm_state_nxt = wb_fsm_trans;
+	   wb_cyc_nxt = !wb_stb_o | !wb_err_i & !wb_rty_i & 
+			!(wb_ack & wb_cti_o == 3'b111);
+	   
+	   wb_stb_nxt = !wb_stb_o | !wb_err_i & !wb_rty_i & !wb_ack | 
+			!wb_err_i & !wb_rty_i & wb_cti_o == 3'b010 /*& !wb_we_o -- Removed to add burst write, JPB*/;
+	   
+	   wb_cti_nxt[2] = wb_stb_o & wb_ack & burst_len == 'h0 | wb_cti_o[2];
+	   wb_cti_nxt[1] = 1'b1  ;
+	   wb_cti_nxt[0] = wb_stb_o & wb_ack & burst_len == 'h0 | wb_cti_o[0];
+	   
+	   //if ((!biu_cyc_i | !biu_stb | !biu_cab_i) & wb_cti_o == 3'b010  | 
+	   //     biu_sel_i != wb_sel_o | biu_we_i != wb_we_o)
+	   
+	   if ((!biu_cyc_i | !biu_stb | !biu_cab_i | biu_sel_i != wb_sel_o | 
+		biu_we_i != wb_we_o) & wb_cti_o == 3'b010)
+	     wb_fsm_state_nxt = wb_fsm_last;
+	   else if ((wb_err_i | wb_rty_i | wb_ack & wb_cti_o==3'b111) & 
+		    wb_stb_o)
+	     wb_fsm_state_nxt = wb_fsm_idle;
+	   else
+	     wb_fsm_state_nxt = wb_fsm_trans;
 	end
 	// LAST transfer
 	wb_fsm_last : begin
-		wb_cyc_nxt = !wb_stb_o || !wb_err_i && !wb_rty_i && !(wb_ack && wb_cti_o == 3'b111);
-		wb_stb_nxt = !wb_stb_o || !wb_err_i && !wb_rty_i && !(wb_ack && wb_cti_o == 3'b111);
-		wb_cti_nxt[2] = wb_ack && wb_stb_o || wb_cti_o[2];
-		wb_cti_nxt[1] = 1'b1                  ;
-		wb_cti_nxt[0] = wb_ack && wb_stb_o || wb_cti_o[0];
-		if ((wb_err_i || wb_rty_i || wb_ack && wb_cti_o == 3'b111) && wb_stb_o)
-			wb_fsm_state_nxt = wb_fsm_idle;
-		else
-			wb_fsm_state_nxt = wb_fsm_last;
+	   wb_cyc_nxt = !wb_stb_o | !wb_err_i & !wb_rty_i & 
+			!(wb_ack & wb_cti_o == 3'b111);
+	   wb_stb_nxt = !wb_stb_o | !wb_err_i & !wb_rty_i & 
+			!(wb_ack & wb_cti_o == 3'b111);
+	   wb_cti_nxt[2] = wb_ack & wb_stb_o | wb_cti_o[2];
+	   wb_cti_nxt[1] = 1'b1                  ;
+	   wb_cti_nxt[0] = wb_ack & wb_stb_o | wb_cti_o[0];
+	   if ((wb_err_i | wb_rty_i | wb_ack & wb_cti_o == 3'b111) & wb_stb_o)
+	     wb_fsm_state_nxt = wb_fsm_idle;
+	   else
+	     wb_fsm_state_nxt = wb_fsm_last;
 	end
 	// default state
 	default:begin
-		wb_cyc_nxt = 1'bx;
-		wb_stb_nxt = 1'bx;
-		wb_cti_nxt = 3'bxxx;
-		wb_fsm_state_nxt = 2'bxx;
+	   wb_cyc_nxt = 1'bx;
+	   wb_stb_nxt = 1'bx;
+	   wb_cti_nxt = 3'bxxx;
+	   wb_fsm_state_nxt = 2'bxx;
 	end
-	endcase
-end
+      endcase
+   end
 
-//
-// WB FSM - output signals
-// 
-always @(posedge wb_clk_i or posedge wb_rst_i) begin
-	if (wb_rst_i) begin
-		wb_cyc_o	<= #1 1'b0;
-		wb_stb_o	<= #1 1'b0;
-		wb_cti_o	<= #1 3'b111;
-		wb_bte_o	<= #1 2'b01;	// 4-beat wrap burst = constant
+   //
+   // WB FSM - output signals
+   // 
+   always @(posedge wb_clk_i or posedge wb_rst_i) begin
+      if (wb_rst_i) begin
+	 wb_cyc_o	<=  1'b0;
+	 wb_stb_o	<=  1'b0;
+	 wb_cti_o	<=  3'b111;
+	 wb_bte_o	<=  2'b01;	// 4-beat wrap burst = constant
 `ifdef OR1200_WB_CAB
-		wb_cab_o	<= #1 1'b0;
+	 wb_cab_o	<=  1'b0;
 `endif
-		wb_we_o		<= #1 1'b0;
-		wb_sel_o	<= #1 4'hf;
-		wb_adr_o	<= #1 {aw{1'b0}};
-		wb_dat_o	<= #1 {dw{1'b0}};
-	end
-	else begin
-		wb_cyc_o	<= #1 wb_cyc_nxt;
-//		wb_stb_o	<= #1 wb_stb_nxt;
-                if (wb_ack && wb_cti_o == 3'b111) 
-                        wb_stb_o        <= #1 1'b0;
-                else
-                        wb_stb_o        <= #1 wb_stb_nxt;
-		wb_cti_o	<= #1 wb_cti_nxt;
-		wb_bte_o	<= #1 2'b01;	// 4-beat wrap burst = constant
+	 wb_we_o		<=  1'b0;
+	 wb_sel_o	<=  4'hf;
+	 wb_adr_o	<=  {aw{1'b0}};
+`ifdef OR1200_NO_DC	 
+	 wb_dat_o	<=  {dw{1'b0}};
+`endif	 
+      end
+      else begin
+	 wb_cyc_o	<=  wb_cyc_nxt;
+	 //		wb_stb_o	<=  wb_stb_nxt;
+         if (wb_ack & wb_cti_o == 3'b111) 
+           wb_stb_o        <=  1'b0;
+         else
+           wb_stb_o        <=  wb_stb_nxt;
+	 wb_cti_o	<=  wb_cti_nxt;
+	 wb_bte_o	<=  2'b01;	// 4-beat wrap burst = constant
 `ifdef OR1200_WB_CAB
-		wb_cab_o	<= #1 biu_cab_i;
+	 wb_cab_o	<=  biu_cab_i;
 `endif
-		// we and sel - set at beginning of access 
-		if (wb_fsm_state_cur == wb_fsm_idle) begin
-			wb_we_o		<= #1 biu_we_i;
-			wb_sel_o	<= #1 biu_sel_i;
-		end
-		// adr - set at beginning of access and changed at every termination 
-		if (wb_fsm_state_cur == wb_fsm_idle) begin
-		   wb_adr_o	<= #1 biu_adr_i;
-		end 
-		else if (wb_stb_o && wb_ack) begin
-			wb_adr_o[3:2]	<= #1 wb_adr_o[3:2] + 1'b1;
-		end
-		// dat - write data changed after avery subsequent write access
-		if (!wb_stb_o) begin
-			wb_dat_o 	<= #1 biu_dat_i;
-		end
-	end
-end
+	 // we and sel - set at beginning of access 
+	 if (wb_fsm_state_cur == wb_fsm_idle) begin
+	    wb_we_o		<=  biu_we_i;
+	    wb_sel_o	<=  biu_sel_i;
+	 end
+	 // adr - set at beginning of access and changed at every termination 
+	 if (wb_fsm_state_cur == wb_fsm_idle) begin
+	    wb_adr_o	<=  biu_adr_i;
+	 end 
+	 else if (wb_stb_o & wb_ack) begin
+	    wb_adr_o[3:2]	<=  wb_adr_o[3:2] + 1'b1;
+	 end
+`ifdef OR1200_NO_DC	 
+	 // dat - write data changed after avery subsequent write access
+	 if (!wb_stb_o) begin
+	    wb_dat_o 	<=  biu_dat_i;
+	 end
+`endif	 
+      end
+   end
 
-//
-// WB & BIU termination toggle counters
-// 
-always @(posedge wb_clk_i or posedge wb_rst_i) begin
-	if (wb_rst_i) begin
-		wb_ack_cnt	<= #1 1'b0;
-		wb_err_cnt	<= #1 1'b0;
-		wb_rty_cnt	<= #1 1'b0;
-	end
-	else begin
-		// WB ack toggle counter
-		if (wb_fsm_state_cur == wb_fsm_idle || !clmode)
-			wb_ack_cnt	<= #1 1'b0;
-		else if (wb_stb_o && wb_ack)
-			wb_ack_cnt	<= #1 !wb_ack_cnt;
-		// WB err toggle counter
-		if (wb_fsm_state_cur == wb_fsm_idle || !clmode)
-			wb_err_cnt	<= #1 1'b0;
-		else if (wb_stb_o && wb_err_i)
-			wb_err_cnt	<= #1 !wb_err_cnt;
-		// WB rty toggle counter
-		if (wb_fsm_state_cur == wb_fsm_idle || !clmode)
-			wb_rty_cnt	<= #1 1'b0;
-		else if (wb_stb_o && wb_rty_i)
-			wb_rty_cnt	<= #1 !wb_rty_cnt;
-	end
-end
+   //
+   // WB & BIU termination toggle counters
+   // 
+   always @(posedge wb_clk_i or posedge wb_rst_i) begin
+      if (wb_rst_i) begin
+	 wb_ack_cnt	<=  1'b0;
+	 wb_err_cnt	<=  1'b0;
+	 wb_rty_cnt	<=  1'b0;
+      end
+      else begin
+	 // WB ack toggle counter
+	 if (wb_fsm_state_cur == wb_fsm_idle | !clmode)
+	   wb_ack_cnt	<=  1'b0;
+	 else if (wb_stb_o & wb_ack)
+	   wb_ack_cnt	<=  !wb_ack_cnt;
+	 // WB err toggle counter
+	 if (wb_fsm_state_cur == wb_fsm_idle | !clmode)
+	   wb_err_cnt	<=  1'b0;
+	 else if (wb_stb_o & wb_err_i)
+	   wb_err_cnt	<=  !wb_err_cnt;
+	 // WB rty toggle counter
+	 if (wb_fsm_state_cur == wb_fsm_idle | !clmode)
+	   wb_rty_cnt	<=  1'b0;
+	 else if (wb_stb_o & wb_rty_i)
+	   wb_rty_cnt	<=  !wb_rty_cnt;
+      end
+   end
 
-always @(posedge clk or posedge rst) begin
-	if (rst) begin
-                biu_stb_reg	<= #1 1'b0;
-		biu_ack_cnt	<= #1 1'b0;
-		biu_err_cnt	<= #1 1'b0;
-		biu_rty_cnt	<= #1 1'b0;
+   always @(posedge clk or posedge rst) begin
+      if (rst) begin
+         biu_stb_reg	<=  1'b0;
+	 biu_ack_cnt	<=  1'b0;
+	 biu_err_cnt	<=  1'b0;
+	 biu_rty_cnt	<=  1'b0;
 `ifdef OR1200_WB_RETRY
-		retry_cnt	<= {`OR1200_WB_RETRY{1'b0}};
+	 retry_cnt	<= {`OR1200_WB_RETRY{1'b0}};
 `endif
-	end
-	else begin
-		// BIU strobe
-		if (biu_stb_i && !biu_cab_i && biu_ack_o)
-			biu_stb_reg	<= #1 1'b0;
-		else
-			biu_stb_reg	<= #1 biu_stb_i;
-		// BIU ack toggle counter
-		if (wb_fsm_state_cur == wb_fsm_idle || !clmode)
-			biu_ack_cnt	<= #1 1'b0 ;
-		else if (biu_ack_o)
-			biu_ack_cnt	<= #1 !biu_ack_cnt ;
-		// BIU err toggle counter
-		if (wb_fsm_state_cur == wb_fsm_idle || !clmode)
-			biu_err_cnt	<= #1 1'b0 ;
-		else if (wb_err_i && biu_err_o)
-			biu_err_cnt	<= #1 !biu_err_cnt ;
-		// BIU rty toggle counter
-		if (wb_fsm_state_cur == wb_fsm_idle || !clmode)
-			biu_rty_cnt	<= #1 1'b0 ;
-		else if (biu_rty)
-			biu_rty_cnt	<= #1 !biu_rty_cnt ;
+      end
+      else begin
+	 // BIU strobe
+	 if (biu_stb_i & !biu_cab_i & biu_ack_o)
+	   biu_stb_reg	<=  1'b0;
+	 else
+	   biu_stb_reg	<=  biu_stb_i;
+	 // BIU ack toggle counter
+	 if (wb_fsm_state_cur == wb_fsm_idle | !clmode)
+	   biu_ack_cnt	<=  1'b0 ;
+	 else if (biu_ack_o)
+	   biu_ack_cnt	<=  !biu_ack_cnt ;
+	 // BIU err toggle counter
+	 if (wb_fsm_state_cur == wb_fsm_idle | !clmode)
+	   biu_err_cnt	<=  1'b0 ;
+	 else if (wb_err_i & biu_err_o)
+	   biu_err_cnt	<=  !biu_err_cnt ;
+	 // BIU rty toggle counter
+	 if (wb_fsm_state_cur == wb_fsm_idle | !clmode)
+	   biu_rty_cnt	<=  1'b0 ;
+	 else if (biu_rty)
+	   biu_rty_cnt	<=  !biu_rty_cnt ;
 `ifdef OR1200_WB_RETRY
-		if (biu_ack_o || biu_err_o)
-			retry_cnt	<= #1 {`OR1200_WB_RETRY{1'b0}};
-		else if (biu_rty)
-			retry_cnt	<= #1 retry_cnt + 1'b1;
+	 if (biu_ack_o | biu_err_o)
+	   retry_cnt	<=  {`OR1200_WB_RETRY{1'b0}};
+	 else if (biu_rty)
+	   retry_cnt	<=  retry_cnt + 1'b1;
 `endif
-	end
-end
+      end
+   end
 
-assign biu_stb = biu_stb_i && biu_stb_reg;
+   assign biu_stb = biu_stb_i & biu_stb_reg;
 
-//
-// Input BIU data bus
-//
-assign	biu_dat_o	= wb_dat_i;
+   //
+   // Input BIU data bus
+   //
+   assign	biu_dat_o	= wb_dat_i;
 
-//
-// Input BIU termination signals 
-//
-assign	biu_rty		= (wb_fsm_state_cur == wb_fsm_trans) && wb_rty_i && wb_stb_o && (wb_rty_cnt ~^ biu_rty_cnt);
-assign	biu_ack_o	= (wb_fsm_state_cur == wb_fsm_trans) && wb_ack && wb_stb_o && (wb_ack_cnt ~^ biu_ack_cnt);
-assign	biu_err_o	= (wb_fsm_state_cur == wb_fsm_trans) && wb_err_i && wb_stb_o && (wb_err_cnt ~^ biu_err_cnt)
+   //
+   // Input BIU termination signals 
+   //
+   assign	biu_rty		= (wb_fsm_state_cur == wb_fsm_trans) & wb_rty_i & wb_stb_o & (wb_rty_cnt ~^ biu_rty_cnt);
+   assign	biu_ack_o	= (wb_fsm_state_cur == wb_fsm_trans) & wb_ack & wb_stb_o & (wb_ack_cnt ~^ biu_ack_cnt);
+   assign	biu_err_o	= (wb_fsm_state_cur == wb_fsm_trans) & wb_err_i & wb_stb_o & (wb_err_cnt ~^ biu_err_cnt)
 `ifdef OR1200_WB_RETRY
-			|| biu_rty && retry_cnt[`OR1200_WB_RETRY-1];
+     | biu_rty & retry_cnt[`OR1200_WB_RETRY-1];
 `else
-			;
+   ;
 `endif
 
 

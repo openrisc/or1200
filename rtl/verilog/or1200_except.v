@@ -267,28 +267,28 @@ assign except_stop = {
 
 always @(posedge clk or posedge rst) begin
 	if (rst) begin
-		trace_trap  <= #1 1'b0 ;
+		trace_trap  <=  1'b0 ;
 	end 
 	else if (!(trace_trap && !ex_pc_val)) begin
-		trace_trap  <= #1 trace_cond & !dsr_te & !sr_ted ;
+		trace_trap  <=  trace_cond & !dsr_te & !sr_ted ;
 	end
 end
 
 always @(posedge clk or posedge rst) begin
 	if (rst) begin
-        ex_freeze_prev  <= #1 1'b0 ;
-        sr_ted_prev     <= #1 1'b0 ;
-        dsr_te_prev     <= #1 1'b0 ;
-        dmr1_st_prev    <= #1 1'b0 ;
-        dmr1_bt_prev    <= #1 1'b0 ;
+        ex_freeze_prev  <=  1'b0 ;
+        sr_ted_prev     <=  1'b0 ;
+        dsr_te_prev     <=  1'b0 ;
+        dmr1_st_prev    <=  1'b0 ;
+        dmr1_bt_prev    <=  1'b0 ;
     end 
     else begin
-        ex_freeze_prev  <= #1 ex_freeze ;
+        ex_freeze_prev  <=  ex_freeze ;
         if (!ex_freeze_prev || ex_void) begin
-            sr_ted_prev     <= #1 sr     [`OR1200_SR_TED    ] ;
-            dsr_te_prev     <= #1 du_dsr [`OR1200_DU_DSR_TE ] ;
-            dmr1_st_prev    <= #1 du_dmr1[`OR1200_DU_DMR1_ST] ;
-            dmr1_bt_prev    <= #1 du_dmr1[`OR1200_DU_DMR1_BT] ;
+            sr_ted_prev     <=  sr     [`OR1200_SR_TED    ] ;
+            dsr_te_prev     <=  du_dsr [`OR1200_DU_DSR_TE ] ;
+            dmr1_st_prev    <=  du_dmr1[`OR1200_DU_DMR1_ST] ;
+            dmr1_bt_prev    <=  du_dmr1[`OR1200_DU_DMR1_BT] ;
         end
     end
 end
@@ -298,18 +298,18 @@ end
 //
 always @(posedge clk or posedge rst) begin
 	if (rst) begin
-		id_pc <= #1 32'd0;
-        id_pc_val <= #1 1'b0 ;
-		id_exceptflags <= #1 3'b000;
+		id_pc <=  32'd0;
+        id_pc_val <=  1'b0 ;
+		id_exceptflags <=  3'b000;
 	end
 	else if (id_flushpipe) begin
-        id_pc_val <= #1 1'b0 ;
-		id_exceptflags <= #1 3'b000;
+        id_pc_val <=  1'b0 ;
+		id_exceptflags <=  3'b000;
 	end
 	else if (!id_freeze) begin
-		id_pc <= #1 if_pc;
-        id_pc_val <= #1 1'b1 ;
-		id_exceptflags <= #1 { sig_ibuserr, sig_itlbmiss, sig_immufault };
+		id_pc <=  if_pc;
+        id_pc_val <=  1'b1 ;
+		id_exceptflags <=  { sig_ibuserr, sig_itlbmiss, sig_immufault };
 	end
 end
 
@@ -323,11 +323,11 @@ end
 //
 always @(posedge rst or posedge clk)
 	if (rst)
-		delayed_iee <= #1 3'b000;
+		delayed_iee <=  3'b000;
 	else if (!sr[`OR1200_SR_IEE])
-		delayed_iee <= #1 3'b000;
+		delayed_iee <=  3'b000;
 	else
-		delayed_iee <= #1 {delayed_iee[1:0], 1'b1};
+		delayed_iee <=  {delayed_iee[1:0], 1'b1};
 
 //
 // delayed_tee
@@ -339,46 +339,46 @@ always @(posedge rst or posedge clk)
 //
 always @(posedge rst or posedge clk)
 	if (rst)
-		delayed_tee <= #1 3'b000;
+		delayed_tee <=  3'b000;
 	else if (!sr[`OR1200_SR_TEE])
-		delayed_tee <= #1 3'b000;
+		delayed_tee <=  3'b000;
 	else
-		delayed_tee <= #1 {delayed_tee[1:0], 1'b1};
+		delayed_tee <=  {delayed_tee[1:0], 1'b1};
 
 //
 // PC and Exception flags pipelines
 //
 always @(posedge clk or posedge rst) begin
 	if (rst) begin
-		ex_dslot <= #1 1'b0;
-		ex_pc <= #1 32'd0;
-                ex_pc_val <= #1 1'b0 ;
-		ex_exceptflags <= #1 3'b000;
-		delayed1_ex_dslot <= #1 1'b0;
-		delayed2_ex_dslot <= #1 1'b0;
+		ex_dslot <=  1'b0;
+		ex_pc <=  32'd0;
+                ex_pc_val <=  1'b0 ;
+		ex_exceptflags <=  3'b000;
+		delayed1_ex_dslot <=  1'b0;
+		delayed2_ex_dslot <=  1'b0;
 	end
 	else if (ex_flushpipe) begin
-		ex_dslot <= #1 1'b0;
-                ex_pc_val <= #1 1'b0 ;
-		ex_exceptflags <= #1 3'b000;
-		delayed1_ex_dslot <= #1 1'b0;
-		delayed2_ex_dslot <= #1 1'b0;
+		ex_dslot <=  1'b0;
+                ex_pc_val <=  1'b0 ;
+		ex_exceptflags <=  3'b000;
+		delayed1_ex_dslot <=  1'b0;
+		delayed2_ex_dslot <=  1'b0;
 	end
 	else if (!ex_freeze & id_freeze) begin
-		ex_dslot <= #1 1'b0;
-		ex_pc <= #1 id_pc;
-                ex_pc_val <= #1 id_pc_val ;
-		ex_exceptflags <= #1 3'b000;
-		delayed1_ex_dslot <= #1 ex_dslot;
-		delayed2_ex_dslot <= #1 delayed1_ex_dslot;
+		ex_dslot <=  1'b0;
+		ex_pc <=  id_pc;
+                ex_pc_val <=  id_pc_val ;
+		ex_exceptflags <=  3'b000;
+		delayed1_ex_dslot <=  ex_dslot;
+		delayed2_ex_dslot <=  delayed1_ex_dslot;
 	end
 	else if (!ex_freeze) begin
-		ex_dslot <= #1 ex_branch_taken;
-		ex_pc <= #1 id_pc;
-                ex_pc_val <= #1 id_pc_val ;
-		ex_exceptflags <= #1 id_exceptflags;
-		delayed1_ex_dslot <= #1 ex_dslot;
-		delayed2_ex_dslot <= #1 delayed1_ex_dslot;
+		ex_dslot <=  ex_branch_taken;
+		ex_pc <=  id_pc;
+                ex_pc_val <=  id_pc_val ;
+		ex_exceptflags <=  id_exceptflags;
+		delayed1_ex_dslot <=  ex_dslot;
+		delayed2_ex_dslot <=  delayed1_ex_dslot;
 	end
 end
 
@@ -387,12 +387,12 @@ end
 //
 always @(posedge clk or posedge rst) begin
 	if (rst) begin
-		wb_pc <= #1 32'd0;
-        dl_pc <= #1 32'd0;
+		wb_pc <=  32'd0;
+        dl_pc <=  32'd0;
 	end
 	else if (!wb_freeze) begin
-		wb_pc <= #1 ex_pc;
-        dl_pc <= #1 wb_pc;
+		wb_pc <=  ex_pc;
+        dl_pc <=  wb_pc;
 	end
 end
 
@@ -411,13 +411,13 @@ assign except_flushpipe = |except_trig & ~|state;
 //
    always @(posedge clk or posedge rst) begin
       if (rst) begin
-	 state <= #1 `OR1200_EXCEPTFSM_IDLE;
-	 except_type <= #1 `OR1200_EXCEPT_NONE;
-	 extend_flush <= #1 1'b0;
-	 epcr <= #1 32'b0;
-	 eear <= #1 32'b0;
-	 esr <= #1 {2'h1, {`OR1200_SR_WIDTH-3{1'b0}}, 1'b1};
-	 extend_flush_last <= #1 1'b0;
+	 state <=  `OR1200_EXCEPTFSM_IDLE;
+	 except_type <=  `OR1200_EXCEPT_NONE;
+	 extend_flush <=  1'b0;
+	 epcr <=  32'b0;
+	 eear <=  32'b0;
+	 esr <=  {2'h1, {`OR1200_SR_WIDTH-3{1'b0}}, 1'b1};
+	 extend_flush_last <=  1'b0;
       end
       else begin
 `ifdef OR1200_CASE_DEFAULT
@@ -427,27 +427,27 @@ assign except_flushpipe = |except_trig & ~|state;
 `endif
 	     `OR1200_EXCEPTFSM_IDLE:
 	       if (except_flushpipe) begin
-		  state <= #1 `OR1200_EXCEPTFSM_FLU1;
-		  extend_flush <= #1 1'b1;
-		  esr <= #1 sr_we ? to_sr : sr;
+		  state <=  `OR1200_EXCEPTFSM_FLU1;
+		  extend_flush <=  1'b1;
+		  esr <=  sr_we ? to_sr : sr;
 		  casex (except_trig)
 `ifdef OR1200_EXCEPT_ITLBMISS
 		    14'b1x_xxxx_xxxx_xxxx: begin
-		       except_type <= #1 `OR1200_EXCEPT_ITLBMISS;
-		       eear <= #1 ex_dslot ? 
+		       except_type <=  `OR1200_EXCEPT_ITLBMISS;
+		       eear <=  ex_dslot ? 
 			       ex_pc : ex_pc;
-		       epcr <= #1 ex_dslot ? 
+		       epcr <=  ex_dslot ? 
 			       wb_pc : ex_pc;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_IPF
 		    14'b01_xxxx_xxxx_xxxx: begin
-		       except_type <= #1 `OR1200_EXCEPT_IPF;
-		       eear <= #1 ex_dslot ? 
+		       except_type <=  `OR1200_EXCEPT_IPF;
+		       eear <=  ex_dslot ? 
 			       ex_pc : delayed1_ex_dslot ? 
 			       id_pc : delayed2_ex_dslot ? 
 			       id_pc : id_pc;
-		       epcr <= #1 ex_dslot ? 
+		       epcr <=  ex_dslot ? 
 			       wb_pc : delayed1_ex_dslot ? 
 			       id_pc : delayed2_ex_dslot ? 
 			       id_pc : id_pc;
@@ -455,50 +455,50 @@ assign except_flushpipe = |except_trig & ~|state;
 `endif
 `ifdef OR1200_EXCEPT_BUSERR
 		    14'b00_1xxx_xxxx_xxxx: begin	// Insn. Bus Error
-		       except_type <= #1 `OR1200_EXCEPT_BUSERR;
-		       eear <= #1 ex_dslot ? 
+		       except_type <=  `OR1200_EXCEPT_BUSERR;
+		       eear <=  ex_dslot ? 
 			       wb_pc : ex_pc;
-		       epcr <= #1 ex_dslot ? 
+		       epcr <=  ex_dslot ? 
 			       wb_pc : ex_pc;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_ILLEGAL
 		    14'b00_01xx_xxxx_xxxx: begin
-		       except_type <= #1 `OR1200_EXCEPT_ILLEGAL;
-		       eear <= #1 ex_pc;
-		       epcr <= #1 ex_dslot ? 
+		       except_type <=  `OR1200_EXCEPT_ILLEGAL;
+		       eear <=  ex_pc;
+		       epcr <=  ex_dslot ? 
 			       wb_pc : ex_pc;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_ALIGN
 		    14'b00_001x_xxxx_xxxx: begin
-		       except_type <= #1 `OR1200_EXCEPT_ALIGN;
-		       eear <= #1 lsu_addr;
-		       epcr <= #1 ex_dslot ? 
+		       except_type <=  `OR1200_EXCEPT_ALIGN;
+		       eear <=  lsu_addr;
+		       epcr <=  ex_dslot ? 
 			       wb_pc : ex_pc;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_DTLBMISS
 		    14'b00_0001_xxxx_xxxx: begin
-		       except_type <= #1 `OR1200_EXCEPT_DTLBMISS;
-		       eear <= #1 lsu_addr;
-		       epcr <= #1 ex_dslot ? 
+		       except_type <=  `OR1200_EXCEPT_DTLBMISS;
+		       eear <=  lsu_addr;
+		       epcr <=  ex_dslot ? 
 			       wb_pc : delayed1_ex_dslot ? 
 			       dl_pc : ex_pc;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_TRAP			
 		    14'b00_0000_1xxx_xxxx: begin
-		       except_type <= #1 `OR1200_EXCEPT_TRAP;
-		       epcr <= #1 ex_dslot ? 
+		       except_type <=  `OR1200_EXCEPT_TRAP;
+		       epcr <=  ex_dslot ? 
 			       wb_pc : delayed1_ex_dslot ? 
 			       id_pc : ex_pc;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_SYSCALL
 		    14'b00_0000_01xx_xxxx: begin
-		       except_type <= #1 `OR1200_EXCEPT_SYSCALL;
-		       epcr <= #1 ex_dslot ? 
+		       except_type <=  `OR1200_EXCEPT_SYSCALL;
+		       epcr <=  ex_dslot ? 
 			       wb_pc : delayed1_ex_dslot ? 
 			       id_pc : delayed2_ex_dslot ? 
 			       id_pc : id_pc;
@@ -506,26 +506,26 @@ assign except_flushpipe = |except_trig & ~|state;
 `endif
 `ifdef OR1200_EXCEPT_DPF
 		    14'b00_0000_001x_xxxx: begin
-		       except_type <= #1 `OR1200_EXCEPT_DPF;
-		       eear <= #1 lsu_addr;
-		       epcr <= #1 ex_dslot ? 
+		       except_type <=  `OR1200_EXCEPT_DPF;
+		       eear <=  lsu_addr;
+		       epcr <=  ex_dslot ? 
 			       wb_pc : delayed1_ex_dslot ? 
 			       dl_pc : ex_pc;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_BUSERR
 		    14'b00_0000_0001_xxxx: begin	// Data Bus Error
-		       except_type <= #1 `OR1200_EXCEPT_BUSERR;
-		       eear <= #1 lsu_addr;
-		       epcr <= #1 ex_dslot ? 
+		       except_type <=  `OR1200_EXCEPT_BUSERR;
+		       eear <=  lsu_addr;
+		       epcr <=  ex_dslot ? 
 			       wb_pc : delayed1_ex_dslot ? 
 			       dl_pc : ex_pc;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_RANGE
 		    14'b00_0000_0000_1xxx: begin
-		       except_type <= #1 `OR1200_EXCEPT_RANGE;
-		       epcr <= #1 ex_dslot ? 
+		       except_type <=  `OR1200_EXCEPT_RANGE;
+		       epcr <=  ex_dslot ? 
 			       wb_pc : delayed1_ex_dslot ? 
 			       id_pc : delayed2_ex_dslot ? 
 			       id_pc : id_pc;
@@ -533,60 +533,60 @@ assign except_flushpipe = |except_trig & ~|state;
 `endif
 `ifdef OR1200_EXCEPT_FLOAT
 		    14'b00_0000_0000_01xx: begin
-		       except_type <= #1 `OR1200_EXCEPT_FLOAT;
-		       epcr <= #1 id_pc;
+		       except_type <=  `OR1200_EXCEPT_FLOAT;
+		       epcr <=  id_pc;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_INT
 		    14'b00_0000_0000_001x: begin
-		       except_type <= #1 `OR1200_EXCEPT_INT;
-		       epcr <= #1 id_pc;
+		       except_type <=  `OR1200_EXCEPT_INT;
+		       epcr <=  id_pc;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_TICK
 		    14'b00_0000_0000_0001: begin
-		       except_type <= #1 `OR1200_EXCEPT_TICK;
-		       epcr <= #1 id_pc;
+		       except_type <=  `OR1200_EXCEPT_TICK;
+		       epcr <=  id_pc;
 		    end
 `endif
 		    default:
-		      except_type <= #1 `OR1200_EXCEPT_NONE;
+		      except_type <=  `OR1200_EXCEPT_NONE;
 		  endcase
 	       end
 	       else if (pc_we) begin
-		  state <= #1 `OR1200_EXCEPTFSM_FLU1;
-		  extend_flush <= #1 1'b1;
+		  state <=  `OR1200_EXCEPTFSM_FLU1;
+		  extend_flush <=  1'b1;
 	       end
 	       else begin
 		  if (epcr_we)
-		    epcr <= #1 datain;
+		    epcr <=  datain;
 		  if (eear_we)
-		    eear <= #1 datain;
+		    eear <=  datain;
 		  if (esr_we)
-		    esr <= #1 {datain[`OR1200_SR_WIDTH-1], 1'b1, datain[`OR1200_SR_WIDTH-3:0]};
+		    esr <=  {datain[`OR1200_SR_WIDTH-1], 1'b1, datain[`OR1200_SR_WIDTH-3:0]};
 	       end
 	     `OR1200_EXCEPTFSM_FLU1:
 	       if (icpu_ack_i | icpu_err_i | genpc_freeze)
-		 state <= #1 `OR1200_EXCEPTFSM_FLU2;
+		 state <=  `OR1200_EXCEPTFSM_FLU2;
 	     `OR1200_EXCEPTFSM_FLU2:
 `ifdef OR1200_EXCEPT_TRAP
 	       if (except_type == `OR1200_EXCEPT_TRAP) begin
-		  state <= #1 `OR1200_EXCEPTFSM_IDLE;
-		  extend_flush <= #1 1'b0;
-		  extend_flush_last <= #1 1'b0;
-		  except_type <= #1 `OR1200_EXCEPT_NONE;
+		  state <=  `OR1200_EXCEPTFSM_IDLE;
+		  extend_flush <=  1'b0;
+		  extend_flush_last <=  1'b0;
+		  except_type <=  `OR1200_EXCEPT_NONE;
 	       end
                else
 `endif
-		 state <= #1 `OR1200_EXCEPTFSM_FLU3;
+		 state <=  `OR1200_EXCEPTFSM_FLU3;
 	     `OR1200_EXCEPTFSM_FLU3:
 	       begin
-		  state <= #1 `OR1200_EXCEPTFSM_FLU4;
+		  state <=  `OR1200_EXCEPTFSM_FLU4;
 	       end
 	     `OR1200_EXCEPTFSM_FLU4: begin
-		state <= #1 `OR1200_EXCEPTFSM_FLU5;
-		extend_flush <= #1 1'b0;
-		extend_flush_last <= #1 1'b0; // damjan
+		state <=  `OR1200_EXCEPTFSM_FLU5;
+		extend_flush <=  1'b0;
+		extend_flush_last <=  1'b0; // damjan
 	     end
 `ifdef OR1200_CASE_DEFAULT
 	     default: begin
@@ -594,9 +594,9 @@ assign except_flushpipe = |except_trig & ~|state;
 		`OR1200_EXCEPTFSM_FLU5: begin
 `endif
 		   if (!if_stall && !id_freeze) begin
-		      state <= #1 `OR1200_EXCEPTFSM_IDLE;
-		      except_type <= #1 `OR1200_EXCEPT_NONE;
-		      extend_flush_last <= #1 1'b0;
+		      state <=  `OR1200_EXCEPTFSM_IDLE;
+		      except_type <=  `OR1200_EXCEPT_NONE;
+		      extend_flush_last <=  1'b0;
 		   end
 		end
 	   endcase

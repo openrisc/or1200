@@ -311,9 +311,9 @@ reg	[4:0]	addr_a_r;
 
 always @(posedge clk_a or posedge rst_a)
 	if (rst_a)
-		addr_a_r <= #1 5'b00000;
+		addr_a_r <=  5'b00000;
 	else if (ce_a)
-		addr_a_r <= #1 addr_a;
+		addr_a_r <=  addr_a;
 
 //
 // Block 0
@@ -534,16 +534,16 @@ assign do_a = (oe_a) ? mem[addr_a_reg] : {dw{1'b0}};
 //
 always @(posedge clk_a or posedge rst_a)
 	if (rst_a)
-		addr_a_reg <= #1 {aw{1'b0}};
+		addr_a_reg <=  {aw{1'b0}};
 	else if (ce_a)
-		addr_a_reg <= #1 addr_a;
+		addr_a_reg <=  addr_a;
 
 //
 // RAM write
 //
 always @(posedge clk_b)
 	if (ce_b && we_b)
-		mem[addr_b] <= #1 di_b;
+		mem[addr_b] <=  di_b;
 
 `endif	// !OR1200_ALTERA_LPM
 `endif	// !OR1200_XILINX_RAMB16

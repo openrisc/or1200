@@ -3,7 +3,7 @@
 ////  OR1200's Data MMU top level                                 ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://www.opencores.org/project,or1k                       ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Instantiation of all DMMU blocks.                           ////
@@ -41,61 +41,10 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
-//
 // $Log: or1200_dmmu_top.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Minor update: 
 // Bugs fixed. 
-//
-// Revision 1.9  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.7.4.2  2003/12/09 11:46:48  simons
-// Mbist nameing changed, Artisan ram instance signal names fixed, some synthesis waning fixed.
-//
-// Revision 1.7.4.1  2003/07/08 15:36:37  lampret
-// Added embedded memory QMEM.
-//
-// Revision 1.7  2002/10/17 20:04:40  lampret
-// Added BIST scan. Special VS RAMs need to be used to implement BIST.
-//
-// Revision 1.6  2002/03/29 15:16:55  lampret
-// Some of the warnings fixed.
-//
-// Revision 1.5  2002/02/14 15:34:02  simons
-// Lapsus fixed.
-//
-// Revision 1.4  2002/02/11 04:33:17  lampret
-// Speed optimizations (removed duplicate _cyc_ and _stb_). Fixed D/IMMU cache-inhibit attr.
-//
-// Revision 1.3  2002/01/28 01:16:00  lampret
-// Changed 'void' nop-ops instead of insn[0] to use insn[16]. Debug unit stalls the tick timer. Prepared new flag generation for add and and insns. Blocked DC/IC while they are turned off. Fixed I/D MMU SPRs layout except WAYs. TODO: smart IC invalidate, l.j 2 and TLB ways.
-//
-// Revision 1.2  2002/01/14 06:18:22  lampret
-// Fixed mem2reg bug in FAST implementation. Updated debug unit to work with new genpc/if.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.6  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.5  2001/10/14 13:12:09  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:36  igorm
-// no message
-//
-// Revision 1.1  2001/08/17 08:03:35  lampret
-// *** empty log message ***
-//
-// Revision 1.2  2001/07/22 03:31:53  lampret
-// Fixed RAM's oen bug. Cache bypass under development.
-//
-// Revision 1.1  2001/07/20 00:46:03  lampret
-// Development version of RTL. Libraries are missing.
-//
 //
 
 // synopsys translate_off
@@ -255,44 +204,45 @@ assign dcpu_tag_o = miss ? `OR1200_DTAG_TE : fault ? `OR1200_DTAG_PE : qmemdmmu_
 assign dcpu_err_o = miss | fault | qmemdmmu_err_i;
 
 //
-// Assert dtlb_done one clock cycle after new address and dtlb_en must be active.
+// Assert dtlb_done one clock cycle after new address and dtlb_en must be active
 //
 always @(posedge clk or posedge rst)
 	if (rst)
-		dtlb_done <= #1 1'b0;
+		dtlb_done <=  1'b0;
 	else if (dtlb_en)
-		dtlb_done <= #1 dcpu_cycstb_i;
+		dtlb_done <=  dcpu_cycstb_i;
 	else
-		dtlb_done <= #1 1'b0;
+		dtlb_done <=  1'b0;
 
 //
-// Cut transfer if something goes wrong with translation. Also delayed signals because of translation delay.
-//
-assign qmemdmmu_cycstb_o = (!dc_en & dmmu_en) ? ~(miss | fault) & dtlb_done & dcpu_cycstb_i : ~(miss | fault) & dcpu_cycstb_i;
-//assign qmemdmmu_cycstb_o = (dmmu_en) ? ~(miss | fault) & dcpu_cycstb_i : (miss | fault) ? 1'b0 : dcpu_cycstb_i;
+// Cut transfer if something goes wrong with translation. Also delayed signals 
+// because of translation delay.
+assign qmemdmmu_cycstb_o = (dc_en & dmmu_en) ? 
+			   !(miss | fault) & dtlb_done & dcpu_cycstb_i : 
+			   !(miss | fault) & dcpu_cycstb_i;
+
 
 //
 // Cache Inhibit
 //
-//assign qmemdmmu_ci_o = dmmu_en ? dtlb_done & dtlb_ci : `OR1200_DMMU_CI;
 assign qmemdmmu_ci_o = dmmu_en ? dtlb_ci : `OR1200_DMMU_CI;
 
 //
-// Register dcpu_adr_i's VPN for use when DMMU is not enabled but PPN is expected to come
-// one clock cycle after offset part.
+// Register dcpu_adr_i's VPN for use when DMMU is not enabled but PPN is 
+// expected to come one clock cycle after offset part.
 //
 always @(posedge clk or posedge rst)
 	if (rst)
-		dcpu_vpn_r <= #1 {31-`OR1200_DMMU_PS{1'b0}};
+		dcpu_vpn_r <=  {31-`OR1200_DMMU_PS{1'b0}};
 	else
-		dcpu_vpn_r <= #1 dcpu_adr_i[31:`OR1200_DMMU_PS];
+		dcpu_vpn_r <=  dcpu_adr_i[31:`OR1200_DMMU_PS];
 
 //
 // Physical address is either translated virtual address or
 // simply equal when DMMU is disabled
 //
-// assign qmemdmmu_adr_o = dmmu_en ? {dtlb_ppn, dcpu_adr_i[`OR1200_DMMU_PS-1:0]} : {dcpu_vpn_r, dcpu_adr_i[`OR1200_DMMU_PS-1:0]};
-assign qmemdmmu_adr_o = dmmu_en ? {dtlb_ppn, dcpu_adr_i[`OR1200_DMMU_PS-1:0]} : dcpu_adr_i;
+assign qmemdmmu_adr_o = dmmu_en ? {dtlb_ppn, dcpu_adr_i[`OR1200_DMMU_PS-1:0]} :
+			          dcpu_adr_i;
 
 //
 // Output to SPRS unit
@@ -303,10 +253,10 @@ assign spr_dat_o = dtlb_spr_access ? dtlb_dat_o : 32'h00000000;
 // Page fault exception logic
 //
 assign fault = dtlb_done &
-			(  (!dcpu_we_i & !supv & !dtlb_ure) // Load in user mode not enabled
-			|| (!dcpu_we_i & supv & !dtlb_sre) // Load in supv mode not enabled
-			|| (dcpu_we_i & !supv & !dtlb_uwe) // Store in user mode not enabled
-			|| (dcpu_we_i & supv & !dtlb_swe) ); // Store in supv mode not enabled
+	(  (!dcpu_we_i & !supv & !dtlb_ure) // Load in user mode not enabled
+	   || (!dcpu_we_i & supv & !dtlb_sre) // Load in supv mode not enabled
+	   || (dcpu_we_i & !supv & !dtlb_uwe) // Store in user mode not enabled
+	   || (dcpu_we_i & supv & !dtlb_swe)); // Store in supv mode not enabled
 
 //
 // TLB Miss exception logic

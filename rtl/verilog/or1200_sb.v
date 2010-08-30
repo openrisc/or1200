@@ -3,7 +3,7 @@
 ////  OR1200's Store Buffer                                       ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://opencores.org/project,or1k                           ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Implements store buffer.                                    ////
@@ -41,20 +41,11 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
 //
 // $Log: or1200_sb.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Minor update: 
 // Bugs fixed. 
-//
-// Revision 1.2  2002/08/22 02:18:55  lampret
-// Store buffer has been tested and it works. BY default it is still disabled until uClinux confirms correct operation on FPGA board.
-//
-// Revision 1.1  2002/08/18 19:53:08  lampret
-// Added store buffer.
-//
-//
 
 // synopsys translate_off
 `include "timescale.v"
@@ -162,9 +153,9 @@ always @(posedge clk or posedge rst)
 	if (rst)
 		sb_en_reg <= 1'b0;
 	else if (sb_en & ~dcsb_cyc_i)
-		sb_en_reg <= #1 1'b1; // enable SB when there is no dcsb transfer in progress
+		sb_en_reg <=  1'b1; // enable SB when there is no dcsb transfer in progress
 	else if (~sb_en & (~fifo_empty | (fifo_empty & outstanding_store)))
-		sb_en_reg <= #1 1'b0; // disable SB when there is no pending transfers from SB
+		sb_en_reg <=  1'b0; // disable SB when there is no pending transfers from SB
 
 //
 // Store buffer FIFO instantiation
@@ -185,22 +176,22 @@ or1200_sb_fifo or1200_sb_fifo (
 //
 always @(posedge clk or posedge rst)
 	if (rst)
-		outstanding_store <= #1 1'b0;
+		outstanding_store <=  1'b0;
 	else if (sbbiu_ack_i)
-		outstanding_store <= #1 1'b0;
+		outstanding_store <=  1'b0;
 	else if (sel_sb | fifo_wr)
-		outstanding_store <= #1 1'b1;
+		outstanding_store <=  1'b1;
 
 //
 // fifo_wr_ack
 //
 always @(posedge clk or posedge rst)
 	if (rst)
-		fifo_wr_ack <= #1 1'b0;
+		fifo_wr_ack <=  1'b0;
 	else if (fifo_wr)
-		fifo_wr_ack <= #1 1'b1;
+		fifo_wr_ack <=  1'b1;
 	else
-		fifo_wr_ack <= #1 1'b0;
+		fifo_wr_ack <=  1'b0;
 
 `else	// !OR1200_SB_IMPLEMENTED
 

@@ -99,12 +99,12 @@ reg				muxreg_valid;
 //
 always @(posedge clk or posedge rst) begin
 	if (rst) begin
-		muxreg <= #1 32'd0;
-		muxreg_valid <= #1 1'b0;
+		muxreg <=  32'd0;
+		muxreg_valid <=  1'b0;
 	end
 	else if (!wb_freeze) begin
-		muxreg <= #1 muxout;
-		muxreg_valid <= #1 rfwb_op[0];
+		muxreg <=  muxout;
+		muxreg_valid <=  rfwb_op[0];
 	end
 end
 

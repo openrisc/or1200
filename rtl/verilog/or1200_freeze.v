@@ -3,7 +3,7 @@
 ////  OR1200's Freeze logic                                       ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://www.opencores.org/project,or1k                       ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Generates all freezes and stalls inside RISC                ////
@@ -41,64 +41,10 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
-//
 // $Log: or1200_freeze.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Minor update: 
 // Bugs fixed. 
-//
-// Revision 1.8  2004/06/08 18:17:36  lampret
-// Non-functional changes. Coding style fixes.
-//
-// Revision 1.7  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.6.4.2  2003/12/05 00:09:49  lampret
-// No functional change.
-//
-// Revision 1.6.4.1  2003/07/08 15:36:37  lampret
-// Added embedded memory QMEM.
-//
-// Revision 1.6  2002/07/31 02:04:35  lampret
-// MAC now follows software convention (signed multiply instead of unsigned).
-//
-// Revision 1.5  2002/07/14 22:17:17  lampret
-// Added simple trace buffer [only for Xilinx Virtex target]. Fixed instruction fetch abort when new exception is recognized.
-//
-// Revision 1.4  2002/03/29 15:16:55  lampret
-// Some of the warnings fixed.
-//
-// Revision 1.3  2002/01/28 01:16:00  lampret
-// Changed 'void' nop-ops instead of insn[0] to use insn[16]. Debug unit stalls the tick timer. Prepared new flag generation for add and and insns. Blocked DC/IC while they are turned off. Fixed I/D MMU SPRs layout except WAYs. TODO: smart IC invalidate, l.j 2 and TLB ways.
-//
-// Revision 1.2  2002/01/14 06:18:22  lampret
-// Fixed mem2reg bug in FAST implementation. Updated debug unit to work with new genpc/if.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.10  2001/11/13 10:02:21  lampret
-// Added 'setpc'. Renamed some signals (except_flushpipe into flushpipe etc)
-//
-// Revision 1.9  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.8  2001/10/19 23:28:46  lampret
-// Fixed some synthesis warnings. Configured with caches and MMUs.
-//
-// Revision 1.7  2001/10/14 13:12:09  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:36  igorm
-// no message
-//
-// Revision 1.2  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-// Revision 1.1  2001/07/20 00:46:03  lampret
-// Development version of RTL. Libraries are missing.
-//
 //
 
 // synopsys translate_off
@@ -115,17 +61,19 @@
 //
 // Freeze logic (stalls CPU pipeline, ifetcher etc.)
 //
-module or1200_freeze(
-	// Clock and reset
-	clk, rst,
-
-	// Internal i/f
-	multicycle, flushpipe, extend_flush, lsu_stall, if_stall,
-	lsu_unstall, du_stall, mac_stall, 
-	force_dslot_fetch, abort_ex,
-	genpc_freeze, if_freeze, id_freeze, ex_freeze, wb_freeze, saving_if_insn, 
-	icpu_ack_i, icpu_err_i
-);
+module or1200_freeze
+  (
+   // Clock and reset
+   clk, rst,
+   
+   // Internal i/f
+   multicycle, wait_on, flushpipe, extend_flush, lsu_stall, if_stall,
+   lsu_unstall, du_stall, mac_stall, 
+   force_dslot_fetch, abort_ex,
+   genpc_freeze, if_freeze, id_freeze, ex_freeze, wb_freeze, saving_if_insn,
+   fpu_done, mtspr_done,
+   icpu_ack_i, icpu_err_i
+   );
 
 //
 // I/O
@@ -133,6 +81,7 @@ module or1200_freeze(
 input				clk;
 input				rst;
 input	[`OR1200_MULTICYCLE_WIDTH-1:0]	multicycle;
+input   [`OR1200_WAIT_ON_WIDTH-1:0] 	wait_on;   
 input				flushpipe;
 input				extend_flush;
 input				lsu_stall;
@@ -147,7 +96,9 @@ output				if_freeze;
 output				id_freeze;
 output				ex_freeze;
 output				wb_freeze;
-input               saving_if_insn;
+input                           saving_if_insn;
+input   			fpu_done;
+input   			mtspr_done;   
 input				icpu_ack_i;
 input				icpu_err_i;
 
@@ -157,41 +108,45 @@ input				icpu_err_i;
 wire				multicycle_freeze;
 reg	[`OR1200_MULTICYCLE_WIDTH-1:0]	multicycle_cnt;
 reg				flushpipe_r;
-
+reg [`OR1200_WAIT_ON_WIDTH-1:0]	waiting_on;
+   
 //
 // Pipeline freeze
 //
 // Rules how to create freeze signals:
 // 1. Not overwriting pipeline stages:
-// Freze signals at the beginning of pipeline (such as if_freeze) can be asserted more
-// often than freeze signals at the of pipeline (such as wb_freeze). In other words, wb_freeze must never
-// be asserted when ex_freeze is not. ex_freeze must never be asserted when id_freeze is not etc.
+// Freeze signals at the beginning of pipeline (such as if_freeze) can be 
+// asserted more often than freeze signals at the of pipeline (such as 
+// wb_freeze). In other words, wb_freeze must never be asserted when ex_freeze 
+// is not. ex_freeze must never be asserted when id_freeze is not etc.
 //
 // 2. Inserting NOPs in the middle of pipeline only if supported:
-// At this time, only ex_freeze (and wb_freeze) can be deassrted when id_freeze (and if_freeze) are asserted.
+// At this time, only ex_freeze (and wb_freeze) can be deassrted when id_freeze
+// (and if_freeze) are asserted.
 // This way NOP is asserted from stage ID into EX stage.
 //
-//assign genpc_freeze = du_stall | flushpipe_r | lsu_stall;
-//assign genpc_freeze = du_stall | flushpipe_r;
+
 assign genpc_freeze = (du_stall & !saving_if_insn) | flushpipe_r;
 assign if_freeze = id_freeze | extend_flush;
-//assign id_freeze = (lsu_stall | (~lsu_unstall & if_stall) | multicycle_freeze | force_dslot_fetch) & ~flushpipe | du_stall;
-assign id_freeze = (lsu_stall | (~lsu_unstall & if_stall) | multicycle_freeze | force_dslot_fetch) | du_stall | mac_stall;
+
+assign id_freeze = (lsu_stall | (~lsu_unstall & if_stall) | multicycle_freeze 
+		    | (|waiting_on) | force_dslot_fetch) | du_stall | mac_stall;
 assign ex_freeze = wb_freeze;
-//assign wb_freeze = (lsu_stall | (~lsu_unstall & if_stall) | multicycle_freeze) & ~flushpipe | du_stall | mac_stall;
-assign wb_freeze = (lsu_stall | (~lsu_unstall & if_stall) | multicycle_freeze) | du_stall | mac_stall | abort_ex;
+
+assign wb_freeze = (lsu_stall | (~lsu_unstall & if_stall) | multicycle_freeze 
+		    | (|waiting_on)) | du_stall | mac_stall | abort_ex;
 
 //
 // registered flushpipe
 //
 always @(posedge clk or posedge rst)
 	if (rst)
-		flushpipe_r <= #1 1'b0;
+		flushpipe_r <=  1'b0;
 	else if (icpu_ack_i | icpu_err_i)
 //	else if (!if_stall)
-		flushpipe_r <= #1 flushpipe;
+		flushpipe_r <=  flushpipe;
 	else if (!flushpipe)
-		flushpipe_r <= #1 1'b0;
+		flushpipe_r <=  1'b0;
 		
 //
 // Multicycle freeze
@@ -203,10 +158,25 @@ assign multicycle_freeze = |multicycle_cnt;
 //
 always @(posedge clk or posedge rst)
 	if (rst)
-		multicycle_cnt <= #1 2'b00;
+		multicycle_cnt <=  2'b00;
 	else if (|multicycle_cnt)
-		multicycle_cnt <= #1 multicycle_cnt - 2'd1;
+		multicycle_cnt <=  multicycle_cnt - 2'd1;
 	else if (|multicycle & !ex_freeze)
-		multicycle_cnt <= #1 multicycle;
+		multicycle_cnt <=  multicycle;
 
+
+//
+// Waiting on generation
+//
+always @(posedge clk or posedge rst)
+  if (rst)
+    waiting_on <= 0;
+  else if ((waiting_on == `OR1200_WAIT_ON_FPU) & fpu_done)
+    waiting_on <= 0;
+  else if ((waiting_on == `OR1200_WAIT_ON_MTSPR) & mtspr_done)
+    waiting_on <= 0;
+  else if (!ex_freeze)
+    waiting_on <= wait_on;
+   
+	   
 endmodule

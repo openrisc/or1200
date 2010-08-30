@@ -63,7 +63,7 @@ module or1200_sprs(
 		spr_dat_cfgr, spr_dat_rf, spr_dat_npc, spr_dat_ppc, spr_dat_mac,
 		boot_adr_sel_i,
 		
-		// Floating point control register and SPR input
+		// Floating point SPR input
 		fpcsr, fpcsr_we, spr_dat_fpu,
 
 		// From/to other RISC units
@@ -288,12 +288,8 @@ assign sr_sel = (spr_cs[`OR1200_SPR_GROUP_SYS] && (spr_addr[10:0] == `OR1200_SPR
 assign epcr_sel = (spr_cs[`OR1200_SPR_GROUP_SYS] && (spr_addr[10:0] == `OR1200_SPR_EPCR));
 assign eear_sel = (spr_cs[`OR1200_SPR_GROUP_SYS] && (spr_addr[10:0] == `OR1200_SPR_EEAR));
 assign esr_sel = (spr_cs[`OR1200_SPR_GROUP_SYS] && (spr_addr[10:0] == `OR1200_SPR_ESR));
-`ifdef OR1200_FPU_IMPLEMENTED
 assign fpcsr_sel = (spr_cs[`OR1200_SPR_GROUP_SYS] && (spr_addr[10:0] == `OR1200_SPR_FPCSR));
-`else
-assign fpcsr_sel = 0;
-`endif
-   
+
 
 //
 // Write enables for system SPRs
@@ -303,12 +299,8 @@ assign pc_we = (du_write && (npc_sel | ppc_sel));
 assign epcr_we = (spr_we && epcr_sel);
 assign eear_we = (spr_we && eear_sel);
 assign esr_we = (spr_we && esr_sel);
-`ifdef OR1200_FPU_IMPLEMENTED   
 assign fpcsr_we = (spr_we && fpcsr_sel);
-`else
-assign fpcsr_we = 0;
-`endif
-
+   
 //
 // Output from system SPRs
 //
@@ -319,9 +311,7 @@ assign sys_data = (spr_dat_cfgr & {32{cfgr_sel}}) |
 		  ({{32-`OR1200_SR_WIDTH{1'b0}},sr} & {32{sr_sel}}) |
 		  (epcr & {32{epcr_sel}}) |
 		  (eear & {32{eear_sel}}) |
-`ifdef OR1200_FPU_IMPLEMENTED
 		  ({{32-`OR1200_FPCSR_WIDTH{1'b0}},fpcsr} & {32{fpcsr_sel}}) |
-`endif
 		  ({{32-`OR1200_SR_WIDTH{1'b0}},esr} & {32{esr_sel}});
 
 //
@@ -339,26 +329,26 @@ assign carry = sr[`OR1200_SR_CY];
 //
 always @(posedge clk or posedge rst)
 	if (rst)
-		sr_reg <= #1 {2'h1, `OR1200_SR_EPH_DEF, {`OR1200_SR_WIDTH-4{1'b0}}, 1'b1};
+		sr_reg <=  {2'h1, `OR1200_SR_EPH_DEF, {`OR1200_SR_WIDTH-4{1'b0}}, 1'b1};
 	else if (except_started)
-		sr_reg <= #1 to_sr[`OR1200_SR_WIDTH-1:0];
+		sr_reg <=  to_sr[`OR1200_SR_WIDTH-1:0];
 	else if (sr_we)
-		sr_reg <= #1 to_sr[`OR1200_SR_WIDTH-1:0];
+		sr_reg <=  to_sr[`OR1200_SR_WIDTH-1:0];
 
 // EPH part of Supervision register
 always @(posedge clk or posedge rst)
 	// default value 
 	if (rst) begin
-		sr_reg_bit_eph <= #1 `OR1200_SR_EPH_DEF;
-		sr_reg_bit_eph_select <= #1 1'b1;	// select async. value due to reset state
+		sr_reg_bit_eph <=  `OR1200_SR_EPH_DEF;
+		sr_reg_bit_eph_select <=  1'b1;	// select async. value due to reset state
 	end
 	// selected value (different from default) is written into FF after reset state
 	else if (sr_reg_bit_eph_select) begin
-		sr_reg_bit_eph <= #1 boot_adr_sel_i;	// dynamic value can only be assigned to FF out of reset! 
-		sr_reg_bit_eph_select <= #1 1'b0;	// select FF value 
+		sr_reg_bit_eph <=  boot_adr_sel_i;	// dynamic value can only be assigned to FF out of reset! 
+		sr_reg_bit_eph_select <=  1'b0;	// select FF value 
 	end
 	else if (sr_we) begin
-		sr_reg_bit_eph <= #1 to_sr[`OR1200_SR_EPH];
+		sr_reg_bit_eph <=  to_sr[`OR1200_SR_EPH];
 	end
 
 // select async. value of EPH bit after reset 
@@ -372,9 +362,7 @@ always @(sr_reg or sr_reg_bit_eph_muxed)
 // MTSPR/MFSPR interface
 //
 always @(spr_addr or sys_data or spr_dat_mac or spr_dat_pic or spr_dat_pm or
-`ifdef OR1200_FPU_IMPLEMENTED
 	 spr_dat_fpu or
-`endif	 
 	spr_dat_dmmu or spr_dat_immu or spr_dat_du or spr_dat_tt) begin
 		casex (spr_addr[`OR1200_SPR_GROUP_BITS]) // synopsys parallel_case
 			`OR1200_SPR_GROUP_SYS:
@@ -391,10 +379,8 @@ always @(spr_addr or sys_data or spr_dat_mac or spr_dat_pic or spr_dat_pm or
 				to_wbmux = spr_dat_immu;
 			`OR1200_SPR_GROUP_MAC:
 				to_wbmux = spr_dat_mac;
-`ifdef OR1200_FPU_IMPLEMENTED
 		        `OR1200_SPR_GROUP_FPU:
 			         to_wbmux = spr_dat_fpu;
-`endif
 			default: //`OR1200_SPR_GROUP_DU:
 				to_wbmux = spr_dat_du;
 		endcase

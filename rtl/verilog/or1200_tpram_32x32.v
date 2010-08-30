@@ -389,32 +389,32 @@ assign do_b = (oe_b) ? mem[addr_b_reg] : {dw{1'b0}};
 //
 always @(posedge clk_a)
 	if (ce_a && we_a)
-		mem[addr_a] <= #1 di_a;
+		mem[addr_a] <=  di_a;
 
 //
 // RAM write
 //
 always @(posedge clk_b)
 	if (ce_b && we_b)
-		mem[addr_b] <= #1 di_b;
+		mem[addr_b] <=  di_b;
 
 //
 // RAM read address register
 //
 always @(posedge clk_a or posedge rst_a)
 	if (rst_a)
-		addr_a_reg <= #1 {aw{1'b0}};
+		addr_a_reg <=  {aw{1'b0}};
 	else if (ce_a)
-		addr_a_reg <= #1 addr_a;
+		addr_a_reg <=  addr_a;
 
 //
 // RAM read address register
 //
 always @(posedge clk_b or posedge rst_b)
 	if (rst_b)
-		addr_b_reg <= #1 {aw{1'b0}};
+		addr_b_reg <=  {aw{1'b0}};
 	else if (ce_b)
-		addr_b_reg <= #1 addr_b;
+		addr_b_reg <=  addr_b;
 
 `endif	// !OR1200_ALTERA_LPM
 `endif	// !OR1200_XILINX_RAMB16

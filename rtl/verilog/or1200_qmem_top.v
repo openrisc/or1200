@@ -321,98 +321,98 @@ assign qmem_addr = (qmemdmmu_cycstb_i & daddr_qmem_hit) ? qmemdmmu_adr_i : qmemi
 //
 always @(posedge rst or posedge clk)
 	if (rst) begin
-		state <= #1 `OR1200_QMEMFSM_IDLE;
-		qmem_dack <= #1 1'b0;
-		qmem_iack <= #1 1'b0;
+		state <=  `OR1200_QMEMFSM_IDLE;
+		qmem_dack <=  1'b0;
+		qmem_iack <=  1'b0;
 	end
 	else case (state)	// synopsys parallel_case
 		`OR1200_QMEMFSM_IDLE: begin
 			if (qmemdmmu_cycstb_i & daddr_qmem_hit & qmemdcpu_we_i & qmem_ack) begin
-				state <= #1 `OR1200_QMEMFSM_STORE;
-				qmem_dack <= #1 1'b1;
-				qmem_iack <= #1 1'b0;
+				state <=  `OR1200_QMEMFSM_STORE;
+				qmem_dack <=  1'b1;
+				qmem_iack <=  1'b0;
 			end
 			else if (qmemdmmu_cycstb_i & daddr_qmem_hit & qmem_ack) begin
-				state <= #1 `OR1200_QMEMFSM_LOAD;
-				qmem_dack <= #1 1'b1;
-				qmem_iack <= #1 1'b0;
+				state <=  `OR1200_QMEMFSM_LOAD;
+				qmem_dack <=  1'b1;
+				qmem_iack <=  1'b0;
 			end
 			else if (qmemimmu_cycstb_i & iaddr_qmem_hit & qmem_ack) begin
-				state <= #1 `OR1200_QMEMFSM_FETCH;
-				qmem_iack <= #1 1'b1;
-				qmem_dack <= #1 1'b0;
+				state <=  `OR1200_QMEMFSM_FETCH;
+				qmem_iack <=  1'b1;
+				qmem_dack <=  1'b0;
 			end
 		end
 		`OR1200_QMEMFSM_STORE: begin
 			if (qmemdmmu_cycstb_i & daddr_qmem_hit & qmemdcpu_we_i & qmem_ack) begin
-				state <= #1 `OR1200_QMEMFSM_STORE;
-				qmem_dack <= #1 1'b1;
-				qmem_iack <= #1 1'b0;
+				state <=  `OR1200_QMEMFSM_STORE;
+				qmem_dack <=  1'b1;
+				qmem_iack <=  1'b0;
 			end
 			else if (qmemdmmu_cycstb_i & daddr_qmem_hit & qmem_ack) begin
-				state <= #1 `OR1200_QMEMFSM_LOAD;
-				qmem_dack <= #1 1'b1;
-				qmem_iack <= #1 1'b0;
+				state <=  `OR1200_QMEMFSM_LOAD;
+				qmem_dack <=  1'b1;
+				qmem_iack <=  1'b0;
 			end
 			else if (qmemimmu_cycstb_i & iaddr_qmem_hit & qmem_ack) begin
-				state <= #1 `OR1200_QMEMFSM_FETCH;
-				qmem_iack <= #1 1'b1;
-				qmem_dack <= #1 1'b0;
+				state <=  `OR1200_QMEMFSM_FETCH;
+				qmem_iack <=  1'b1;
+				qmem_dack <=  1'b0;
 			end
 			else begin
-				state <= #1 `OR1200_QMEMFSM_IDLE;
-				qmem_dack <= #1 1'b0;
-				qmem_iack <= #1 1'b0;
+				state <=  `OR1200_QMEMFSM_IDLE;
+				qmem_dack <=  1'b0;
+				qmem_iack <=  1'b0;
 			end
 		end
 		`OR1200_QMEMFSM_LOAD: begin
 			if (qmemdmmu_cycstb_i & daddr_qmem_hit & qmemdcpu_we_i & qmem_ack) begin
-				state <= #1 `OR1200_QMEMFSM_STORE;
-				qmem_dack <= #1 1'b1;
-				qmem_iack <= #1 1'b0;
+				state <=  `OR1200_QMEMFSM_STORE;
+				qmem_dack <=  1'b1;
+				qmem_iack <=  1'b0;
 			end
 			else if (qmemdmmu_cycstb_i & daddr_qmem_hit & qmem_ack) begin
-				state <= #1 `OR1200_QMEMFSM_LOAD;
-				qmem_dack <= #1 1'b1;
-				qmem_iack <= #1 1'b0;
+				state <=  `OR1200_QMEMFSM_LOAD;
+				qmem_dack <=  1'b1;
+				qmem_iack <=  1'b0;
 			end
 			else if (qmemimmu_cycstb_i & iaddr_qmem_hit & qmem_ack) begin
-				state <= #1 `OR1200_QMEMFSM_FETCH;
-				qmem_iack <= #1 1'b1;
-				qmem_dack <= #1 1'b0;
+				state <=  `OR1200_QMEMFSM_FETCH;
+				qmem_iack <=  1'b1;
+				qmem_dack <=  1'b0;
 			end
 			else begin
-				state <= #1 `OR1200_QMEMFSM_IDLE;
-				qmem_dack <= #1 1'b0;
-				qmem_iack <= #1 1'b0;
+				state <=  `OR1200_QMEMFSM_IDLE;
+				qmem_dack <=  1'b0;
+				qmem_iack <=  1'b0;
 			end
 		end
 		`OR1200_QMEMFSM_FETCH: begin
 			if (qmemdmmu_cycstb_i & daddr_qmem_hit & qmemdcpu_we_i & qmem_ack) begin
-				state <= #1 `OR1200_QMEMFSM_STORE;
-				qmem_dack <= #1 1'b1;
-				qmem_iack <= #1 1'b0;
+				state <=  `OR1200_QMEMFSM_STORE;
+				qmem_dack <=  1'b1;
+				qmem_iack <=  1'b0;
 			end
 			else if (qmemdmmu_cycstb_i & daddr_qmem_hit & qmem_ack) begin
-				state <= #1 `OR1200_QMEMFSM_LOAD;
-				qmem_dack <= #1 1'b1;
-				qmem_iack <= #1 1'b0;
+				state <=  `OR1200_QMEMFSM_LOAD;
+				qmem_dack <=  1'b1;
+				qmem_iack <=  1'b0;
 			end
 			else if (qmemimmu_cycstb_i & iaddr_qmem_hit & qmem_ack) begin
-				state <= #1 `OR1200_QMEMFSM_FETCH;
-				qmem_iack <= #1 1'b1;
-				qmem_dack <= #1 1'b0;
+				state <=  `OR1200_QMEMFSM_FETCH;
+				qmem_iack <=  1'b1;
+				qmem_dack <=  1'b0;
 			end
 			else begin
-				state <= #1 `OR1200_QMEMFSM_IDLE;
-				qmem_dack <= #1 1'b0;
-				qmem_iack <= #1 1'b0;
+				state <=  `OR1200_QMEMFSM_IDLE;
+				qmem_dack <=  1'b0;
+				qmem_iack <=  1'b0;
 			end
 		end
 		default: begin
-			state <= #1 `OR1200_QMEMFSM_IDLE;
-			qmem_dack <= #1 1'b0;
-			qmem_iack <= #1 1'b0;
+			state <=  `OR1200_QMEMFSM_IDLE;
+			qmem_dack <=  1'b0;
+			qmem_iack <=  1'b0;
 		end
 	endcase
 

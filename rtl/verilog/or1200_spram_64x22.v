@@ -393,16 +393,16 @@ assign doq = (oe) ? mem[addr_reg] : {dw{1'b0}};
 //
 always @(posedge clk or posedge rst)
         if (rst)
-                addr_reg <= #1 {aw{1'b0}};
+                addr_reg <=  {aw{1'b0}};
         else if (ce)
-                addr_reg <= #1 addr;
+                addr_reg <=  addr;
                                                                                                                                                                                                      
 //
 // RAM write
 //
 always @(posedge clk)
         if (ce && we)
-                mem[addr] <= #1 di;
+                mem[addr] <=  di;
 
 `endif	// !OR1200_ALTERA_LPM
 `endif	// !OR1200_XILINX_RAMB16

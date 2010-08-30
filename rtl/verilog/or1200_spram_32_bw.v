@@ -104,7 +104,7 @@ module or1200_spram_32_bw
    //
    // Generic RAM's registers and wires
    //
-`ifdef OR1200_ACTEL   
+`ifdef OR1200_GENERIC   
    reg [7:0] 				  mem0 [(1<<aw)-1:0] /*synthesis syn_ramstyle = "no_rw_check"*/;
    reg [7:0] 				  mem1 [(1<<aw)-1:0] /*synthesis syn_ramstyle = "no_rw_check"*/;
    reg [7:0] 				  mem2 [(1<<aw)-1:0] /*synthesis syn_ramstyle = "no_rw_check"*/;
@@ -127,21 +127,21 @@ module or1200_spram_32_bw
    //
    always @(posedge clk)
      if (ce)
-       addr_reg <= #1 addr;
+       addr_reg <=  addr;
    
    //
-   // RAM write
+   // RAM write - big endian selection
    //
    always @(posedge clk)
      if (ce) begin
-       if (we[0])
-         mem0[addr] <= #1 di[31:24];
-       if (we[1])
-         mem1[addr] <= #1 di[23:16];
-       if (we[2])
-         mem2[addr] <= #1 di[15:08];
        if (we[3])
-         mem3[addr] <= #1 di[07:00];
+         mem0[addr] <=  di[31:24];
+       if (we[2])
+         mem1[addr] <=  di[23:16];
+       if (we[1])
+         mem2[addr] <=  di[15:08];
+       if (we[0])
+         mem3[addr] <=  di[07:00];
      end
    
 endmodule // or1200_spram

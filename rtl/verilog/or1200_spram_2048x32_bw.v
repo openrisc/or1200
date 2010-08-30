@@ -638,37 +638,37 @@ assign doq = (oe) ? {mem_3[addr_reg], mem_2[addr_reg], mem_1[addr_reg], mem_0[ad
 //
 always @(posedge clk or posedge rst)
         if (rst)
-                addr_reg <= #1 11'h000;
+                addr_reg <=  11'h000;
         else if (ce)
-                addr_reg <= #1 addr;
+                addr_reg <=  addr;
                                                                                                                                                                                                      
 //
 // RAM write byte 0
 //
 always @(posedge clk)
         if (ce && we[0])
-                mem_0[addr] <= #1 di[7:0];
+                mem_0[addr] <=  di[7:0];
                                                                                                                                                                                                      
 //
 // RAM write byte 1
 //
 always @(posedge clk)
         if (ce && we[1])
-                mem_1[addr] <= #1 di[15:8];
+                mem_1[addr] <=  di[15:8];
                                                                                                                                                                                                      
 //
 // RAM write byte 2
 //
 always @(posedge clk)
         if (ce && we[2])
-                mem_2[addr] <= #1 di[23:16];
+                mem_2[addr] <=  di[23:16];
                                                                                                                                                                                                      
 //
 // RAM write byte 3
 //
 always @(posedge clk)
         if (ce && we[3])
-                mem_3[addr] <= #1 di[31:24];
+                mem_3[addr] <=  di[31:24];
 
 `endif  // !OR1200_XILINX_RAMB16
 `endif  // !OR1200_XILINX_RAMB4

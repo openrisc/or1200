@@ -3,7 +3,7 @@
 ////  OR1200's Data TLB                                           ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://www.opencores.org/project,or1k                       ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Instantiation of DTLB.                                      ////
@@ -41,43 +41,11 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
 //
 // $Log: or1200_dmmu_tlb.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Minor update: 
 // Bugs fixed, coding style changed. 
-//
-// Revision 1.7  2004/06/08 18:17:36  lampret
-// Non-functional changes. Coding style fixes.
-//
-// Revision 1.6  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.4.4.1  2003/12/09 11:46:48  simons
-// Mbist nameing changed, Artisan ram instance signal names fixed, some synthesis waning fixed.
-//
-// Revision 1.4  2002/10/17 20:04:40  lampret
-// Added BIST scan. Special VS RAMs need to be used to implement BIST.
-//
-// Revision 1.3  2002/02/11 04:33:17  lampret
-// Speed optimizations (removed duplicate _cyc_ and _stb_). Fixed D/IMMU cache-inhibit attr.
-//
-// Revision 1.2  2002/01/28 01:16:00  lampret
-// Changed 'void' nop-ops instead of insn[0] to use insn[16]. Debug unit stalls the tick timer. Prepared new flag generation for add and and insns. Blocked DC/IC while they are turned off. Fixed I/D MMU SPRs layout except WAYs. TODO: smart IC invalidate, l.j 2 and TLB ways.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.8  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.7  2001/10/14 13:12:09  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:36  igorm
-// no message
-//
 //
 
 // synopsys translate_off

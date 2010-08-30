@@ -3,7 +3,7 @@
 ////  OR1200's DC TAG RAMs                                        ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://opencores.org/project,or1k                           ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Instatiation of data cache tag rams.                        ////
@@ -41,43 +41,10 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
-//
 // $Log: or1200_dc_tag.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Minor update: 
 // Coding style changed.
-//
-// Revision 1.5  2004/06/08 18:17:36  lampret
-// Non-functional changes. Coding style fixes.
-//
-// Revision 1.4  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.2.4.1  2003/12/09 11:46:48  simons
-// Mbist nameing changed, Artisan ram instance signal names fixed, some synthesis waning fixed.
-//
-// Revision 1.2  2002/10/17 20:04:40  lampret
-// Added BIST scan. Special VS RAMs need to be used to implement BIST.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.8  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.7  2001/10/14 13:12:09  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:36  igorm
-// no message
-//
-// Revision 1.2  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-// Revision 1.1  2001/07/20 00:46:03  lampret
-// Development version of RTL. Libraries are missing.
-//
 //
 
 // synopsys translate_off
@@ -95,10 +62,10 @@ module or1200_dc_tag(
 `endif
 
 	// Internal i/f
-	addr, en, we, datain, tag_v, tag
+	addr, en, we, datain, tag_v, tag, dirty
 );
 
-parameter dw = `OR1200_DCTAG_W;
+parameter dw = `OR1200_DCTAG_W+1;
 parameter aw = `OR1200_DCTAG;
 
 //
@@ -111,7 +78,9 @@ input				en;
 input				we;
 input	[dw-1:0]		datain;
 output				tag_v;
-output	[dw-2:0]		tag;
+output	[dw-3:0]		tag;
+output  			dirty;
+   
 
 `ifdef OR1200_BIST
 //
@@ -142,14 +111,14 @@ assign mbist_so_o = mbist_si_i;
    or1200_spram #
      (
       .aw(8),
-      .dw(21)
+      .dw(21 + 1)
       )
 `endif
 `ifdef OR1200_DC_1W_8KB
    or1200_spram #
      (
       .aw(9),
-      .dw(20)
+      .dw(20 + 1)
       )
 `endif
    dc_tag0
@@ -165,7 +134,7 @@ assign mbist_so_o = mbist_si_i;
       .we(we),
       .addr(addr),
       .di(datain),
-      .doq({tag, tag_v})
+      .doq({tag, tag_v, dirty})
       );
 `endif
 

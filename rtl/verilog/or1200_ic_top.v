@@ -3,7 +3,7 @@
 ////  OR1200's Data Cache top level                               ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://opencores.org/project,or1k                           ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Instantiation of all IC blocks.                             ////
@@ -41,64 +41,9 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
-//
 // $Log: or1200_ic_top.v,v $
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // No update 
-//
-// Revision 1.9  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.7.4.2  2003/12/09 11:46:48  simons
-// Mbist nameing changed, Artisan ram instance signal names fixed, some synthesis waning fixed.
-//
-// Revision 1.7.4.1  2003/07/08 15:36:37  lampret
-// Added embedded memory QMEM.
-//
-// Revision 1.7  2002/10/17 20:04:40  lampret
-// Added BIST scan. Special VS RAMs need to be used to implement BIST.
-//
-// Revision 1.6  2002/03/29 15:16:55  lampret
-// Some of the warnings fixed.
-//
-// Revision 1.5  2002/02/11 04:33:17  lampret
-// Speed optimizations (removed duplicate _cyc_ and _stb_). Fixed D/IMMU cache-inhibit attr.
-//
-// Revision 1.4  2002/02/01 19:56:54  lampret
-// Fixed combinational loops.
-//
-// Revision 1.3  2002/01/28 01:16:00  lampret
-// Changed 'void' nop-ops instead of insn[0] to use insn[16]. Debug unit stalls the tick timer. Prepared new flag generation for add and and insns. Blocked DC/IC while they are turned off. Fixed I/D MMU SPRs layout except WAYs. TODO: smart IC invalidate, l.j 2 and TLB ways.
-//
-// Revision 1.2  2002/01/14 06:18:22  lampret
-// Fixed mem2reg bug in FAST implementation. Updated debug unit to work with new genpc/if.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.10  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from ic.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.9  2001/10/14 13:12:09  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:35  igorm
-// no message
-//
-// Revision 1.4  2001/08/13 03:36:20  lampret
-// Added cfg regs. Moved all defines into one defines.v file. More cleanup.
-//
-// Revision 1.3  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-// Revision 1.2  2001/07/22 03:31:53  lampret
-// Fixed RAM's oen bug. Cache bypass under development.
-//
-// Revision 1.1  2001/07/20 00:46:03  lampret
-// Development version of RTL. Libraries are missing.
-//
-//
 
 // synopsys translate_off
 `include "timescale.v"
@@ -227,7 +172,9 @@ assign				mbist_so_o = mbist_tag_so;
 assign icbiu_adr_o = ic_addr;
 assign ic_inv = spr_cs & spr_write;
 assign ictag_we = icfsm_tag_we | ic_inv;
-assign ictag_addr = ic_inv ? spr_dat_i[`OR1200_ICINDXH:`OR1200_ICLS] : ic_addr[`OR1200_ICINDXH:`OR1200_ICLS];
+assign ictag_addr = ic_inv ? 
+		    spr_dat_i[`OR1200_ICINDXH:`OR1200_ICLS] : 
+		    ic_addr[`OR1200_ICINDXH:`OR1200_ICLS];
 assign ictag_en = ic_inv | ic_en;
 assign ictag_v = ~ic_inv;
 

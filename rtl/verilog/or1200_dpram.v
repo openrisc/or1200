@@ -104,22 +104,7 @@ module or1200_dpram
       // verilator public
       input [aw-1:0] 		gpr_no;
 
-      get_gpr = { mem[gpr_no*32 + 31], mem[gpr_no*32 + 30],
-                  mem[gpr_no*32 + 29], mem[gpr_no*32 + 28],
-                  mem[gpr_no*32 + 27], mem[gpr_no*32 + 26],
-                  mem[gpr_no*32 + 25], mem[gpr_no*32 + 24],
-                  mem[gpr_no*32 + 23], mem[gpr_no*32 + 22],
-                  mem[gpr_no*32 + 21], mem[gpr_no*32 + 20],
-                  mem[gpr_no*32 + 19], mem[gpr_no*32 + 18],
-                  mem[gpr_no*32 + 17], mem[gpr_no*32 + 16],
-                  mem[gpr_no*32 + 15], mem[gpr_no*32 + 14],
-                  mem[gpr_no*32 + 13], mem[gpr_no*32 + 12],
-                  mem[gpr_no*32 + 11], mem[gpr_no*32 + 10],
-                  mem[gpr_no*32 +  9], mem[gpr_no*32 +  8],
-                  mem[gpr_no*32 +  7], mem[gpr_no*32 +  6],
-                  mem[gpr_no*32 +  5], mem[gpr_no*32 +  4],
-                  mem[gpr_no*32 +  3], mem[gpr_no*32 +  2],
-                  mem[gpr_no*32 +  1], mem[gpr_no*32 +  0] };
+      get_gpr = mem[gpr_no];
       
    endfunction // get_gpr
    
@@ -135,13 +120,13 @@ module or1200_dpram
    //
    always @(posedge clk_a)
      if (ce_a)
-       addr_a_reg <= #1 addr_a;
+       addr_a_reg <=  addr_a;
    
    //
    // RAM write
    //
    always @(posedge clk_b)
      if (ce_b & we_b)
-       mem[addr_b] <= #1 di_b;
+       mem[addr_b] <=  di_b;
    
 endmodule // or1200_dpram

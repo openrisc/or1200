@@ -140,11 +140,11 @@ reg				genpc_refetch_r;
    //
    always @(posedge clk or posedge rst)
      if (rst)
-       genpc_refetch_r <= #1 1'b0;
+       genpc_refetch_r <=  1'b0;
      else if (genpc_refetch)
-       genpc_refetch_r <= #1 1'b1;
+       genpc_refetch_r <=  1'b1;
      else
-       genpc_refetch_r <= #1 1'b0;
+       genpc_refetch_r <=  1'b0;
 
    //
    // Async calculation of new PC value. This value is used for addressing the
@@ -258,22 +258,22 @@ reg				genpc_refetch_r;
    always @(posedge clk or posedge rst)
      // default value 
      if (rst) begin
-	pcreg_default <= #1 `OR1200_BOOT_PCREG_DEFAULT; // jb
-	pcreg_select <= #1 1'b1;// select async. value due to reset state
+	pcreg_default <=  `OR1200_BOOT_PCREG_DEFAULT; // jb
+	pcreg_select <=  1'b1;// select async. value due to reset state
      end
    // selected value (different from default) is written into FF after
    // reset state
      else if (pcreg_select) begin
 	// dynamic value can only be assigned to FF out of reset! 
-	pcreg_default <= #1 pcreg_boot[31:2];	
-	pcreg_select <= #1 1'b0;		// select FF value 
+	pcreg_default <=  pcreg_boot[31:2];	
+	pcreg_select <=  1'b0;		// select FF value 
      end
      else if (spr_pc_we) begin
-	pcreg_default <= #1 spr_dat_i[31:2];
+	pcreg_default <=  spr_dat_i[31:2];
      end
      else if (no_more_dslot | except_start | !genpc_freeze & !icpu_rty_i 
 	      & !genpc_refetch) begin
-	pcreg_default <= #1 pc[31:2];
+	pcreg_default <=  pc[31:2];
      end
 
    // select async. value for pcreg after reset - PC jumps to the address selected

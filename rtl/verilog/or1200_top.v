@@ -3,7 +3,7 @@
 ////  OR1200 Top Level                                            ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://opencores.org/project,or1k                           ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  OR1200 Top Level                                            ////
@@ -47,100 +47,6 @@
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Major update: 
 // Structure reordered. 
-//
-// Revision 1.13  2004/06/08 18:17:36  lampret
-// Non-functional changes. Coding style fixes.
-//
-// Revision 1.12  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.10.4.9  2004/02/11 01:40:11  lampret
-// preliminary HW breakpoints support in debug unit (by default disabled). To enable define OR1200_DU_HWBKPTS.
-//
-// Revision 1.10.4.8  2004/01/17 21:14:14  simons
-// Errors fixed.
-//
-// Revision 1.10.4.7  2004/01/17 19:06:38  simons
-// Error fixed.
-//
-// Revision 1.10.4.6  2004/01/17 18:39:48  simons
-// Error fixed.
-//
-// Revision 1.10.4.5  2004/01/15 06:46:38  markom
-// interface to debug changed; no more opselect; stb-ack protocol
-//
-// Revision 1.10.4.4  2003/12/09 11:46:49  simons
-// Mbist nameing changed, Artisan ram instance signal names fixed, some synthesis waning fixed.
-//
-// Revision 1.10.4.3  2003/12/05 00:08:44  lampret
-// Fixed instantiation name.
-//
-// Revision 1.10.4.2  2003/07/11 01:10:35  lampret
-// Added three missing wire declarations. No functional changes.
-//
-// Revision 1.10.4.1  2003/07/08 15:36:37  lampret
-// Added embedded memory QMEM.
-//
-// Revision 1.10  2002/12/08 08:57:56  lampret
-// Added optional support for WB B3 specification (xwb_cti_o, xwb_bte_o). Made xwb_cab_o optional.
-//
-// Revision 1.9  2002/10/17 20:04:41  lampret
-// Added BIST scan. Special VS RAMs need to be used to implement BIST.
-//
-// Revision 1.8  2002/08/18 19:54:22  lampret
-// Added store buffer.
-//
-// Revision 1.7  2002/07/14 22:17:17  lampret
-// Added simple trace buffer [only for Xilinx Virtex target]. Fixed instruction fetch abort when new exception is recognized.
-//
-// Revision 1.6  2002/03/29 15:16:56  lampret
-// Some of the warnings fixed.
-//
-// Revision 1.5  2002/02/11 04:33:17  lampret
-// Speed optimizations (removed duplicate _cyc_ and _stb_). Fixed D/IMMU cache-inhibit attr.
-//
-// Revision 1.4  2002/02/01 19:56:55  lampret
-// Fixed combinational loops.
-//
-// Revision 1.3  2002/01/28 01:16:00  lampret
-// Changed 'void' nop-ops instead of insn[0] to use insn[16]. Debug unit stalls the tick timer. Prepared new flag generation for add and and insns. Blocked DC/IC while they are turned off. Fixed I/D MMU SPRs layout except WAYs. TODO: smart IC invalidate, l.j 2 and TLB ways.
-//
-// Revision 1.2  2002/01/18 07:56:00  lampret
-// No more low/high priority interrupts (PICPR removed). Added tick timer exception. Added exception prefix (SR[EPH]). Fixed single-step bug whenreading NPC.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.13  2001/11/23 08:38:51  lampret
-// Changed DSR/DRR behavior and exception detection.
-//
-// Revision 1.12  2001/11/20 00:57:22  lampret
-// Fixed width of du_except.
-//
-// Revision 1.11  2001/11/18 08:36:28  lampret
-// For GDB changed single stepping and disabled trap exception.
-//
-// Revision 1.10  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.9  2001/10/14 13:12:10  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:35  igorm
-// no message
-//
-// Revision 1.4  2001/08/13 03:36:20  lampret
-// Added cfg regs. Moved all defines into one defines.v file. More cleanup.
-//
-// Revision 1.3  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-// Revision 1.2  2001/07/22 03:31:54  lampret
-// Fixed RAM's oen bug. Cache bypass under development.
-//
-// Revision 1.1  2001/07/20 00:46:21  lampret
-// Development version of RTL. Libraries are missing.
-//
 //
 
 // synopsys translate_off
@@ -388,7 +294,8 @@ wire			dcpu_ack_qmem;
 wire			dcpu_rty_qmem;
 wire			dcpu_err_dmmu;
 wire	[3:0]		dcpu_tag_dmmu;
-
+wire    		dc_no_writethrough;
+   
 //
 // IMMU and CPU
 //
@@ -765,6 +672,7 @@ or1200_cpu or1200_cpu(
 	.dcpu_rty_i(dcpu_rty_qmem),
 	.dcpu_err_i(dcpu_err_dmmu),
 	.dcpu_tag_i(dcpu_tag_dmmu),
+	.dc_no_writethrough(dc_no_writethrough),
 
 	// Connection DMMU and CPU internally
 	.dmmu_en(dmmu_en),
@@ -791,7 +699,8 @@ or1200_cpu or1200_cpu(
 	.spr_dat_du(spr_dat_du),
 	.spr_dat_npc(spr_dat_npc),
 	.spr_cs(spr_cs),
-	.spr_we(spr_we)
+	.spr_we(spr_we),
+        .mtspr_dc_done(mtspr_dc_done)
 );
 
 //
@@ -863,10 +772,14 @@ or1200_dc_top or1200_dc_top(
 	.dcqmem_err_o(dcqmem_err_dc),
 	.dcqmem_tag_o(dcqmem_tag_dc),
 
+	.dc_no_writethrough(dc_no_writethrough),
+
 	// SPR access
 	.spr_cs(spr_cs[`OR1200_SPR_GROUP_DC]),
+	.spr_addr(spr_addr),
 	.spr_write(spr_we),
 	.spr_dat_i(spr_dat_cpu),
+        .mtspr_dc_done(mtspr_dc_done),
 
 	// DC and BIU
 	.dcsb_dat_o(dcsb_dat_dc),

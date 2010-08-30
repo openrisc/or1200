@@ -124,12 +124,14 @@
 //`define OR1200_XILINX_RAMB4
 //`define OR1200_XILINX_RAM32X1D
 //`define OR1200_USE_RAM16X1D_FOR_RAM32X1D
-`define OR1200_ACTEL
+// Generic models should infer RAM blocks at synthesis time (not only effects 
+// single port ram.)
+`define OR1200_GENERIC
 
 //
 // Do not implement Data cache
 //
-`define OR1200_NO_DC
+//`define OR1200_NO_DC
 
 //
 // Do not implement Insn cache
@@ -161,8 +163,8 @@
 //`define OR1200_IC_1W_512B
 //`define OR1200_IC_1W_4KB
 `define OR1200_IC_1W_8KB
-`define OR1200_DC_1W_4KB
-//`define OR1200_DC_1W_8KB
+//`define OR1200_DC_1W_4KB
+`define OR1200_DC_1W_8KB
 
 `endif
 
@@ -313,17 +315,6 @@
 //`define OR1200_IMPL_CY
 
 //
-// Implement optional l.div/l.divu instructions
-//
-// By default divide instructions are not implemented
-// to save area and increase clock frequency. or32 C/C++
-// compiler can use soft library for division.
-//
-// To implement divide, multiplier needs to be implemented.
-//
-//`define OR1200_IMPL_DIV
-
-//
 // Implement rotate in the ALU
 //
 // At the time of writing this, or32
@@ -353,7 +344,7 @@
 //
 // By default multiplier is implemented
 //
-//`define OR1200_MULT_IMPLEMENTED
+`define OR1200_MULT_IMPLEMENTED
 
 //
 // Implement multiply-and-accumulate
@@ -362,7 +353,18 @@
 // implement MAC, multiplier needs to be
 // implemented.
 //
-//`define OR1200_MAC_IMPLEMENTED
+`define OR1200_MAC_IMPLEMENTED
+
+//
+// Implement optional l.div/l.divu instructions
+//
+// By default divide instructions are not implemented
+// to save area and increase clock frequency. or32 C/C++
+// compiler can use soft library for division.
+//
+// To implement divide, both multiplier and MAC needs to be implemented.
+//
+`define OR1200_DIV_IMPLEMENTED
 
 //
 // Low power, slower multiplier
@@ -379,6 +381,16 @@
 // Implement HW Single Precision FPU
 //
 //`define OR1200_FPU_IMPLEMENTED
+//
+// Select modules for FPU
+`ifdef OR1200_FPU_IMPLEMENTED
+// FPU arithmetic module (add,sub,mul,div)
+ `define OR1200_FPU_ARITH_FPU100
+// FPU conversion module (int-float,float-int)
+ `define OR1200_FPU_CONV_USSELMANN
+// FPU comparison module
+ `define OR1200_FPU_COMP_USSELMANN
+`endif
 
 //
 // Clock ratio RISC clock versus WB clock
@@ -401,7 +413,7 @@
 // Memory macro w/ two ports (see or1200_tpram_32x32.v)
 //`define OR1200_RFRAM_TWOPORT
 //
-// Memory macro dual port (see or1200_dpram_32x32.v)
+// Memory macro dual port (see or1200_dpram.v)
 `define OR1200_RFRAM_DUALPORT
 
 //
@@ -470,6 +482,11 @@
 `define OR1200_MULTICYCLE_WIDTH	3
 `define OR1200_ONE_CYCLE		3'd0
 `define OR1200_TWO_CYCLES		3'd1
+
+// Execution control which will "wait on" a module to finish
+`define OR1200_WAIT_ON_WIDTH 2
+`define OR1200_WAIT_ON_FPU `OR1200_WAIT_ON_WIDTH'd1
+`define OR1200_WAIT_ON_MTSPR `OR1200_WAIT_ON_WIDTH'd2
 
 // Operand MUX selects
 `define OR1200_SEL_WIDTH		2
@@ -1225,8 +1242,24 @@
 // 3 for 8 bytes, 4 for 16 bytes etc
 `define OR1200_DCLS		4
 
-// Define to perform store refill (potential performance penalty)
-// `define OR1200_DC_STORE_REFILL
+// Define to enable default behavior of cache as write through
+// Turning this off enabled write back statergy
+//
+`define OR1200_DC_WRITETHROUGH
+
+// Define to enable stores from the stack not doing writethrough.
+// EXPERIMENTAL
+//`define OR1200_DC_NOSTACKWRITETHROUGH
+
+// Data cache SPR definitions
+`define OR1200_SPRGRP_DC_ADR_WIDTH 3
+// Data cache group SPR addresses
+`define OR1200_SPRGRP_DC_DCCR		3'd0 // Not implemented
+`define OR1200_SPRGRP_DC_DCBPR		3'd1 // Not implemented
+`define OR1200_SPRGRP_DC_DCBFR		3'd2
+`define OR1200_SPRGRP_DC_DCBIR		3'd3
+`define OR1200_SPRGRP_DC_DCBWR		3'd4 // Not implemented
+`define OR1200_SPRGRP_DC_DCBLR		3'd5 // Not implemented
 
 //
 // DC configurations
@@ -1247,6 +1280,7 @@
 `define	OR1200_DCTAG			`OR1200_DCSIZE-`OR1200_DCLS	// 9
 `define	OR1200_DCTAG_W			20
 `endif
+
 
 /////////////////////////////////////////////////
 //
@@ -1392,7 +1426,7 @@
 `define OR1200_VR_VER_BITS		31:24
 
 // VR values
-`define OR1200_VR_REV			6'h01
+`define OR1200_VR_REV			6'h08
 `define OR1200_VR_RES1			10'h000
 `define OR1200_VR_CFG			8'h00
 `define OR1200_VR_VER			8'h12
@@ -1409,7 +1443,8 @@
 `define OR1200_UPR_PMP_BITS		8
 `define OR1200_UPR_PICP_BITS		9
 `define OR1200_UPR_TTP_BITS		10
-`define OR1200_UPR_RES1_BITS		23:11
+`define OR1200_UPR_FPP_BITS		11
+`define OR1200_UPR_RES1_BITS		23:12
 `define OR1200_UPR_CUP_BITS		31:24
 
 // UPR values
@@ -1434,7 +1469,11 @@
 `else
 `define OR1200_UPR_IMP			1'b1
 `endif
-`define OR1200_UPR_MP			1'b1	// MAC always present
+`ifdef OR1200_MAC_IMPLEMENTED
+`define OR1200_UPR_MP			1'b1
+`else
+`define OR1200_UPR_MP			1'b0
+`endif
 `ifdef OR1200_DU_IMPLEMENTED
 `define OR1200_UPR_DUP			1'b1
 `else
@@ -1456,7 +1495,12 @@
 `else
 `define OR1200_UPR_TTP			1'b0
 `endif
-`define OR1200_UPR_RES1			13'h0000
+`ifdef OR1200_FPU_IMPLEMENTED
+`define OR1200_UPR_FPP			1'b1
+`else
+`define OR1200_UPR_FPP			1'b0
+`endif
+`define OR1200_UPR_RES1			12'h000
 `define OR1200_UPR_CUP			8'h00
 
 // CPUCFGR fields
@@ -1478,7 +1522,12 @@
 `endif
 `define OR1200_CPUCFGR_OB32S		1'b1
 `define OR1200_CPUCFGR_OB64S		1'b0
-`define OR1200_CPUCFGR_OF32S		1'b0
+`ifdef OR1200_FPU_IMPLEMENTED
+ `define OR1200_CPUCFGR_OF32S		1'b1
+`else
+ `define OR1200_CPUCFGR_OF32S		1'b0
+`endif
+
 `define OR1200_CPUCFGR_OF64S		1'b0
 `define OR1200_CPUCFGR_OV64S		1'b0
 `define OR1200_CPUCFGR_RES1		22'h000000
@@ -1575,13 +1624,21 @@
 `define OR1200_DCCFGR_NCW		3'h0	// 1 cache way
 `define OR1200_DCCFGR_NCS (`OR1200_DCTAG)	// Num cache sets
 `define OR1200_DCCFGR_CBS (`OR1200_DCLS-4)	// 16 byte cache block
-`define OR1200_DCCFGR_CWS		1'b0	// Write-through strategy
+`ifdef OR1200_DC_WRITETHROUGH
+ `define OR1200_DCCFGR_CWS		1'b0	// Write-through strategy
+`else
+ `define OR1200_DCCFGR_CWS		1'b1	// Write-back strategy
+`endif
 `define OR1200_DCCFGR_CCRI		1'b1	// Cache control reg impl.
 `define OR1200_DCCFGR_CBIRI		1'b1	// Cache block inv reg impl.
 `define OR1200_DCCFGR_CBPRI		1'b0	// Cache block prefetch reg not impl.
 `define OR1200_DCCFGR_CBLRI		1'b0	// Cache block lock reg not impl.
 `define OR1200_DCCFGR_CBFRI		1'b1	// Cache block flush reg impl.
-`define OR1200_DCCFGR_CBWBRI		1'b0	// Cache block WB reg not impl.
+`ifdef OR1200_DC_WRITETHROUGH
+ `define OR1200_DCCFGR_CBWBRI		1'b0	// Cache block WB reg not impl.
+`else
+ `define OR1200_DCCFGR_CBWBRI		1'b1	// Cache block WB reg impl.
+`endif
 `define OR1200_DCCFGR_RES1		17'h00000
 `endif
 
@@ -1650,8 +1707,8 @@
 // used to determine where vectors are located.                              //
 ///////////////////////////////////////////////////////////////////////////////
  // Boot from 0xf0000100
-`define OR1200_BOOT_PCREG_DEFAULT 30'h3c00003f
-`define OR1200_BOOT_ADR 32'hf0000100
+//`define OR1200_BOOT_PCREG_DEFAULT 30'h3c00003f
+//`define OR1200_BOOT_ADR 32'hf0000100
 // Boot from 0x100
-// `define OR1200_BOOT_PCREG_DEFAULT 30'h0000003f
-// `define OR1200_BOOT_ADR 32'h00000100
+ `define OR1200_BOOT_PCREG_DEFAULT 30'h0000003f
+ `define OR1200_BOOT_ADR 32'h00000100

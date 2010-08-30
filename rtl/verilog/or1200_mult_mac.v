@@ -1,9 +1,9 @@
 //////////////////////////////////////////////////////////////////////
 ////                                                              ////
-////  OR1200's Top level multiplier and MAC                       ////
+////  OR1200's Top level multiplier, divider and MAC              ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://opencores.org/project,or1k                           ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Multiplier is 32x32 however multiply instructions only      ////
@@ -48,31 +48,6 @@
 // Revision 2.0  2010/06/30 11:00:00  ORSoC
 // Minor update: 
 // Bugs fixed. 
-//
-// Revision 1.5  2006/04/09 01:32:29  lampret
-// See OR1200_MAC_SHIFTBY in or1200_defines.v for explanation of the change. Since now no more 28 bits shift for l.macrc insns however for backward compatbility it is possible to set arbitry number of shifts.
-//
-// Revision 1.4  2004/06/08 18:17:36  lampret
-// Non-functional changes. Coding style fixes.
-//
-// Revision 1.3  2003/04/24 00:16:07  lampret
-// No functional changes. Added defines to disable implementation of multiplier/MAC
-//
-// Revision 1.2  2002/09/08 05:52:16  lampret
-// Added optional l.div/l.divu insns. By default they are disabled.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.3  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.2  2001/10/14 13:12:09  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:38  igorm
-// no message
-//
 //
 
 // synopsys translate_off
@@ -157,7 +132,7 @@ wire				spr_machi_we;
 wire				alu_op_div_divu;
 wire				alu_op_div;
 reg				div_free;
-`ifdef OR1200_IMPL_DIV
+`ifdef OR1200_DIV_IMPLEMENTED
 wire	[width-1:0]		div_tmp;
 reg	[5:0]			div_cntr;
 `endif
@@ -175,13 +150,17 @@ assign spr_machi_we = 1'b0;
 assign spr_dat_o = 32'h0000_0000;
 `endif
 `ifdef OR1200_LOWPWR_MULT
-assign x = (alu_op_div & a[31]) ? ~a + 1'b1 : alu_op_div_divu | (alu_op == `OR1200_ALUOP_MUL) | (|mac_op) ? a : 32'h0000_0000;
-assign y = (alu_op_div & b[31]) ? ~b + 1'b1 : alu_op_div_divu | (alu_op == `OR1200_ALUOP_MUL) | (|mac_op) ? b : 32'h0000_0000;
+assign x = (alu_op_div & a[31]) ? ~a + 1'b1 : 
+	   alu_op_div_divu | (alu_op == `OR1200_ALUOP_MUL) | (|mac_op) ? 
+	   a : 32'h0000_0000;
+assign y = (alu_op_div & b[31]) ? ~b + 1'b1 : 
+	   alu_op_div_divu | (alu_op == `OR1200_ALUOP_MUL) | (|mac_op) ? 
+	   b : 32'h0000_0000;
 `else
 assign x = alu_op_div & a[31] ? ~a + 32'b1 : a;
 assign y = alu_op_div & b[31] ? ~b + 32'b1 : b;
 `endif
-`ifdef OR1200_IMPL_DIV
+`ifdef OR1200_DIV_IMPLEMENTED
 assign alu_op_div = (alu_op == `OR1200_ALUOP_DIV);
 assign alu_op_div_divu = alu_op_div | (alu_op == `OR1200_ALUOP_DIVU);
 assign div_tmp = mul_prod_r[63:32] - y;
@@ -197,27 +176,28 @@ assign alu_op_div_divu = 1'b0;
 // to next instruction and to WB stage
 //
 always @(alu_op or mul_prod_r or mac_r or a or b)
-	casex(alu_op)	// synopsys parallel_case
-`ifdef OR1200_IMPL_DIV
-		`OR1200_ALUOP_DIV:
-			result = a[31] ^ b[31] ? ~mul_prod_r[31:0] + 1'b1 : mul_prod_r[31:0];
-		`OR1200_ALUOP_DIVU,
-`endif
-		`OR1200_ALUOP_MUL: begin
-			result = mul_prod_r[31:0];
-		end
-		default:
-`ifdef OR1200_MAC_SHIFTBY
-			result = mac_r[`OR1200_MAC_SHIFTBY+31:`OR1200_MAC_SHIFTBY];
-`else
-			result = mac_r[31:0];
-`endif
-	endcase
-
-//
-// Instantiation of the multiplier
-//
-`ifdef OR1200_ASIC_MULTP2_32X32
+  casex(alu_op)	// synopsys parallel_case
+ `ifdef OR1200_DIV_IMPLEMENTED
+    `OR1200_ALUOP_DIV: begin
+       result = a[31] ^ b[31] ? ~mul_prod_r[31:0] + 1'b1 : mul_prod_r[31:0];
+    end
+    `OR1200_ALUOP_DIVU,
+ `endif
+    `OR1200_ALUOP_MUL: begin
+       result = mul_prod_r[31:0];
+    end
+    default:
+ `ifdef OR1200_MAC_SHIFTBY
+      result = mac_r[`OR1200_MAC_SHIFTBY+31:`OR1200_MAC_SHIFTBY];
+ `else
+      result = mac_r[31:0];
+ `endif
+  endcase
+   
+   //
+   // Instantiation of the multiplier
+   //
+ `ifdef OR1200_ASIC_MULTP2_32X32
 or1200_amultp2_32x32 or1200_amultp2_32x32(
 	.X(x),
 	.Y(y),
@@ -241,29 +221,29 @@ or1200_gmultp2_32x32 or1200_gmultp2_32x32(
 //
 always @(posedge rst or posedge clk)
 	if (rst) begin
-		mul_prod_r <= #1 64'h0000_0000_0000_0000;
-		div_free <= #1 1'b1;
-`ifdef OR1200_IMPL_DIV
-		div_cntr <= #1 6'b00_0000;
+		mul_prod_r <=  64'h0000_0000_0000_0000;
+		div_free <=  1'b1;
+`ifdef OR1200_DIV_IMPLEMENTED
+		div_cntr <=  6'b00_0000;
 `endif
 	end
-`ifdef OR1200_IMPL_DIV
+`ifdef OR1200_DIV_IMPLEMENTED
 	else if (|div_cntr) begin
 		if (div_tmp[31])
-			mul_prod_r <= #1 {mul_prod_r[62:0], 1'b0};
+			mul_prod_r <=  {mul_prod_r[62:0], 1'b0};
 		else
-			mul_prod_r <= #1 {div_tmp[30:0], mul_prod_r[31:0], 1'b1};
-		div_cntr <= #1 div_cntr - 1'b1;
+			mul_prod_r <=  {div_tmp[30:0], mul_prod_r[31:0], 1'b1};
+		div_cntr <=  div_cntr - 1'b1;
 	end
 	else if (alu_op_div_divu && div_free) begin
-		mul_prod_r <= #1 {31'b0, x[31:0], 1'b0};
-		div_cntr <= #1 6'b10_0000;
-		div_free <= #1 1'b0;
+		mul_prod_r <=  {31'b0, x[31:0], 1'b0};
+		div_cntr <=  6'b10_0000;
+		div_free <=  1'b0;
 	end
-`endif // OR1200_IMPL_DIV
+`endif // OR1200_DIV_IMPLEMENTED
 	else if (div_free | !ex_freeze) begin
-		mul_prod_r <= #1 mul_prod[63:0];
-		div_free <= #1 1'b1;
+		mul_prod_r <=  mul_prod[63:0];
+		div_free <=  1'b1;
 	end
 
 `else // OR1200_MULT_IMPLEMENTED
@@ -279,46 +259,46 @@ assign mul_prod_r = {2*width{1'b0}};
 //
 always @(posedge clk or posedge rst)
 	if (rst)
-		mac_op_r1 <= #1 `OR1200_MACOP_WIDTH'b0;
+		mac_op_r1 <=  `OR1200_MACOP_WIDTH'b0;
 	else
-		mac_op_r1 <= #1 mac_op;
+		mac_op_r1 <=  mac_op;
 
 //
 // Propagation of l.mac opcode
 //
 always @(posedge clk or posedge rst)
 	if (rst)
-		mac_op_r2 <= #1 `OR1200_MACOP_WIDTH'b0;
+		mac_op_r2 <=  `OR1200_MACOP_WIDTH'b0;
 	else
-		mac_op_r2 <= #1 mac_op_r1;
+		mac_op_r2 <=  mac_op_r1;
 
 //
 // Propagation of l.mac opcode
 //
 always @(posedge clk or posedge rst)
 	if (rst)
-		mac_op_r3 <= #1 `OR1200_MACOP_WIDTH'b0;
+		mac_op_r3 <=  `OR1200_MACOP_WIDTH'b0;
 	else
-		mac_op_r3 <= #1 mac_op_r2;
+		mac_op_r3 <=  mac_op_r2;
 
 //
 // Implementation of MAC
 //
 always @(posedge rst or posedge clk)
 	if (rst)
-		mac_r <= #1 64'h0000_0000_0000_0000;
+		mac_r <=  64'h0000_0000_0000_0000;
 `ifdef OR1200_MAC_SPR_WE
 	else if (spr_maclo_we)
-		mac_r[31:0] <= #1 spr_dat_i;
+		mac_r[31:0] <=  spr_dat_i;
 	else if (spr_machi_we)
-		mac_r[63:32] <= #1 spr_dat_i;
+		mac_r[63:32] <=  spr_dat_i;
 `endif
 	else if (mac_op_r3 == `OR1200_MACOP_MAC)
-		mac_r <= #1 mac_r + mul_prod_r;
+		mac_r <=  mac_r + mul_prod_r;
 	else if (mac_op_r3 == `OR1200_MACOP_MSB)
-		mac_r <= #1 mac_r - mul_prod_r;
+		mac_r <=  mac_r - mul_prod_r;
 	else if (macrc_op && !ex_freeze)
-		mac_r <= #1 64'h0000_0000_0000_0000;
+		mac_r <=  64'h0000_0000_0000_0000;
 
 //
 // Stall CPU if l.macrc is in ID and MAC still has to process l.mac instructions
@@ -327,10 +307,10 @@ always @(posedge rst or posedge clk)
 //
 always @(posedge rst or posedge clk)
 	if (rst)
-		mac_stall_r <= #1 1'b0;
+		mac_stall_r <=  1'b0;
 	else
-		mac_stall_r <= #1 (|mac_op | (|mac_op_r1) | (|mac_op_r2)) & (id_macrc_op | mac_stall_r)
-`ifdef OR1200_IMPL_DIV
+		mac_stall_r <=  (|mac_op | (|mac_op_r1) | (|mac_op_r2)) & (id_macrc_op | mac_stall_r)
+`ifdef OR1200_DIV_IMPLEMENTED
 				| (|div_cntr)
 `endif
 				;

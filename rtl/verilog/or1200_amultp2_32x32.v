@@ -783,7 +783,7 @@ output DOUT;
       if (RST)
         DOUT_reg <= 1'b0;
       else
-        DOUT_reg <= #1 DIN;
+        DOUT_reg <=  DIN;
    end
    assign DOUT = DOUT_reg;
 endmodule
@@ -2359,7 +2359,7 @@ output [0:63] RESULT;
    DBLCADDER_64_64 D (.OPA(INT_SUM[0:63]) , .OPB(INT_CARRY[0:63]) , .CIN (LOGIC_ZERO) , .PHI (PHI) , .SUM(ARESULT[0:63]), .COUT() );
    always @(posedge CLK or posedge RST)
      if (RST)
-	RESULT <= #1 64'h0000_0000_0000_0000;
+	RESULT <=  64'h0000_0000_0000_0000;
      else
 	RESULT <= ARESULT;
 endmodule
