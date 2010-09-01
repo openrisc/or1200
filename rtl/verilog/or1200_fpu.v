@@ -282,8 +282,6 @@ module or1200_fpu(
    // Instantiate FPU modules
    //
    
- `ifdef OR1200_FPU_ARITH_FPU100
-
    // FPU 100 VHDL core from OpenCores.org: http://opencores.org/project,fpu100
    // Used only for add,sub,mul,div
    or1200_fpu_arith fpu_arith
@@ -306,8 +304,6 @@ module or1200_fpu(
       .snan_o(snan)
       );
 
-    `endif //  `ifdef OR1200_FPU_ARITH_FPU100
-   
    // Logic for detection of signaling NaN on input
    // signaling NaN: exponent is 8hff, [22] is zero, rest of fract is non-zero
    // quiet NaN: exponent is 8hff, [22] is 1
