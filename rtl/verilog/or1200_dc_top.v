@@ -292,7 +292,7 @@ assign dcqmem_dat_o = dcfsm_first_miss_ack | !dc_en ? dcsb_dat_i : from_dcram;
    wire [31:`OR1200_DCTAGL]  dcqmem_adr_i_tag;
    assign dcqmem_adr_i_tag = dcqmem_adr_i[31:`OR1200_DCTAGL];
    
-always @(tag or dcqmem_adr_i or tag_v) begin
+always @(tag or dcqmem_adr_i_tag or tag_v) begin
 	if ((tag != dcqmem_adr_i_tag) || !tag_v)
 		tagcomp_miss = 1'b1;
 	else
