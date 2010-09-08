@@ -99,9 +99,9 @@ input	[width-1:0]		dat_i;		// SPR write data
 input                           ex_spr_read;	// l.mfspr in EX
 input                           ex_spr_write;	// l.mtspr in EX
 input	[`OR1200_BRANCHOP_WIDTH-1:0]	branch_op;	// Branch operation
-input	[width-1:0] 		epcr;		// EPCR0
-input	[width-1:0] 		eear;		// EEAR0
-input	[`OR1200_SR_WIDTH-1:0] 	esr;		// ESR0
+input	[width-1:0] 		epcr /* verilator public */;		// EPCR0
+input	[width-1:0] 		eear /* verilator public */;		// EEAR0
+input	[`OR1200_SR_WIDTH-1:0] 	esr /* verilator public */;		// ESR0
 input 				except_started; // Exception was started
 output	[width-1:0]		to_wbmux;	// For l.mfspr
 output				epcr_we;	// EPCR0 write enable
@@ -110,7 +110,7 @@ output				esr_we;		// ESR0 write enable
 output				pc_we;		// PC write enable
 output 				sr_we;		// Write enable SR
 output	[`OR1200_SR_WIDTH-1:0]	to_sr;		// Data to SR
-output	[`OR1200_SR_WIDTH-1:0]	sr;		// SR
+output	[`OR1200_SR_WIDTH-1:0]	sr /* verilator public */;		// SR
 input	[31:0]			spr_dat_cfgr;	// Data from CFGR
 input	[31:0]			spr_dat_rf;	// Data from RF
 input	[31:0]			spr_dat_npc;	// Data from NPC
@@ -358,6 +358,34 @@ assign	sr_reg_bit_eph_muxed = (sr_reg_bit_eph_select) ? boot_adr_sel_i : sr_reg_
 always @(sr_reg or sr_reg_bit_eph_muxed)
 	sr = {sr_reg[`OR1200_SR_WIDTH-1:`OR1200_SR_WIDTH-2], sr_reg_bit_eph_muxed, sr_reg[`OR1200_SR_WIDTH-4:0]};
 
+`ifdef verilator
+   // Function to access various sprs (for Verilator). Have to hide this from
+   // simulator, since functions with no inputs are not allowed in IEEE
+   // 1364-2001.
+
+   function [31:0] get_sr;
+      // verilator public
+      get_sr = sr;
+   endfunction // get_sr
+
+   function [31:0] get_epcr;
+      // verilator public
+      get_epcr = epcr;
+   endfunction // get_epcr
+
+   function [31:0] get_eear;
+      // verilator public
+      get_eear = eear;
+   endfunction // get_eear
+
+   function [31:0] get_esr;
+      // verilator public
+      get_esr = esr;
+   endfunction // get_esr
+
+`endif
+
+   
 //
 // MTSPR/MFSPR interface
 //

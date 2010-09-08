@@ -79,8 +79,8 @@ module or1200_ctrl
 input					clk;
 input					rst;
 input					id_freeze;
-input					ex_freeze;
-input					wb_freeze;
+input					ex_freeze /* verilator public */;
+input					wb_freeze /* verilator public */;
 output					if_flushpipe;
 output					id_flushpipe;
 output					ex_flushpipe;
@@ -90,7 +90,7 @@ input					except_flushpipe;
 input                           abort_mvspr ;
 input	[31:0]			if_insn;
 output	[31:0]			id_insn;
-output	[31:0]			ex_insn;
+output	[31:0]			ex_insn /* verilator public */;
 output	[`OR1200_BRANCHOP_WIDTH-1:0]		ex_branch_op;
 output	[`OR1200_BRANCHOP_WIDTH-1:0]		id_branch_op;
 input						ex_branch_taken;
@@ -155,9 +155,9 @@ wire	[`OR1200_MACOP_WIDTH-1:0]		mac_op;
 wire					ex_macrc_op;
 `endif
 reg	[`OR1200_SHROTOP_WIDTH-1:0]		shrot_op;
-reg	[31:0]				id_insn;
-reg	[31:0]				ex_insn;
-reg	[31:0]				wb_insn;
+reg	[31:0]				id_insn /* verilator public */;
+reg	[31:0]				ex_insn /* verilator public */;
+reg	[31:0]				wb_insn /* verilator public */;
 reg	[`OR1200_REGFILE_ADDR_WIDTH-1:0]	rf_addrw;
 reg	[`OR1200_REGFILE_ADDR_WIDTH-1:0]	wb_rfaddrw;
 reg	[`OR1200_RFWBOP_WIDTH-1:0]		rfwb_op;
@@ -373,6 +373,35 @@ assign cust5_limm = ex_insn[10:5];
 //
 assign rfe = (id_branch_op == `OR1200_BRANCHOP_RFE) | (ex_branch_op == `OR1200_BRANCHOP_RFE);
 
+   
+`ifdef verilator
+   // Function to access wb_insn (for Verilator). Have to hide this from
+   // simulator, since functions with no inputs are not allowed in IEEE
+   // 1364-2001.
+   function [31:0] get_wb_insn;
+      // verilator public
+      get_wb_insn = wb_insn;
+   endfunction // get_wb_insn
+
+   // Function to access id_insn (for Verilator). Have to hide this from
+   // simulator, since functions with no inputs are not allowed in IEEE
+   // 1364-2001.
+   function [31:0] get_id_insn;
+      // verilator public
+      get_id_insn = id_insn;
+   endfunction // get_id_insn
+
+   // Function to access ex_insn (for Verilator). Have to hide this from
+   // simulator, since functions with no inputs are not allowed in IEEE
+   // 1364-2001.
+   function [31:0] get_ex_insn;
+      // verilator public
+      get_ex_insn = ex_insn;
+   endfunction // get_ex_insn
+   
+`endif
+
+   
 //
 // Generation of sel_a
 //
@@ -861,15 +890,15 @@ always @(id_insn) begin
 
 	// l.maci
 	`OR1200_OR32_MACI:
-		id_mac_op <=  `OR1200_MACOP_MAC;
+		id_mac_op =  `OR1200_MACOP_MAC;
 
 	// l.mac, l.msb
 	`OR1200_OR32_MACMSB:
-		id_mac_op <=  id_insn[2:0];
+		id_mac_op =  id_insn[2:0];
 
 	// Illegal and OR1200 unsupported instructions
 	default:
-		id_mac_op <=  `OR1200_MACOP_NOP;
+		id_mac_op =  `OR1200_MACOP_NOP;
 
 	endcase
 end
@@ -1068,39 +1097,39 @@ always @(id_insn) begin
 
 	// l.lwz
 	`OR1200_OR32_LWZ:
-		id_lsu_op <=  `OR1200_LSUOP_LWZ;
+		id_lsu_op =  `OR1200_LSUOP_LWZ;
 
 	// l.lbz
 	`OR1200_OR32_LBZ:
-		id_lsu_op <=  `OR1200_LSUOP_LBZ;
+		id_lsu_op =  `OR1200_LSUOP_LBZ;
 
 	// l.lbs
 	`OR1200_OR32_LBS:
-		id_lsu_op <=  `OR1200_LSUOP_LBS;
+		id_lsu_op =  `OR1200_LSUOP_LBS;
 
 	// l.lhz
 	`OR1200_OR32_LHZ:
-		id_lsu_op <=  `OR1200_LSUOP_LHZ;
+		id_lsu_op =  `OR1200_LSUOP_LHZ;
 
 	// l.lhs
 	`OR1200_OR32_LHS:
-		id_lsu_op <=  `OR1200_LSUOP_LHS;
+		id_lsu_op =  `OR1200_LSUOP_LHS;
 
 	// l.sw
 	`OR1200_OR32_SW:
-		id_lsu_op <=  `OR1200_LSUOP_SW;
+		id_lsu_op =  `OR1200_LSUOP_SW;
 
 	// l.sb
 	`OR1200_OR32_SB:
-		id_lsu_op <=  `OR1200_LSUOP_SB;
+		id_lsu_op =  `OR1200_LSUOP_SB;
 
 	// l.sh
 	`OR1200_OR32_SH:
-		id_lsu_op <=  `OR1200_LSUOP_SH;
+		id_lsu_op =  `OR1200_LSUOP_SH;
 
 	// Non load/store instructions
 	default:
-		id_lsu_op <=  `OR1200_LSUOP_NOP;
+		id_lsu_op =  `OR1200_LSUOP_NOP;
 
 	endcase
 end
