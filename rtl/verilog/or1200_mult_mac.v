@@ -117,13 +117,13 @@ reg	[`OR1200_MACOP_WIDTH-1:0]	mac_op_r1;
 reg	[`OR1200_MACOP_WIDTH-1:0]	mac_op_r2;
 reg	[`OR1200_MACOP_WIDTH-1:0]	mac_op_r3;
 reg				mac_stall_r;
-reg	[2*width-1:0]		mac_r;
+reg	[63:0]		mac_r;
 `else
 wire	[`OR1200_MACOP_WIDTH-1:0]	mac_op_r1;
 wire	[`OR1200_MACOP_WIDTH-1:0]	mac_op_r2;
 wire	[`OR1200_MACOP_WIDTH-1:0]	mac_op_r3;
 wire				mac_stall_r;
-wire	[2*width-1:0]		mac_r;
+wire	[63:0]		mac_r;
 `endif
 wire	[width-1:0]		x;
 wire	[width-1:0]		y;
@@ -175,7 +175,7 @@ assign alu_op_div_divu = 1'b0;
 // Select result of current ALU operation to be forwarded
 // to next instruction and to WB stage
 //
-always @(alu_op or mul_prod_r or mac_r or a or b)
+always @*
   casex(alu_op)	// synopsys parallel_case
  `ifdef OR1200_DIV_IMPLEMENTED
     `OR1200_ALUOP_DIV: begin
@@ -253,15 +253,23 @@ assign mul_prod_r = {2*width{1'b0}};
 `endif // OR1200_MULT_IMPLEMENTED
 
 `ifdef OR1200_MAC_IMPLEMENTED
-
+// Signal to indicate when we should check for new MAC op
+reg ex_freeze_r;
+   
+always @(posedge clk or posedge rst)
+  if (rst)
+    ex_freeze_r <= 1'b1;
+  else
+    ex_freeze_r <= ex_freeze;
+   
 //
-// Propagation of l.mac opcode
+// Propagation of l.mac opcode, only register it for one cycle
 //
 always @(posedge clk or posedge rst)
 	if (rst)
 		mac_op_r1 <=  `OR1200_MACOP_WIDTH'b0;
 	else
-		mac_op_r1 <=  mac_op;
+		mac_op_r1 <=  !ex_freeze_r ? mac_op : `OR1200_MACOP_WIDTH'b0;
 
 //
 // Propagation of l.mac opcode
