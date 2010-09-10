@@ -779,8 +779,8 @@ input  RST;
 input  CLK;
 output DOUT;
    reg DOUT_reg;
-   always @ ( posedge RST or posedge CLK ) begin
-      if (RST)
+   always @ ( `OR1200_RST_EVENT RST or posedge CLK ) begin
+      if (RST == `OR1200_RST_VALUE)
         DOUT_reg <= 1'b0;
       else
         DOUT_reg <=  DIN;
@@ -2357,8 +2357,8 @@ output [0:63] RESULT;
    WALLACE_33_32 W (.SUMMAND(PPBIT[0:575]) , .RST(RST), .CLK (CLK) , .CARRY(INT_CARRY[1:63]) , .SUM(INT_SUM[0:63]) );
    assign INT_CARRY[0] = LOGIC_ZERO;
    DBLCADDER_64_64 D (.OPA(INT_SUM[0:63]) , .OPB(INT_CARRY[0:63]) , .CIN (LOGIC_ZERO) , .PHI (PHI) , .SUM(ARESULT[0:63]), .COUT() );
-   always @(posedge CLK or posedge RST)
-     if (RST)
+   always @(posedge CLK or `OR1200_RST_EVENT RST)
+     if (RST == `OR1200_RST_VALUE)
 	RESULT <=  64'h0000_0000_0000_0000;
      else
 	RESULT <= ARESULT;

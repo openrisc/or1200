@@ -151,8 +151,8 @@ assign ttcr_sel = (spr_cs && (spr_addr[`OR1200_TTOFS_BITS] == `OR1200_TT_OFS_TTC
 // Write to TTMR or update of TTMR[IP] bit
 //
 `ifdef OR1200_TT_TTMR
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		ttmr <= 32'b0;
 	else if (ttmr_sel && spr_write)
 		ttmr <=  spr_dat_i;
@@ -166,8 +166,8 @@ assign ttmr = {2'b11, 30'b0};	// TTMR[M] = 0x3
 // Write to or increment of TTCR
 //
 `ifdef OR1200_TT_TTCR
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		ttcr <= 32'b0;
 	else if (restart)
 		ttcr <=  32'b0;

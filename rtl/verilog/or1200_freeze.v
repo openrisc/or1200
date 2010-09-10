@@ -139,8 +139,8 @@ assign wb_freeze = (lsu_stall | (~lsu_unstall & if_stall) | multicycle_freeze
 //
 // registered flushpipe
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		flushpipe_r <=  1'b0;
 	else if (icpu_ack_i | icpu_err_i)
 //	else if (!if_stall)
@@ -156,8 +156,8 @@ assign multicycle_freeze = |multicycle_cnt;
 //
 // Multicycle counter
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		multicycle_cnt <=  2'b00;
 	else if (|multicycle_cnt)
 		multicycle_cnt <=  multicycle_cnt - 2'd1;
@@ -168,8 +168,8 @@ always @(posedge clk or posedge rst)
 //
 // Waiting on generation
 //
-always @(posedge clk or posedge rst)
-  if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+  if (rst == `OR1200_RST_VALUE)
     waiting_on <= 0;
   else if ((waiting_on == `OR1200_WAIT_ON_FPU) & fpu_done)
     waiting_on <= 0;

@@ -200,8 +200,8 @@ assign do_a = (oe_a) ? mem[addr_a_reg] : {dw{1'b0}};
 //
 // RAM read
 //
-always @(posedge clk_a or posedge rst_a)
-	if (rst_a)
+always @(posedge clk_a or `OR1200_RST_EVENT rst_a)
+	if (rst_a == `OR1200_RST_VALUE)
 		addr_a_reg <=  {aw{1'b0}};
 	else if (ce_a)
 		addr_a_reg <=  addr_a;

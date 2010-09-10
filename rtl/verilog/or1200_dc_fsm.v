@@ -359,8 +359,8 @@ module or1200_dc_fsm
    //
    // Main DC FSM
    //
-   always @(posedge clk or posedge rst) begin
-      if (rst) begin
+   always @(posedge clk or `OR1200_RST_EVENT rst) begin
+      if (rst == `OR1200_RST_VALUE) begin
 	 state <=  `OR1200_DCFSM_IDLE;
 	 addr_r <=  32'b0;
 	 hitmiss_eval <=  1'b0;
@@ -555,7 +555,7 @@ module or1200_dc_fsm
 
 	endcase // case (state)
       
-   end // always @ (posedge clk or posedge rst)
+   end // always @ (posedge clk or `OR1200_RST_EVENT rst)
    
 
 endmodule

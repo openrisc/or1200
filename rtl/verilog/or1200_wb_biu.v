@@ -185,8 +185,8 @@ module or1200_wb_biu(
    //
    // WB FSM - register part
    // 
-   always @(posedge wb_clk_i or posedge wb_rst_i) begin
-      if (wb_rst_i) 
+   always @(posedge wb_clk_i or `OR1200_RST_EVENT wb_rst_i) begin
+      if (wb_rst_i == `OR1200_RST_VALUE) 
 	wb_fsm_state_cur <=  wb_fsm_idle;
       else 
 	wb_fsm_state_cur <=  wb_fsm_state_nxt;
@@ -195,8 +195,8 @@ module or1200_wb_biu(
    //
    // WB burst tength counter
    // 
-   always @(posedge wb_clk_i or posedge wb_rst_i) begin
-      if (wb_rst_i) begin
+   always @(posedge wb_clk_i or `OR1200_RST_EVENT wb_rst_i) begin
+      if (wb_rst_i == `OR1200_RST_VALUE) begin
 	 burst_len <=  2'h0;
       end
       else begin
@@ -277,8 +277,8 @@ module or1200_wb_biu(
    //
    // WB FSM - output signals
    // 
-   always @(posedge wb_clk_i or posedge wb_rst_i) begin
-      if (wb_rst_i) begin
+   always @(posedge wb_clk_i or `OR1200_RST_EVENT wb_rst_i) begin
+      if (wb_rst_i == `OR1200_RST_VALUE) begin
 	 wb_cyc_o	<=  1'b0;
 	 wb_stb_o	<=  1'b0;
 	 wb_cti_o	<=  3'b111;
@@ -329,8 +329,8 @@ module or1200_wb_biu(
    //
    // WB & BIU termination toggle counters
    // 
-   always @(posedge wb_clk_i or posedge wb_rst_i) begin
-      if (wb_rst_i) begin
+   always @(posedge wb_clk_i or `OR1200_RST_EVENT wb_rst_i) begin
+      if (wb_rst_i == `OR1200_RST_VALUE) begin
 	 wb_ack_cnt	<=  1'b0;
 	 wb_err_cnt	<=  1'b0;
 	 wb_rty_cnt	<=  1'b0;
@@ -354,8 +354,8 @@ module or1200_wb_biu(
       end
    end
 
-   always @(posedge clk or posedge rst) begin
-      if (rst) begin
+   always @(posedge clk or `OR1200_RST_EVENT rst) begin
+      if (rst == `OR1200_RST_VALUE) begin
          biu_stb_reg	<=  1'b0;
 	 biu_ack_cnt	<=  1'b0;
 	 biu_err_cnt	<=  1'b0;

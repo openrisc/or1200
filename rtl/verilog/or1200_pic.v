@@ -116,8 +116,8 @@ assign picsr_sel = (spr_cs && (spr_addr[`OR1200_PICOFS_BITS] == `OR1200_PIC_OFS_
 // Write to PICMR
 //
 `ifdef OR1200_PIC_PICMR
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		picmr <= {1'b1, {`OR1200_PIC_INTS-3{1'b0}}};
 	else if (picmr_sel && spr_write) begin
 		picmr <=  spr_dat_i[`OR1200_PIC_INTS-1:2];
@@ -130,8 +130,8 @@ assign picmr = (`OR1200_PIC_INTS)'b1;
 // Write to PICSR, both CPU and external ints
 //
 `ifdef OR1200_PIC_PICSR
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		picsr <= {`OR1200_PIC_INTS{1'b0}};
 	else if (picsr_sel && spr_write) begin
 		picsr <=  spr_dat_i[`OR1200_PIC_INTS-1:0] | um_ints;

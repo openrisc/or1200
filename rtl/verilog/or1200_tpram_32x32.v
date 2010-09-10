@@ -401,8 +401,8 @@ always @(posedge clk_b)
 //
 // RAM read address register
 //
-always @(posedge clk_a or posedge rst_a)
-	if (rst_a)
+always @(posedge clk_a or `OR1200_RST_EVENT rst_a)
+	if (rst_a == `OR1200_RST_VALUE)
 		addr_a_reg <=  {aw{1'b0}};
 	else if (ce_a)
 		addr_a_reg <=  addr_a;
@@ -410,8 +410,8 @@ always @(posedge clk_a or posedge rst_a)
 //
 // RAM read address register
 //
-always @(posedge clk_b or posedge rst_b)
-	if (rst_b)
+always @(posedge clk_b or `OR1200_RST_EVENT rst_b)
+	if (rst_b == `OR1200_RST_VALUE)
 		addr_b_reg <=  {aw{1'b0}};
 	else if (ce_b)
 		addr_b_reg <=  addr_b;

@@ -154,8 +154,8 @@ reg	[dw-1:0]		do_b;
 //
 // Write port
 //
-always @(posedge clk or posedge rst)
-	if (rst) begin
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE) begin
 		mem <=  {512'h0, 512'h0};
 	end
 	else if (ce_w & we_w)
@@ -200,8 +200,8 @@ always @(posedge clk or posedge rst)
 //
 // Read port A
 //
-always @(posedge clk or posedge rst)
-	if (rst) begin
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE) begin
 		intaddr_a <=  5'h00;
 	end
 	else if (ce_a)
@@ -249,8 +249,8 @@ always @(mem or intaddr_a)
 //
 // Read port B
 //
-always @(posedge clk or posedge rst)
-	if (rst) begin
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE) begin
 		intaddr_b <=  5'h00;
 	end
 	else if (ce_b)

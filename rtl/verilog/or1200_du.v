@@ -141,8 +141,8 @@ reg	[1:0]			dbg_is_o;
 //
 // Show insn activity (temp, must be removed)
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dbg_is_o <=  2'b00;
 	else if (!ex_freeze & ~((ex_insn[31:26] == `OR1200_OR32_NOP) & ex_insn[16]))
 		dbg_is_o <=  ~dbg_is_o;
@@ -168,8 +168,8 @@ reg				dbg_ack;
 //
 // Generate acknowledge -- just delay stb signal
 //
-always @(posedge clk or posedge rst) begin
-	if (rst) begin
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE) begin
 		dbg_ack   <=  1'b0;
 		dbg_ack_o <=  1'b0;
 	end
@@ -586,8 +586,8 @@ assign dbg_bp_o = dbg_bp_r;
 //
 // Breakpoint activation register
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dbg_bp_r <=  1'b0;
 	else if (!ex_freeze)
 		dbg_bp_r <=  |except_stop
@@ -605,8 +605,8 @@ always @(posedge clk or posedge rst)
 // Write to DMR1
 //
 `ifdef OR1200_DU_DMR1
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dmr1 <= 25'h000_0000;
 	else if (dmr1_sel && spr_write)
 `ifdef OR1200_DU_HWBKPTS
@@ -622,8 +622,8 @@ assign dmr1 = 25'h000_0000;
 // Write to DMR2
 //
 `ifdef OR1200_DU_DMR2
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dmr2 <= 24'h00_0000;
 	else if (dmr2_sel && spr_write)
 		dmr2 <=  spr_dat_i[23:0];
@@ -635,8 +635,8 @@ assign dmr2 = 24'h00_0000;
 // Write to DSR
 //
 `ifdef OR1200_DU_DSR
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dsr <= {`OR1200_DU_DSR_WIDTH{1'b0}};
 	else if (dsr_sel && spr_write)
 		dsr <=  spr_dat_i[`OR1200_DU_DSR_WIDTH-1:0];
@@ -648,8 +648,8 @@ assign dsr = {`OR1200_DU_DSR_WIDTH{1'b0}};
 // Write to DRR
 //
 `ifdef OR1200_DU_DRR
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		drr <= 14'b0;
 	else if (drr_sel && spr_write)
 		drr <=  spr_dat_i[13:0];
@@ -663,8 +663,8 @@ assign drr = 14'b0;
 // Write to DVR0
 //
 `ifdef OR1200_DU_DVR0
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dvr0 <= 32'h0000_0000;
 	else if (dvr0_sel && spr_write)
 		dvr0 <=  spr_dat_i[31:0];
@@ -676,8 +676,8 @@ assign dvr0 = 32'h0000_0000;
 // Write to DVR1
 //
 `ifdef OR1200_DU_DVR1
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dvr1 <= 32'h0000_0000;
 	else if (dvr1_sel && spr_write)
 		dvr1 <=  spr_dat_i[31:0];
@@ -689,8 +689,8 @@ assign dvr1 = 32'h0000_0000;
 // Write to DVR2
 //
 `ifdef OR1200_DU_DVR2
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dvr2 <= 32'h0000_0000;
 	else if (dvr2_sel && spr_write)
 		dvr2 <=  spr_dat_i[31:0];
@@ -702,8 +702,8 @@ assign dvr2 = 32'h0000_0000;
 // Write to DVR3
 //
 `ifdef OR1200_DU_DVR3
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dvr3 <= 32'h0000_0000;
 	else if (dvr3_sel && spr_write)
 		dvr3 <=  spr_dat_i[31:0];
@@ -715,8 +715,8 @@ assign dvr3 = 32'h0000_0000;
 // Write to DVR4
 //
 `ifdef OR1200_DU_DVR4
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dvr4 <= 32'h0000_0000;
 	else if (dvr4_sel && spr_write)
 		dvr4 <=  spr_dat_i[31:0];
@@ -728,8 +728,8 @@ assign dvr4 = 32'h0000_0000;
 // Write to DVR5
 //
 `ifdef OR1200_DU_DVR5
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dvr5 <= 32'h0000_0000;
 	else if (dvr5_sel && spr_write)
 		dvr5 <=  spr_dat_i[31:0];
@@ -741,8 +741,8 @@ assign dvr5 = 32'h0000_0000;
 // Write to DVR6
 //
 `ifdef OR1200_DU_DVR6
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dvr6 <= 32'h0000_0000;
 	else if (dvr6_sel && spr_write)
 		dvr6 <=  spr_dat_i[31:0];
@@ -754,8 +754,8 @@ assign dvr6 = 32'h0000_0000;
 // Write to DVR7
 //
 `ifdef OR1200_DU_DVR7
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dvr7 <= 32'h0000_0000;
 	else if (dvr7_sel && spr_write)
 		dvr7 <=  spr_dat_i[31:0];
@@ -767,8 +767,8 @@ assign dvr7 = 32'h0000_0000;
 // Write to DCR0
 //
 `ifdef OR1200_DU_DCR0
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dcr0 <= 8'h00;
 	else if (dcr0_sel && spr_write)
 		dcr0 <=  spr_dat_i[7:0];
@@ -780,8 +780,8 @@ assign dcr0 = 8'h00;
 // Write to DCR1
 //
 `ifdef OR1200_DU_DCR1
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dcr1 <= 8'h00;
 	else if (dcr1_sel && spr_write)
 		dcr1 <=  spr_dat_i[7:0];
@@ -793,8 +793,8 @@ assign dcr1 = 8'h00;
 // Write to DCR2
 //
 `ifdef OR1200_DU_DCR2
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dcr2 <= 8'h00;
 	else if (dcr2_sel && spr_write)
 		dcr2 <=  spr_dat_i[7:0];
@@ -806,8 +806,8 @@ assign dcr2 = 8'h00;
 // Write to DCR3
 //
 `ifdef OR1200_DU_DCR3
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dcr3 <= 8'h00;
 	else if (dcr3_sel && spr_write)
 		dcr3 <=  spr_dat_i[7:0];
@@ -819,8 +819,8 @@ assign dcr3 = 8'h00;
 // Write to DCR4
 //
 `ifdef OR1200_DU_DCR4
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dcr4 <= 8'h00;
 	else if (dcr4_sel && spr_write)
 		dcr4 <=  spr_dat_i[7:0];
@@ -832,8 +832,8 @@ assign dcr4 = 8'h00;
 // Write to DCR5
 //
 `ifdef OR1200_DU_DCR5
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dcr5 <= 8'h00;
 	else if (dcr5_sel && spr_write)
 		dcr5 <=  spr_dat_i[7:0];
@@ -845,8 +845,8 @@ assign dcr5 = 8'h00;
 // Write to DCR6
 //
 `ifdef OR1200_DU_DCR6
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dcr6 <= 8'h00;
 	else if (dcr6_sel && spr_write)
 		dcr6 <=  spr_dat_i[7:0];
@@ -858,8 +858,8 @@ assign dcr6 = 8'h00;
 // Write to DCR7
 //
 `ifdef OR1200_DU_DCR7
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dcr7 <= 8'h00;
 	else if (dcr7_sel && spr_write)
 		dcr7 <=  spr_dat_i[7:0];
@@ -871,8 +871,8 @@ assign dcr7 = 8'h00;
 // Write to DWCR0
 //
 `ifdef OR1200_DU_DWCR0
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dwcr0 <= 32'h0000_0000;
 	else if (dwcr0_sel && spr_write)
 		dwcr0 <=  spr_dat_i[31:0];
@@ -886,8 +886,8 @@ assign dwcr0 = 32'h0000_0000;
 // Write to DWCR1
 //
 `ifdef OR1200_DU_DWCR1
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dwcr1 <= 32'h0000_0000;
 	else if (dwcr1_sel && spr_write)
 		dwcr1 <=  spr_dat_i[31:0];
@@ -1620,8 +1620,8 @@ assign du_hwbkpt = 1'b0;
 `endif
 
 // Hold du_hwbkpt if ex_freeze is active in order to cause trap exception 
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		du_hwbkpt_hold <=  1'b0;
 	else if (du_hwbkpt & ex_freeze)
 		du_hwbkpt_hold <=  1'b1;
@@ -1645,8 +1645,8 @@ assign tb_enw = ~ex_freeze & ~((ex_insn[31:26] == `OR1200_OR32_NOP) & ex_insn[16
 //
 // Trace buffer write address pointer
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		tb_wadr <=  8'h00;
 	else if (tb_enw)
 		tb_wadr <=  tb_wadr + 8'd1;
@@ -1654,8 +1654,8 @@ always @(posedge clk or posedge rst)
 //
 // Free running counter (time stamp)
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		tb_timstmp <=  32'h00000000;
 	else if (!dbg_bp_r)
 		tb_timstmp <=  tb_timstmp + 32'd1;

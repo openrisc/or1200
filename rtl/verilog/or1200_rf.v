@@ -191,8 +191,8 @@ assign rf_dataw = (spr_valid & spr_write) ? spr_dat_i : dataw;
 //
 // RF write enable is either from SPRS or normal from CPU control
 //
-always @(posedge rst or posedge clk)
-	if (rst)
+always @(`OR1200_RST_EVENT rst or posedge clk)
+	if (rst == `OR1200_RST_VALUE)
 		rf_we_allow <=  1'b1;
 	else if (~wb_freeze)
 		rf_we_allow <=  ~flushpipe;

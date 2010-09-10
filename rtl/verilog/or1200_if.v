@@ -118,8 +118,8 @@ assign saving_if_insn = !if_flushpipe & save_insn;
 //
 assign if_bypass = icpu_adr_i[0] ? 1'b0 : if_bypass_reg | if_flushpipe;
 
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		if_bypass_reg <=  1'b0;
 	else
 		if_bypass_reg <=  if_bypass;
@@ -138,8 +138,8 @@ assign except_ibuserr = no_more_dslot ? 1'b0 : saved ? err_saved[2] : icpu_err_i
 //
 // Flag for saved insn/address
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		saved <=  1'b0;
 	else if (if_flushpipe)
 		saved <=  1'b0;
@@ -151,8 +151,8 @@ always @(posedge clk or posedge rst)
 //
 // Store fetched instruction
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		insn_saved <=  {`OR1200_OR32_NOP, 26'h041_0000};
 	else if (if_flushpipe)
 		insn_saved <=  {`OR1200_OR32_NOP, 26'h041_0000};
@@ -164,8 +164,8 @@ always @(posedge clk or posedge rst)
 //
 // Store fetched instruction's address
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		addr_saved <=  32'h00000000;
 	else if (if_flushpipe)
 		addr_saved <=  32'h00000000;
@@ -177,8 +177,8 @@ always @(posedge clk or posedge rst)
 //
 // Store fetched instruction's error tags 
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		err_saved <=  3'b000;
 	else if (if_flushpipe)
 		err_saved <=  3'b000;

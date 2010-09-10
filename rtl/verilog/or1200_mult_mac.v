@@ -219,8 +219,8 @@ or1200_gmultp2_32x32 or1200_gmultp2_32x32(
 // Registered output from the multiplier and
 // an optional divider
 //
-always @(posedge rst or posedge clk)
-	if (rst) begin
+always @(`OR1200_RST_EVENT rst or posedge clk)
+	if (rst == `OR1200_RST_VALUE) begin
 		mul_prod_r <=  64'h0000_0000_0000_0000;
 		div_free <=  1'b1;
 `ifdef OR1200_DIV_IMPLEMENTED
@@ -256,8 +256,8 @@ assign mul_prod_r = {2*width{1'b0}};
 // Signal to indicate when we should check for new MAC op
 reg ex_freeze_r;
    
-always @(posedge clk or posedge rst)
-  if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+  if (rst == `OR1200_RST_VALUE)
     ex_freeze_r <= 1'b1;
   else
     ex_freeze_r <= ex_freeze;
@@ -265,8 +265,8 @@ always @(posedge clk or posedge rst)
 //
 // Propagation of l.mac opcode, only register it for one cycle
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		mac_op_r1 <=  `OR1200_MACOP_WIDTH'b0;
 	else
 		mac_op_r1 <=  !ex_freeze_r ? mac_op : `OR1200_MACOP_WIDTH'b0;
@@ -274,8 +274,8 @@ always @(posedge clk or posedge rst)
 //
 // Propagation of l.mac opcode
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		mac_op_r2 <=  `OR1200_MACOP_WIDTH'b0;
 	else
 		mac_op_r2 <=  mac_op_r1;
@@ -283,8 +283,8 @@ always @(posedge clk or posedge rst)
 //
 // Propagation of l.mac opcode
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		mac_op_r3 <=  `OR1200_MACOP_WIDTH'b0;
 	else
 		mac_op_r3 <=  mac_op_r2;
@@ -292,8 +292,8 @@ always @(posedge clk or posedge rst)
 //
 // Implementation of MAC
 //
-always @(posedge rst or posedge clk)
-	if (rst)
+always @(`OR1200_RST_EVENT rst or posedge clk)
+	if (rst == `OR1200_RST_VALUE)
 		mac_r <=  64'h0000_0000_0000_0000;
 `ifdef OR1200_MAC_SPR_WE
 	else if (spr_maclo_we)
@@ -313,8 +313,8 @@ always @(posedge rst or posedge clk)
 // in EX stage (e.g. inside multiplier)
 // This stall signal is also used by the divider.
 //
-always @(posedge rst or posedge clk)
-	if (rst)
+always @(`OR1200_RST_EVENT rst or posedge clk)
+	if (rst == `OR1200_RST_VALUE)
 		mac_stall_r <=  1'b0;
 	else
 		mac_stall_r <=  (|mac_op | (|mac_op_r1) | (|mac_op_r2)) & (id_macrc_op | mac_stall_r)

@@ -116,8 +116,8 @@ always @(Y)
 //
 // First multiply stage
 //
-always @(posedge CLK or posedge RST)
-        if (RST)
+always @(posedge CLK or `OR1200_RST_EVENT RST)
+        if (RST == `OR1200_RST_VALUE)
                 p0 <= `OR1200_WW'b0;
         else
                 p0 <=  xi * yi;
@@ -125,8 +125,8 @@ always @(posedge CLK or posedge RST)
 //
 // Second multiply stage
 //
-always @(posedge CLK or posedge RST)
-        if (RST)
+always @(posedge CLK or `OR1200_RST_EVENT RST)
+        if (RST == `OR1200_RST_VALUE)
                 p1 <= `OR1200_WW'b0;
         else
                 p1 <=  p0;

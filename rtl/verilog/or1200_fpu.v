@@ -193,8 +193,8 @@ module or1200_fpu(
        fpu_op_r <= {1'b0,fpu_op[`OR1200_FPUOP_WIDTH-2:0]}; 
 
    // Indicate new FPU op
-   always @(posedge clk or posedge rst)
-     if (rst) 
+   always @(posedge clk or `OR1200_RST_EVENT rst)
+     if (rst == `OR1200_RST_VALUE) 
        fpu_op_valid_re <= 0;
      else if (fpu_op_valid_re)
        fpu_op_valid_re <= 0;
@@ -204,8 +204,8 @@ module or1200_fpu(
    //
    // FPCSR system group register implementation
    //   
-   always @(posedge clk or posedge rst) begin
-      if (rst)
+   always @(posedge clk or `OR1200_RST_EVENT rst) begin
+      if (rst == `OR1200_RST_VALUE)
 	fpcsr_r <= 0;
       else
 	begin
@@ -236,7 +236,7 @@ module or1200_fpu(
 	   if (except_started)
 	     fpcsr_r[`OR1200_FPCSR_FPEE] <= 0;
 	end // else: !if(rst)
-   end // always @ (posedge clk or posedge rst)
+   end // always @ (posedge clk or `OR1200_RST_EVENT rst)
 
    //
    // Comparison flag generation

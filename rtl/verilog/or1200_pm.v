@@ -135,8 +135,8 @@ assign pmr_sel = ((spr_addr[`OR1200_SPR_GROUP_BITS] == `OR1200_SPRGRP_PM) &&
 // Write to PMR and also PMR[DME]/PMR[SME] reset when
 // pic_wakeup is asserted
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		{dcge, sme, dme, sdf} <= 7'b0;
 	else if (pmr_sel && spr_write) begin
 		sdf <=  spr_dat_i[`OR1200_PM_PMR_SDF];

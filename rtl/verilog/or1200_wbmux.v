@@ -97,8 +97,8 @@ reg				muxreg_valid;
 //
 // Registered output from the write-back multiplexer
 //
-always @(posedge clk or posedge rst) begin
-	if (rst) begin
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE) begin
 		muxreg <=  32'd0;
 		muxreg_valid <=  1'b0;
 	end

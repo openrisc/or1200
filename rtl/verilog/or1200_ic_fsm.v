@@ -136,8 +136,8 @@ reg				cache_inhibit;
    //
    // Main IC FSM
    //
-   always @(posedge clk or posedge rst) begin
-      if (rst) begin
+   always @(posedge clk or `OR1200_RST_EVENT rst) begin
+      if (rst == `OR1200_RST_VALUE) begin
 	 state <=  `OR1200_ICFSM_IDLE;
 	 saved_addr_r <=  32'b0;
 	 hitmiss_eval <=  1'b0;

@@ -149,8 +149,8 @@ assign sel_sb = sb_en_reg & (~fifo_empty | (fifo_empty & outstanding_store));
 //
 // SB enable
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		sb_en_reg <= 1'b0;
 	else if (sb_en & ~dcsb_cyc_i)
 		sb_en_reg <=  1'b1; // enable SB when there is no dcsb transfer in progress
@@ -174,8 +174,8 @@ or1200_sb_fifo or1200_sb_fifo (
 //
 // fifo_rd
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		outstanding_store <=  1'b0;
 	else if (sbbiu_ack_i)
 		outstanding_store <=  1'b0;
@@ -185,8 +185,8 @@ always @(posedge clk or posedge rst)
 //
 // fifo_wr_ack
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		fifo_wr_ack <=  1'b0;
 	else if (fifo_wr)
 		fifo_wr_ack <=  1'b1;

@@ -138,8 +138,8 @@ reg				genpc_refetch_r;
    //
    // genpc_freeze_r
    //
-   always @(posedge clk or posedge rst)
-     if (rst)
+   always @(posedge clk or `OR1200_RST_EVENT rst)
+     if (rst == `OR1200_RST_VALUE)
        genpc_refetch_r <=  1'b0;
      else if (genpc_refetch)
        genpc_refetch_r <=  1'b1;
@@ -255,9 +255,9 @@ reg				genpc_refetch_r;
    //
    // PC register
    //
-   always @(posedge clk or posedge rst)
+   always @(posedge clk or `OR1200_RST_EVENT rst)
      // default value 
-     if (rst) begin
+     if (rst == `OR1200_RST_VALUE) begin
 	pcreg_default <=  `OR1200_BOOT_PCREG_DEFAULT; // jb
 	pcreg_select <=  1'b1;// select async. value due to reset state
      end

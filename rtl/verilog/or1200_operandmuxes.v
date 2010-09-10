@@ -94,8 +94,8 @@ reg				saved_b;
 //
 // Operand A register
 //
-always @(posedge clk or posedge rst) begin
-	if (rst) begin
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE) begin
 		operand_a <=  32'd0;
 		saved_a <=  1'b0;
 	end else if (!ex_freeze && id_freeze && !saved_a) begin
@@ -110,8 +110,8 @@ end
 //
 // Operand B register
 //
-always @(posedge clk or posedge rst) begin
-	if (rst) begin
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE) begin
 		operand_b <=  32'd0;
 		saved_b <=  1'b0;
 	end else if (!ex_freeze && id_freeze && !saved_b) begin

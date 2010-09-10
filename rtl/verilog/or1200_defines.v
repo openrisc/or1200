@@ -175,6 +175,11 @@
 //
 
 //
+// Reset active low
+//
+//`define OR1200_RST_ACT_LOW
+
+//
 // Enable RAM BIST
 //
 // At the moment this only works for Virtual Silicon
@@ -426,6 +431,17 @@
 //`define OR1200_IMPL_MEM2REG2
 
 //
+// Reset value and event
+//
+`ifdef OR1200_RST_ACT_LOW
+  `define OR1200_RST_VALUE      (1'b0)
+  `define OR1200_RST_EVENT      negedge
+`else
+  `define OR1200_RST_VALUE      (1'b1)
+  `define OR1200_RST_EVENT      posedge
+`endif
+
+//
 // ALUOPs
 //
 `define OR1200_ALUOP_WIDTH	4
@@ -535,13 +551,13 @@
 // Bit 0: register file write enable
 // Bits 3-1: write-back mux selects
 //
- `define OR1200_RFWBOP_WIDTH		4
- `define OR1200_RFWBOP_NOP		4'b0000
- `define OR1200_RFWBOP_ALU		3'b000
- `define OR1200_RFWBOP_LSU		3'b001
- `define OR1200_RFWBOP_SPRS		3'b010
- `define OR1200_RFWBOP_LR		3'b011
- `define OR1200_RFWBOP_FPU		3'b100
+`define OR1200_RFWBOP_WIDTH		4
+`define OR1200_RFWBOP_NOP		4'b0000
+`define OR1200_RFWBOP_ALU		3'b000
+`define OR1200_RFWBOP_LSU		3'b001
+`define OR1200_RFWBOP_SPRS		3'b010
+`define OR1200_RFWBOP_LR		3'b011
+`define OR1200_RFWBOP_FPU		3'b100
 
 // Compare instructions
 `define OR1200_COP_SFEQ       3'b000

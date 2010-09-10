@@ -327,8 +327,8 @@ assign carry = sr[`OR1200_SR_CY];
 //
 // Supervision register
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		sr_reg <=  {2'h1, `OR1200_SR_EPH_DEF, {`OR1200_SR_WIDTH-4{1'b0}}, 1'b1};
 	else if (except_started)
 		sr_reg <=  to_sr[`OR1200_SR_WIDTH-1:0];
@@ -336,9 +336,9 @@ always @(posedge clk or posedge rst)
 		sr_reg <=  to_sr[`OR1200_SR_WIDTH-1:0];
 
 // EPH part of Supervision register
-always @(posedge clk or posedge rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
 	// default value 
-	if (rst) begin
+	if (rst == `OR1200_RST_VALUE) begin
 		sr_reg_bit_eph <=  `OR1200_SR_EPH_DEF;
 		sr_reg_bit_eph_select <=  1'b1;	// select async. value due to reset state
 	end

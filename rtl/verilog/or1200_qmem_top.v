@@ -319,8 +319,8 @@ assign qmem_addr = (qmemdmmu_cycstb_i & daddr_qmem_hit) ? qmemdmmu_adr_i : qmemi
 //
 // QMEM control FSM
 //
-always @(posedge rst or posedge clk)
-	if (rst) begin
+always @(`OR1200_RST_EVENT rst or posedge clk)
+	if (rst == `OR1200_RST_VALUE) begin
 		state <=  `OR1200_QMEMFSM_IDLE;
 		qmem_dack <=  1'b0;
 		qmem_iack <=  1'b0;

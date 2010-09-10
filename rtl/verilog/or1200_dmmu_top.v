@@ -206,8 +206,8 @@ assign dcpu_err_o = miss | fault | qmemdmmu_err_i;
 //
 // Assert dtlb_done one clock cycle after new address and dtlb_en must be active
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dtlb_done <=  1'b0;
 	else if (dtlb_en)
 		dtlb_done <=  dcpu_cycstb_i;
@@ -231,8 +231,8 @@ assign qmemdmmu_ci_o = dmmu_en ? dtlb_ci : `OR1200_DMMU_CI;
 // Register dcpu_adr_i's VPN for use when DMMU is not enabled but PPN is 
 // expected to come one clock cycle after offset part.
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		dcpu_vpn_r <=  {31-`OR1200_DMMU_PS{1'b0}};
 	else
 		dcpu_vpn_r <=  dcpu_adr_i[31:`OR1200_DMMU_PS];

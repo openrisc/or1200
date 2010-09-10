@@ -130,8 +130,8 @@ reg				except_align;
 //
 // ex_lsu_op
 //
-always @(posedge clk or posedge rst) begin
-    if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+    if (rst == `OR1200_RST_VALUE)
         ex_lsu_op <=  `OR1200_LSUOP_NOP;
     else if (!ex_freeze & id_freeze | flushpipe)
         ex_lsu_op <=  `OR1200_LSUOP_NOP;
@@ -145,8 +145,8 @@ end
 assign id_precalc_sum = id_addrbase[`OR1200_LSUEA_PRECALC-1:0] +
                         id_addrofs[`OR1200_LSUEA_PRECALC-1:0];
 
-always @(posedge clk or posedge rst) begin
-    if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+    if (rst == `OR1200_RST_VALUE)
         dcpu_adr_r <=  {`OR1200_LSUEA_PRECALC{1'b0}};
     else if (!ex_freeze)
         dcpu_adr_r <=  id_precalc_sum;
@@ -155,8 +155,8 @@ end
 //
 // Generate except_align in ID stage
 //
-always @(posedge clk or posedge rst) begin
-    if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+    if (rst == `OR1200_RST_VALUE)
         except_align <=  1'b0;
     else if (!ex_freeze & id_freeze | flushpipe)
         except_align <=  1'b0;

@@ -636,8 +636,8 @@ assign doq = (oe) ? {mem_3[addr_reg], mem_2[addr_reg], mem_1[addr_reg], mem_0[ad
 //
 // RAM address register
 //
-always @(posedge clk or posedge rst)
-        if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+        if (rst == `OR1200_RST_VALUE)
                 addr_reg <=  11'h000;
         else if (ce)
                 addr_reg <=  addr;

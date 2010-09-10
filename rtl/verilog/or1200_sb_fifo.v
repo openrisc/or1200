@@ -94,8 +94,8 @@ reg	[fw-1:0]	rd_pntr;
 reg			empty_o;
 reg			full_o;
 
-always @(posedge clk_i or posedge rst_i)
-	if (rst_i) begin
+always @(posedge clk_i or `OR1200_RST_EVENT rst_i)
+	if (rst_i == `OR1200_RST_VALUE) begin
 		full_o <=  1'b0;
 		empty_o <=  1'b1;
 		wr_pntr <=  {fw{1'b0}};

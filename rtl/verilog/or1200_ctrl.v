@@ -216,8 +216,8 @@ assign ex_spr_read = spr_read && !abort_mvspr;
 //       next different is DS insn, previous different was Jump/Branch
 //  !ex_delayslot_dsi & !ex_delayslot_nop - normal insn in EX stage
 //
-always @(posedge clk or posedge rst) begin
-        if (rst) begin
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+        if (rst == `OR1200_RST_VALUE) begin
 		ex_delayslot_nop <=  1'b0;
 		ex_delayslot_dsi <=  1'b0;
 	end
@@ -248,8 +248,8 @@ assign wb_flushpipe = except_flushpipe | pc_we | extend_flush;
 //
 // EX Sign/Zero extension of immediates
 //
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		ex_simm <=  32'h0000_0000;
 	else if (!ex_freeze) begin
 		ex_simm <=  id_simm;
@@ -319,8 +319,8 @@ assign id_branch_addrtarget = {{4{id_insn[25]}}, id_insn[25:0]} + id_pc[31:2];
 //
 
 // pipeline ID and EX branch target address 
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		ex_branch_addrtarget <=  32'h00000000;
 	else if (!ex_freeze) 
 		ex_branch_addrtarget <=  id_branch_addrtarget;
@@ -350,8 +350,8 @@ assign id_macrc_op = 1'b0;
 // l.macrc in EX stage
 //
 `ifdef OR1200_MAC_IMPLEMENTED
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		ex_macrc_op <=  1'b0;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
 		ex_macrc_op <=  1'b0;
@@ -516,8 +516,8 @@ end // always @ (id_insn)
 //
 // Register file write address
 //
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		rf_addrw <=  5'd0;
 	else if (!ex_freeze & id_freeze)
 		rf_addrw <=  5'd00;
@@ -533,8 +533,8 @@ end
 //
 // rf_addrw in wb stage (used in forwarding logic)
 //
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		wb_rfaddrw <=  5'd0;
 	else if (!wb_freeze)
 		wb_rfaddrw <=  rf_addrw;
@@ -543,8 +543,8 @@ end
 //
 // Instruction latch in id_insn
 //
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		id_insn <=  {`OR1200_OR32_NOP, 26'h041_0000};
         else if (id_flushpipe)
                 id_insn <=  {`OR1200_OR32_NOP, 26'h041_0000};        // NOP -> id_insn[16] must be 1
@@ -561,8 +561,8 @@ end
 //
 // Instruction latch in ex_insn
 //
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		ex_insn <=  {`OR1200_OR32_NOP, 26'h041_0000};
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
 		ex_insn <=  {`OR1200_OR32_NOP, 26'h041_0000};	// NOP -> ex_insn[16] must be 1
@@ -579,8 +579,8 @@ end
 //
 // Instruction latch in wb_insn
 //
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		wb_insn <=  {`OR1200_OR32_NOP, 26'h041_0000};
 	// wb_insn should not be changed by exceptions due to correct 
 	// recording of display_arch_state in the or1200_monitor! 
@@ -593,8 +593,8 @@ end
 //
 // Decode of sel_imm
 //
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		sel_imm <=  1'b0;
 	else if (!id_freeze) begin
 	  case (if_insn[31:26])		// synopsys parallel_case
@@ -676,8 +676,8 @@ end
 //
 // Decode of except_illegal
 //
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		except_illegal <=  1'b0;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
 		except_illegal <=  1'b0;
@@ -774,8 +774,8 @@ end
 //
 // Decode of alu_op
 //
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		alu_op <=  `OR1200_ALUOP_NOP;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
 		alu_op <=  `OR1200_ALUOP_NOP;
@@ -847,8 +847,8 @@ end
 //
 // Decode of spr_read, spr_write
 //
-always @(posedge clk or posedge rst) begin
-	if (rst) begin
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE) begin
 		spr_read <=  1'b0;
 		spr_write <=  1'b0;
 	end
@@ -903,8 +903,8 @@ always @(id_insn) begin
 	endcase
 end
 
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		ex_mac_op <=  `OR1200_MACOP_NOP;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
 		ex_mac_op <=  `OR1200_MACOP_NOP;
@@ -921,8 +921,8 @@ assign mac_op = `OR1200_MACOP_NOP;
 //
 // Decode of shrot_op
 //
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		shrot_op <=  `OR1200_SHROTOP_NOP;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
 		shrot_op <=  `OR1200_SHROTOP_NOP;
@@ -934,8 +934,8 @@ end
 //
 // Decode of rfwb_op
 //
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		rfwb_op <=  `OR1200_RFWBOP_NOP;
 	else  if (!ex_freeze & id_freeze | ex_flushpipe)
 		rfwb_op <=  `OR1200_RFWBOP_NOP;
@@ -1034,8 +1034,8 @@ end
 //
 // Decode of id_branch_op
 //
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		id_branch_op <=  `OR1200_BRANCHOP_NOP;
 	else if (id_flushpipe)
 		id_branch_op <=  `OR1200_BRANCHOP_NOP;
@@ -1081,8 +1081,8 @@ end
 //
 // Generation of ex_branch_op
 //
-always @(posedge clk or posedge rst)
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst)
+	if (rst == `OR1200_RST_VALUE)
 		ex_branch_op <=  `OR1200_BRANCHOP_NOP;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
 		ex_branch_op <=  `OR1200_BRANCHOP_NOP;		
@@ -1137,8 +1137,8 @@ end
 //
 // Decode of comp_op
 //
-always @(posedge clk or posedge rst) begin
-	if (rst) begin
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE) begin
 		comp_op <=  4'd0;
 	end else if (!ex_freeze & id_freeze | ex_flushpipe)
 		comp_op <=  4'd0;
@@ -1160,8 +1160,8 @@ end
 //
 // Decode of l.sys
 //
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		sig_syscall <=  1'b0;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
 		sig_syscall <=  1'b0;
@@ -1179,8 +1179,8 @@ end
 //
 // Decode of l.trap
 //
-always @(posedge clk or posedge rst) begin
-	if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
 		sig_trap <=  1'b0;
 	else if (!ex_freeze & id_freeze | ex_flushpipe)
 		sig_trap <=  1'b0;
@@ -1199,8 +1199,8 @@ end
 // Decode destination register address for data cache to check if store ops
 // are being done from the stack register (r1) or frame pointer register (r2)
 `ifdef OR1200_DC_NOSTACKWRITETHROUGH   
-always @(posedge clk or posedge rst) begin
-   if (rst)
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+   if (rst == `OR1200_RST_VALUE)
      dc_no_writethrough <= 0;
    else if (!ex_freeze)
      dc_no_writethrough <= (id_insn[20:16] == 5'd1) | (id_insn[20:16] == 5'd2);

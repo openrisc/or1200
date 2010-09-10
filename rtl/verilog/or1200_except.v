@@ -266,8 +266,8 @@ assign except_stop = {
 			sig_syscall		& du_dsr[`OR1200_DU_DSR_SCE] & ~ex_freeze
 		};
 
-always @(posedge clk or posedge rst) begin
-	if (rst) begin
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE) begin
 		trace_trap  <=  1'b0 ;
 	end 
 	else if (!(trace_trap && !ex_pc_val)) begin
@@ -275,8 +275,8 @@ always @(posedge clk or posedge rst) begin
 	end
 end
 
-always @(posedge clk or posedge rst) begin
-	if (rst) begin
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE) begin
         ex_freeze_prev  <=  1'b0 ;
         sr_ted_prev     <=  1'b0 ;
         dsr_te_prev     <=  1'b0 ;
@@ -332,8 +332,8 @@ end
 //
 // PC and Exception flags pipelines
 //
-always @(posedge clk or posedge rst) begin
-	if (rst) begin
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE) begin
 		id_pc <=  32'd0;
         id_pc_val <=  1'b0 ;
 		id_exceptflags <=  3'b000;
@@ -357,8 +357,8 @@ end
 // together with SR[IEE] enables interrupts once
 // pipeline is again ready.
 //
-always @(posedge rst or posedge clk)
-	if (rst)
+always @(`OR1200_RST_EVENT rst or posedge clk)
+	if (rst == `OR1200_RST_VALUE)
 		delayed_iee <=  3'b000;
 	else if (!sr[`OR1200_SR_IEE])
 		delayed_iee <=  3'b000;
@@ -373,8 +373,8 @@ always @(posedge rst or posedge clk)
 // together with SR[TEE] enables tick exceptions once
 // pipeline is again ready.
 //
-always @(posedge rst or posedge clk)
-	if (rst)
+always @(`OR1200_RST_EVENT rst or posedge clk)
+	if (rst == `OR1200_RST_VALUE)
 		delayed_tee <=  3'b000;
 	else if (!sr[`OR1200_SR_TEE])
 		delayed_tee <=  3'b000;
@@ -384,8 +384,8 @@ always @(posedge rst or posedge clk)
 //
 // PC and Exception flags pipelines
 //
-always @(posedge clk or posedge rst) begin
-	if (rst) begin
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE) begin
 		ex_dslot <=  1'b0;
 		ex_pc <=  32'd0;
                 ex_pc_val <=  1'b0 ;
@@ -421,8 +421,8 @@ end
 //
 // PC and Exception flags pipelines
 //
-always @(posedge clk or posedge rst) begin
-	if (rst) begin
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE) begin
 		wb_pc <=  32'd0;
         dl_pc <=  32'd0;
 	end
@@ -445,8 +445,8 @@ assign except_flushpipe = |except_trig & ~|state;
 // except_type signals which exception handler we start fetching in:
 //  1. Asserted in next clock cycle after exception is recognized
 //
-   always @(posedge clk or posedge rst) begin
-      if (rst) begin
+   always @(posedge clk or `OR1200_RST_EVENT rst) begin
+      if (rst == `OR1200_RST_VALUE) begin
 	 state <=  `OR1200_EXCEPTFSM_IDLE;
 	 except_type <=  `OR1200_EXCEPT_NONE;
 	 extend_flush <=  1'b0;
