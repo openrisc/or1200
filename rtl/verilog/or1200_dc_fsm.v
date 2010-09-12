@@ -366,7 +366,7 @@ module or1200_dc_fsm
 	 hitmiss_eval <=  1'b0;
 	 store <=  1'b0;
 	 load <=  1'b0;
-	 cnt <=  3'b000;
+	 cnt <=  3'd0;
          cache_miss <=  1'b0;
 	 cache_dirty_needs_writeback <= 1'b0;
 	 cache_inhibit <=  1'b0;
@@ -453,10 +453,10 @@ module or1200_dc_fsm
                 state <=  `OR1200_DCFSM_IDLE;
                 load <=  1'b0;
 		store <= 1'b0;
-		cnt <= 1'b0;
+		cnt <= 3'd0;
              end
              if (biudata_valid & (|cnt)) begin
-                cnt <=  cnt - 1'b1;
+                cnt <=  cnt - 3'd1;
                 addr_r[3:2] <=  addr_r[3:2] + 1'b1;
              end
 	     else if (biudata_valid & !(|cnt)) begin

@@ -365,7 +365,7 @@ always @(sr_reg or sr_reg_bit_eph_muxed)
 
    function [31:0] get_sr;
       // verilator public
-      get_sr = sr;
+      get_sr = {{32-`OR1200_SR_WIDTH{1'b0}},sr};
    endfunction // get_sr
 
    function [31:0] get_epcr;
@@ -380,7 +380,7 @@ always @(sr_reg or sr_reg_bit_eph_muxed)
 
    function [31:0] get_esr;
       // verilator public
-      get_esr = esr;
+      get_esr = {{32-`OR1200_SR_WIDTH{1'b0}},esr};
    endfunction // get_esr
 
 `endif
@@ -392,7 +392,7 @@ always @(sr_reg or sr_reg_bit_eph_muxed)
 always @(spr_addr or sys_data or spr_dat_mac or spr_dat_pic or spr_dat_pm or
 	 spr_dat_fpu or
 	spr_dat_dmmu or spr_dat_immu or spr_dat_du or spr_dat_tt) begin
-		casex (spr_addr[`OR1200_SPR_GROUP_BITS]) // synopsys parallel_case
+		casez (spr_addr[`OR1200_SPR_GROUP_BITS]) // synopsys parallel_case
 			`OR1200_SPR_GROUP_SYS:
 				to_wbmux = sys_data;
 			`OR1200_SPR_GROUP_TT:

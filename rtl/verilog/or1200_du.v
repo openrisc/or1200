@@ -536,39 +536,39 @@ assign dwcr1_sel = (spr_cs && (spr_addr[`OR1200_DUOFS_BITS] == `OR1200_DU_DWCR1)
 //   
 always @(du_except_stop) begin
 	except_stop = 14'b00_0000_0000_0000;
-	casex (du_except_stop)
-	        14'b1x_xxxx_xxxx_xxxx:
+	casez (du_except_stop)
+	        14'b1?_????_????_????:
 			except_stop[`OR1200_DU_DRR_TTE] = 1'b1;
-		14'b01_xxxx_xxxx_xxxx: begin
+		14'b01_????_????_????: begin
 			except_stop[`OR1200_DU_DRR_IE] = 1'b1;
 		end
-		14'b00_1xxx_xxxx_xxxx: begin
+		14'b00_1???_????_????: begin
 			except_stop[`OR1200_DU_DRR_IME] = 1'b1;
 		end
-		14'b00_01xx_xxxx_xxxx:
+		14'b00_01??_????_????:
 			except_stop[`OR1200_DU_DRR_IPFE] = 1'b1;
-		14'b00_001x_xxxx_xxxx: begin
+		14'b00_001?_????_????: begin
 			except_stop[`OR1200_DU_DRR_BUSEE] = 1'b1;
 		end
-		14'b00_0001_xxxx_xxxx:
+		14'b00_0001_????_????:
 			except_stop[`OR1200_DU_DRR_IIE] = 1'b1;
-		14'b00_0000_1xxx_xxxx: begin
+		14'b00_0000_1???_????: begin
 			except_stop[`OR1200_DU_DRR_AE] = 1'b1;
 		end
-		14'b00_0000_01xx_xxxx: begin
+		14'b00_0000_01??_????: begin
 			except_stop[`OR1200_DU_DRR_DME] = 1'b1;
 		end
-		14'b00_0000_001x_xxxx:
+		14'b00_0000_001?_????:
 			except_stop[`OR1200_DU_DRR_DPFE] = 1'b1;
-		14'b00_0000_0001_xxxx:
+		14'b00_0000_0001_????:
 			except_stop[`OR1200_DU_DRR_BUSEE] = 1'b1;
-		14'b00_0000_0000_1xxx: begin
+		14'b00_0000_0000_1???: begin
 			except_stop[`OR1200_DU_DRR_RE] = 1'b1;
 		end
-		14'b00_0000_0000_01xx: begin
+		14'b00_0000_0000_01??: begin
 			except_stop[`OR1200_DU_DRR_TE] = 1'b1;
 		end
-		14'b00_0000_0000_001x: begin
+		14'b00_0000_0000_001?: begin
 		        except_stop[`OR1200_DU_DRR_FPE] = 1'b1;
 		end	  
 		14'b00_0000_0000_0001:
@@ -912,7 +912,7 @@ always @(spr_addr or dsr or drr or dmr1 or dmr2
 	or tbar_dat_o or tbts_dat_o
 `endif
 	)
-	casex (spr_addr[`OR1200_DUOFS_BITS]) // synopsys parallel_case
+	casez (spr_addr[`OR1200_DUOFS_BITS]) // synopsys parallel_case
 `ifdef OR1200_DU_DVR0
 		`OR1200_DU_DVR0:
 			spr_dat_o = dvr0;

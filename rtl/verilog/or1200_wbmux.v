@@ -113,9 +113,9 @@ end
 //
 always @(muxin_a or muxin_b or muxin_c or muxin_d or muxin_e or rfwb_op) begin
 `ifdef OR1200_ADDITIONAL_SYNOPSYS_DIRECTIVES
-	case(rfwb_op[`OR1200_RFWBOP_WIDTH-1:1]) // synopsys parallel_case infer_mux
+	casez(rfwb_op[`OR1200_RFWBOP_WIDTH-1:1]) // synopsys parallel_case infer_mux
 `else
-	case(rfwb_op[`OR1200_RFWBOP_WIDTH-1:1]) // synopsys parallel_case
+	casez(rfwb_op[`OR1200_RFWBOP_WIDTH-1:1]) // synopsys parallel_case
 `endif
 		`OR1200_RFWBOP_ALU: muxout = muxin_a;
 		`OR1200_RFWBOP_LSU: begin
@@ -151,7 +151,11 @@ always @(muxin_a or muxin_b or muxin_c or muxin_d or muxin_e or rfwb_op) begin
 // synopsys translate_on
 `endif
 	       end		      
-`endif	  	  
+`endif
+	  default : begin
+	     muxout = 0;
+	  end
+	  
 	endcase
 end
 

@@ -103,16 +103,15 @@ integer 		  yi;
 //
 // Conversion unsigned to signed
 //
- /* verilator lint_off COMBDLY */   
 always @(X)
-	xi <= X;
+	xi = X;
 
 //
 // Conversion unsigned to signed
 //
 always @(Y)
-	yi <= Y;
- /* verilator lint_on COMBDLY */
+	yi = Y;
+
 //
 // First multiply stage
 //

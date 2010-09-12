@@ -233,7 +233,7 @@ assign qmemdmmu_ci_o = dmmu_en ? dtlb_ci : `OR1200_DMMU_CI;
 //
 always @(posedge clk or `OR1200_RST_EVENT rst)
 	if (rst == `OR1200_RST_VALUE)
-		dcpu_vpn_r <=  {31-`OR1200_DMMU_PS{1'b0}};
+		dcpu_vpn_r <=  {32-`OR1200_DMMU_PS{1'b0}};
 	else
 		dcpu_vpn_r <=  dcpu_adr_i[31:`OR1200_DMMU_PS];
 

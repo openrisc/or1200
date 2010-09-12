@@ -128,9 +128,9 @@ end
 //
 always @(ex_forw or wb_forw or rf_dataa or sel_a) begin
 `ifdef OR1200_ADDITIONAL_SYNOPSYS_DIRECTIVES
-	casex (sel_a)	// synopsys parallel_case infer_mux
+	casez (sel_a)	// synopsys parallel_case infer_mux
 `else
-	casex (sel_a)	// synopsys parallel_case
+	casez (sel_a)	// synopsys parallel_case
 `endif
 		`OR1200_SEL_EX_FORW:
 			muxed_a = ex_forw;
@@ -146,9 +146,9 @@ end
 //
 always @(simm or ex_forw or wb_forw or rf_datab or sel_b) begin
 `ifdef OR1200_ADDITIONAL_SYNOPSYS_DIRECTIVES
-	casex (sel_b)	// synopsys parallel_case infer_mux
+	casez (sel_b)	// synopsys parallel_case infer_mux
 `else
-	casex (sel_b)	// synopsys parallel_case
+	casez (sel_b)	// synopsys parallel_case
 `endif
 		`OR1200_SEL_IMM:
 			muxed_b = simm;

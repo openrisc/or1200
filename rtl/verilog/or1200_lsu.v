@@ -147,7 +147,7 @@ assign id_precalc_sum = id_addrbase[`OR1200_LSUEA_PRECALC-1:0] +
 
 always @(posedge clk or `OR1200_RST_EVENT rst) begin
     if (rst == `OR1200_RST_VALUE)
-        dcpu_adr_r <=  {`OR1200_LSUEA_PRECALC{1'b0}};
+        dcpu_adr_r <=  {`OR1200_LSUEA_PRECALC+1{1'b0}};
     else if (!ex_freeze)
         dcpu_adr_r <=  id_precalc_sum;
 end
@@ -181,14 +181,19 @@ assign except_dbuserr = dcpu_err_i & (dcpu_tag_i == `OR1200_DTAG_BE);
 //
 // External I/F assignments
 //
-assign dcpu_adr_o[31:`OR1200_LSUEA_PRECALC] = ex_addrbase[31:`OR1200_LSUEA_PRECALC] + ex_addrofs[31:`OR1200_LSUEA_PRECALC] +  dcpu_adr_r[`OR1200_LSUEA_PRECALC]; // carry
+assign dcpu_adr_o[31:`OR1200_LSUEA_PRECALC] = 
+				   ex_addrbase[31:`OR1200_LSUEA_PRECALC] + 
+				   (ex_addrofs[31:`OR1200_LSUEA_PRECALC] +
+				    // carry from precalc, pad to 30-bits
+				   {{(32-`OR1200_LSUEA_PRECALC)-1{1'b0}},
+				    dcpu_adr_r[`OR1200_LSUEA_PRECALC]});
 assign dcpu_adr_o[`OR1200_LSUEA_PRECALC-1:0] = dcpu_adr_r[`OR1200_LSUEA_PRECALC-1:0];
 assign dcpu_cycstb_o = du_stall | lsu_unstall | except_align ? 
 		       1'b0 : |ex_lsu_op;
 assign dcpu_we_o = ex_lsu_op[3];
 assign dcpu_tag_o = dcpu_cycstb_o ? `OR1200_DTAG_ND : `OR1200_DTAG_IDLE;
 always @(ex_lsu_op or dcpu_adr_o)
-	casex({ex_lsu_op, dcpu_adr_o[1:0]})
+	casez({ex_lsu_op, dcpu_adr_o[1:0]})
 		{`OR1200_LSUOP_SB, 2'b00} : dcpu_sel_o = 4'b1000;
 		{`OR1200_LSUOP_SB, 2'b01} : dcpu_sel_o = 4'b0100;
 		{`OR1200_LSUOP_SB, 2'b10} : dcpu_sel_o = 4'b0010;

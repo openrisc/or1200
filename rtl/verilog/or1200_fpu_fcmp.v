@@ -120,7 +120,7 @@ assign all_zero = opa_zero & opb_zero;
 always @( qnan or snan or opa_inf or opb_inf or signa or signb or exp_eq or exp_gt or
 	exp_lt or fract_eq or fract_gt or fract_lt or all_zero)
 
-	casex( {qnan, snan, opa_inf, opb_inf, signa, signb, exp_eq, exp_gt, exp_lt, fract_eq, fract_gt, fract_lt, all_zero})
+	casez( {qnan, snan, opa_inf, opb_inf, signa, signb, exp_eq, exp_gt, exp_lt, fract_eq, fract_gt, fract_lt, all_zero})
 	   //13'b??_??_??_???_???_?: {altb, blta, aeqb} = 3'b000;
 
 	   13'b1?_??_??_???_???_?: {altb, blta, aeqb} = 3'b000;	// qnan

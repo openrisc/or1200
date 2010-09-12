@@ -258,7 +258,8 @@ wire	[aw-1:0]	spr_addr;
 wire	[dw-1:0]	spr_dat_cpu;
 wire	[31:0]		spr_cs;
 wire			spr_we;
-
+wire    		mtspr_dc_done;
+   
 //
 // SB
 //

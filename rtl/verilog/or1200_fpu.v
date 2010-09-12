@@ -143,7 +143,7 @@ module or1200_fpu(
 					fpu_comp_done;
    wire [width-1:0] 			result_arith, result_conv;
    
-   reg [`OR1200_FPUOP_WIDTH:0] 		fpu_op_r;   
+   reg [`OR1200_FPUOP_WIDTH-1:0] 	fpu_op_r;   
    reg [`OR1200_FPCSR_WIDTH-1:0] 	fpcsr_r;
    wire 				fpu_op_valid;
    reg 					fpu_op_valid_re;   

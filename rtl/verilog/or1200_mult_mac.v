@@ -176,10 +176,10 @@ assign alu_op_div_divu = 1'b0;
 // to next instruction and to WB stage
 //
 always @*
-  casex(alu_op)	// synopsys parallel_case
+  casez(alu_op)	// synopsys parallel_case
  `ifdef OR1200_DIV_IMPLEMENTED
     `OR1200_ALUOP_DIV: begin
-       result = a[31] ^ b[31] ? ~mul_prod_r[31:0] + 1'b1 : mul_prod_r[31:0];
+       result = a[31] ^ b[31] ? ~mul_prod_r[31:0] + 32'd1 : mul_prod_r[31:0];
     end
     `OR1200_ALUOP_DIVU,
  `endif
@@ -233,7 +233,7 @@ always @(`OR1200_RST_EVENT rst or posedge clk)
 			mul_prod_r <=  {mul_prod_r[62:0], 1'b0};
 		else
 			mul_prod_r <=  {div_tmp[30:0], mul_prod_r[31:0], 1'b1};
-		div_cntr <=  div_cntr - 1'b1;
+		div_cntr <=  div_cntr - 6'd1;
 	end
 	else if (alu_op_div_divu && div_free) begin
 		mul_prod_r <=  {31'b0, x[31:0], 1'b0};

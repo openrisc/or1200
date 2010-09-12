@@ -154,7 +154,7 @@ reg				genpc_refetch_r;
 	    or except_start or operand_b or epcr or spr_pc_we or spr_dat_i or 
 	    except_prefix) 
      begin
-	casex ({spr_pc_we, except_start, branch_op}) // synopsys parallel_case
+	casez ({spr_pc_we, except_start, branch_op}) // synopsys parallel_case
 	  {2'b00, `OR1200_BRANCHOP_NOP}: begin
 	     pc = {pcreg + 30'd1, 2'b0};
 	     ex_branch_taken = 1'b0;
@@ -229,7 +229,7 @@ reg				genpc_refetch_r;
 	     pc = epcr;
 	     ex_branch_taken = 1'b1;
 	  end
-	  {2'b01, 3'bxxx}: begin
+	  {2'b01, 3'b???}: begin
 `ifdef OR1200_VERBOSE
 	     // synopsys translate_off
 	     $display("Starting exception: %h.", except_type);

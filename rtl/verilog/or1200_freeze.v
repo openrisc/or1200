@@ -158,9 +158,9 @@ assign multicycle_freeze = |multicycle_cnt;
 //
 always @(posedge clk or `OR1200_RST_EVENT rst)
 	if (rst == `OR1200_RST_VALUE)
-		multicycle_cnt <=  2'b00;
+		multicycle_cnt <=  `OR1200_MULTICYCLE_WIDTH'd0;
 	else if (|multicycle_cnt)
-		multicycle_cnt <=  multicycle_cnt - 2'd1;
+		multicycle_cnt <=  multicycle_cnt - `OR1200_MULTICYCLE_WIDTH'd1;
 	else if (|multicycle & !ex_freeze)
 		multicycle_cnt <=  multicycle;
 

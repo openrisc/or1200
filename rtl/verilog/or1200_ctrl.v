@@ -321,7 +321,7 @@ assign id_branch_addrtarget = {{4{id_insn[25]}}, id_insn[25:0]} + id_pc[31:2];
 // pipeline ID and EX branch target address 
 always @(posedge clk or `OR1200_RST_EVENT rst) begin
 	if (rst == `OR1200_RST_VALUE)
-		ex_branch_addrtarget <=  32'h00000000;
+		ex_branch_addrtarget <=  0;
 	else if (!ex_freeze) 
 		ex_branch_addrtarget <=  id_branch_addrtarget;
 end
@@ -471,15 +471,14 @@ always @(id_insn) begin
     // ALU instructions except the one with immediate
     `OR1200_OR32_ALU:
         case (id_insn[3:0]) // synopsys parallel_case
-        4'h6: multicycle = 2'b11; // l.mul
-        4'h9: multicycle = 2'b10; // l.div
-        4'hA: multicycle = 2'b10; // l.divu
-        4'hB: multicycle = 2'b11; // l.mulu
-        default: multicycle = 2'b00;
-        endcase
-    
+        4'h6: multicycle = `OR1200_MULTICYCLE_WIDTH'd3; // l.mul
+        4'h9: multicycle = `OR1200_MULTICYCLE_WIDTH'd2; // l.div
+        4'hA: multicycle = `OR1200_MULTICYCLE_WIDTH'd2; // l.divu
+        4'hB: multicycle = `OR1200_MULTICYCLE_WIDTH'd3; // l.mulu
+        default: multicycle = `OR1200_MULTICYCLE_WIDTH'd0;
+        endcase    
     `OR1200_OR32_MULI:
-      multicycle = 2'h3;
+      multicycle = `OR1200_MULTICYCLE_WIDTH'd3;
     
     // Single cycle instructions
     default: begin
@@ -724,52 +723,53 @@ always @(posedge clk or `OR1200_RST_EVENT rst) begin
 		`OR1200_OR32_CUST5,
 `endif
 	`OR1200_OR32_NOP:
-			except_illegal <=  1'b0;
+		except_illegal <=  1'b0;
 `ifdef OR1200_FPU_IMPLEMENTED
 	    `OR1200_OR32_FLOAT:
-	                // Check it's not a double precision instruction
-	                except_illegal <=  id_insn[`OR1200_FPUOP_DOUBLE_BIT];
+                // Check it's not a double precision instruction
+                except_illegal <=  id_insn[`OR1200_FPUOP_DOUBLE_BIT];
 `endif	      
 
 	`OR1200_OR32_ALU:
-			except_illegal <=  1'b0 
+		except_illegal <=  1'b0 
 
 `ifdef OR1200_MULT_IMPLEMENTED
 `ifdef OR1200_DIV_IMPLEMENTED
 `else 
-				| ({1'b0, id_insn[3:0]} == `OR1200_ALUOP_DIV)
-				| ({1'b0, id_insn[3:0]} == `OR1200_ALUOP_DIVU)
+		| (id_insn[3:0] == `OR1200_ALUOP_DIV)
+		| (id_insn[3:0] == `OR1200_ALUOP_DIVU)
 `endif
 `else
-				| ({1'b0, id_insn[3:0]} == `OR1200_ALUOP_DIV)
-				| ({1'b0, id_insn[3:0]} == `OR1200_ALUOP_DIVU)
-				| ({1'b0, id_insn[3:0]} == `OR1200_ALUOP_MUL)
+		| (id_insn[3:0] == `OR1200_ALUOP_DIV)
+		| (id_insn[3:0] == `OR1200_ALUOP_DIVU)
+		| (id_insn[3:0] == `OR1200_ALUOP_MUL)
 `endif
 
 `ifdef OR1200_IMPL_ADDC
 `else
-				| ({1'b0, id_insn[3:0]} == `OR1200_ALUOP_ADDC)
+		| (id_insn[3:0] == `OR1200_ALUOP_ADDC)
 `endif
 
 `ifdef OR1200_IMPL_ALU_ROTATE
 `else
-				| (({1'b0, id_insn[3:0]} == `OR1200_ALUOP_SHROT) && (id_insn[7:6] == `OR1200_SHROTOP_ROR))
+		| ((id_insn[3:0] == `OR1200_ALUOP_SHROT) &
+		   (id_insn[7:6] == `OR1200_SHROTOP_ROR))
 `endif
 
 `ifdef OR1200_IMPL_SUB
 `else
-				| ({1'b0, id_insn[3:0]} == `OR1200_ALUOP_SUB)
+		| (id_insn[3:0] == `OR1200_ALUOP_SUB)
 `endif
-				;
+		;
 
 		// Illegal and OR1200 unsupported instructions
-		default:
-			except_illegal <=  1'b1;
+	default:
+		except_illegal <=  1'b1;
 
-		endcase
-	  
-	end
+	endcase
+	end // if (!ex_freeze)
 end
+   
 
 //
 // Decode of alu_op

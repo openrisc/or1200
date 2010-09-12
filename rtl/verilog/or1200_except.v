@@ -466,9 +466,9 @@ assign except_flushpipe = |except_trig & ~|state;
 		  state <=  `OR1200_EXCEPTFSM_FLU1;
 		  extend_flush <=  1'b1;
 		  esr <=  sr_we ? to_sr : sr;
-		  casex (except_trig)
+		  casez (except_trig)
 `ifdef OR1200_EXCEPT_ITLBMISS
-		    14'b1x_xxxx_xxxx_xxxx: begin
+		    14'b1?_????_????_????: begin
 		       except_type <=  `OR1200_EXCEPT_ITLBMISS;
 		       eear <=  ex_dslot ? 
 			       ex_pc : ex_pc;
@@ -477,7 +477,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_IPF
-		    14'b01_xxxx_xxxx_xxxx: begin
+		    14'b01_????_????_????: begin
 		       except_type <=  `OR1200_EXCEPT_IPF;
 		       eear <=  ex_dslot ? 
 			       ex_pc : delayed1_ex_dslot ? 
@@ -490,7 +490,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_BUSERR
-		    14'b00_1xxx_xxxx_xxxx: begin	// Insn. Bus Error
+		    14'b00_1???_????_????: begin	// Insn. Bus Error
 		       except_type <=  `OR1200_EXCEPT_BUSERR;
 		       eear <=  ex_dslot ? 
 			       wb_pc : ex_pc;
@@ -499,7 +499,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_ILLEGAL
-		    14'b00_01xx_xxxx_xxxx: begin
+		    14'b00_01??_????_????: begin
 		       except_type <=  `OR1200_EXCEPT_ILLEGAL;
 		       eear <=  ex_pc;
 		       epcr <=  ex_dslot ? 
@@ -507,7 +507,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_ALIGN
-		    14'b00_001x_xxxx_xxxx: begin
+		    14'b00_001?_????_????: begin
 		       except_type <=  `OR1200_EXCEPT_ALIGN;
 		       eear <=  lsu_addr;
 		       epcr <=  ex_dslot ? 
@@ -515,7 +515,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_DTLBMISS
-		    14'b00_0001_xxxx_xxxx: begin
+		    14'b00_0001_????_????: begin
 		       except_type <=  `OR1200_EXCEPT_DTLBMISS;
 		       eear <=  lsu_addr;
 		       epcr <=  ex_dslot ? 
@@ -524,7 +524,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_TRAP			
-		    14'b00_0000_1xxx_xxxx: begin
+		    14'b00_0000_1???_????: begin
 		       except_type <=  `OR1200_EXCEPT_TRAP;
 		       epcr <=  ex_dslot ? 
 			       wb_pc : delayed1_ex_dslot ? 
@@ -532,7 +532,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_SYSCALL
-		    14'b00_0000_01xx_xxxx: begin
+		    14'b00_0000_01??_????: begin
 		       except_type <=  `OR1200_EXCEPT_SYSCALL;
 		       epcr <=  ex_dslot ? 
 			       wb_pc : delayed1_ex_dslot ? 
@@ -541,7 +541,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_DPF
-		    14'b00_0000_001x_xxxx: begin
+		    14'b00_0000_001?_????: begin
 		       except_type <=  `OR1200_EXCEPT_DPF;
 		       eear <=  lsu_addr;
 		       epcr <=  ex_dslot ? 
@@ -550,7 +550,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_BUSERR
-		    14'b00_0000_0001_xxxx: begin	// Data Bus Error
+		    14'b00_0000_0001_????: begin	// Data Bus Error
 		       except_type <=  `OR1200_EXCEPT_BUSERR;
 		       eear <=  lsu_addr;
 		       epcr <=  ex_dslot ? 
@@ -559,7 +559,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_RANGE
-		    14'b00_0000_0000_1xxx: begin
+		    14'b00_0000_0000_1???: begin
 		       except_type <=  `OR1200_EXCEPT_RANGE;
 		       epcr <=  ex_dslot ? 
 			       wb_pc : delayed1_ex_dslot ? 
@@ -568,13 +568,13 @@ assign except_flushpipe = |except_trig & ~|state;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_FLOAT
-		    14'b00_0000_0000_01xx: begin
+		    14'b00_0000_0000_01??: begin
 		       except_type <=  `OR1200_EXCEPT_FLOAT;
 		       epcr <=  id_pc;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_INT
-		    14'b00_0000_0000_001x: begin
+		    14'b00_0000_0000_001?: begin
 		       except_type <=  `OR1200_EXCEPT_INT;
 		       epcr <=  id_pc;
 		    end

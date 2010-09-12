@@ -396,34 +396,34 @@ module or1200_fpu_arith
      begin
 	if (s_rmode_i==2'd0 | s_div_zero_o | s_infa | s_infb | s_qnan_o |
 	    s_qnan_o) // Round to nearest even
-	  s_output_o <= s_output1;
+	  s_output_o = s_output1;
 	else if (s_rmode_i==2'd1 & (&s_output1[30:23]))
 	  // In round-to-zero: the sum of two non-infinity operands is never 
 	  // infinity,even if an overflow occures
-	  s_output_o <= {s_output1[31], 31'b1111111_01111111_11111111_11111111};
+	  s_output_o = {s_output1[31], 31'b1111111_01111111_11111111_11111111};
 	else if (s_rmode_i==2'd2 & (&s_output1[31:23]))
 	  // In round-up: the sum of two non-infinity operands is never 
 	  // negative infinity,even if an overflow occures
-	  s_output_o <= {32'b11111111_01111111_11111111_11111111};
+	  s_output_o = {32'b11111111_01111111_11111111_11111111};
 	else if (s_rmode_i==2'd3) begin
 	   if (((s_fpu_op_i==3'd0) | (s_fpu_op_i==3'd1)) & s_zero_o & 
 	       (s_opa_i[31] | (s_fpu_op_i[0] ^ s_opb_i[31])))
 	     // In round-down: a-a= -0
-	     s_output_o <= {1'b1,s_output1[30:0]};
+	     s_output_o = {1'b1,s_output1[30:0]};
 	   else if (s_output1[31:23]==9'b0_11111111)
-	     s_output_o <= 32'b01111111011111111111111111111111;
+	     s_output_o = 32'b01111111011111111111111111111111;
 	   else
-	     s_output_o <= s_output1;
+	     s_output_o = s_output1;
 	end
 	else
-	  s_output_o <= s_output1;
+	  s_output_o = s_output1;
      end // always @ *
 
    // Exception generation
    assign s_underflow_o = (s_output1[30:23]==8'h00) & s_ine_o;
    assign s_overflow_o = (s_output1[30:23]==8'hff) & s_ine_o;
    assign s_div_zero_o = serial_div_div_zero & fpu_op_i==3'd3;
-   assign s_inf_o = s_output1[31:23]==8'hff & !(s_qnan_o | s_snan_o);
+   assign s_inf_o = s_output1[30:23]==8'hff & !(s_qnan_o | s_snan_o);
    assign s_zero_o = !(|s_output1[30:0]);
    assign s_qnan_o = s_output1[30:0]==QNAN;
    assign s_snan_o = s_output1[30:0]==SNAN;

@@ -137,7 +137,7 @@ module or1200_fpu_post_norm_intfloat_conv
    // Count Leading zeros in fraction
 
    always @(/*fract_in*/ posedge clk)
-     casex(fract_in)	// synopsys full_case parallel_case
+     casez(fract_in)	// synopsys full_case parallel_case
        48'b1???????????????????????????????????????????????: fi_ldz <=  1;
        48'b01??????????????????????????????????????????????: fi_ldz <=  2;
        48'b001?????????????????????????????????????????????: fi_ldz <=  3;
@@ -294,7 +294,8 @@ module or1200_fpu_post_norm_intfloat_conv
    assign exp_in_mi1    = exp_in  - 1;	// 9 bits - includes carry out
    assign exp_out1_mi1  = exp_out1 - 1;
 
-   assign exp_next_mi  = exp_in_pl1 - fi_ldz_mi1; // 9 bits - includes carry out
+   assign exp_next_mi  = exp_in_pl1 - 
+			 {3'd0,fi_ldz_mi1}; // 9 bits - includes carry out
 
    assign {exp_out1_co, exp_out1} = fract_in[47] ? exp_in_pl1 : exp_next_mi;
    
@@ -309,7 +310,7 @@ module or1200_fpu_post_norm_intfloat_conv
 			     ? 
 			 0 :opas;
 
-   assign exp_i2f   = fract_in_00 ? (opas ? 8'h9e : 0) : (8'h9e-fi_ldz);
+   assign exp_i2f   = fract_in_00 ? (opas ? 8'h9e : 0) : (8'h9e-{2'd0,fi_ldz});
    assign exp_f2i_1 = {{8{fract_in[47]}}, fract_in }<<f2i_shft;
    assign exp_f2i   = f2i_zero ? 0 : f2i_max ? 8'hff : exp_f2i_1[55:48];
    assign conv_exp  = op_f2i ? exp_f2i : exp_i2f;
@@ -319,7 +320,7 @@ module or1200_fpu_post_norm_intfloat_conv
      exp_out <= conv_exp;
    
 
-   assign ldz_all   = fi_ldz;
+   assign ldz_all   = {1'b0,fi_ldz};
    assign fi_ldz_2a = 6'd23 - fi_ldz;
    assign fi_ldz_2  = {fi_ldz_2a[6], fi_ldz_2a[6:0]};
 

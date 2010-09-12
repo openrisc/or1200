@@ -148,9 +148,9 @@ always @(alu_op or a or b or result_sum or result_and or macrc_op or shifted_rot
 `endif
 ) begin
 `ifdef OR1200_CASE_DEFAULT
-	casex (alu_op)		// synopsys parallel_case
+	casez (alu_op)		// synopsys parallel_case
 `else
-	casex (alu_op)		// synopsys full_case parallel_case
+	casez (alu_op)		// synopsys full_case parallel_case
 `endif
 		`OR1200_ALUOP_FF1: begin
 			result = a[0] ? 1 : a[1] ? 2 : a[2] ? 3 : a[3] ? 4 : a[4] ? 5 : a[5] ? 6 : a[6] ? 7 : a[7] ? 8 : a[8] ? 9 : a[9] ? 10 : a[10] ? 11 : a[11] ? 12 : a[12] ? 13 : a[13] ? 14 : a[14] ? 15 : a[15] ? 16 : a[16] ? 17 : a[17] ? 18 : a[18] ? 19 : a[19] ? 20 : a[20] ? 21 : a[21] ? 22 : a[22] ? 23 : a[23] ? 24 : a[24] ? 25 : a[25] ? 26 : a[26] ? 27 : a[27] ? 28 : a[28] ? 29 : a[29] ? 30 : a[30] ? 31 : a[31] ? 32 : 0;
@@ -220,9 +220,9 @@ end
 // Examples for move byte, set bit and clear bit
 //
 always @(cust5_op or cust5_limm or a or b) begin
-	casex (cust5_op)		// synopsys parallel_case
+	casez (cust5_op)		// synopsys parallel_case
 		5'h1 : begin 
-			casex (cust5_limm[1:0])
+			casez (cust5_limm[1:0])
 				2'h0: result_cust5 = {a[31:8], b[7:0]};
 				2'h1: result_cust5 = {a[31:16], b[7:0], a[7:0]};
 				2'h2: result_cust5 = {a[31:24], b[7:0], a[15:0]};
@@ -250,7 +250,7 @@ always @(alu_op or result_sum or result_and or flagcomp
          or result_csum
 `endif
 ) begin
-	casex (alu_op)		// synopsys parallel_case
+	casez (alu_op)		// synopsys parallel_case
 `ifdef OR1200_ADDITIONAL_FLAG_MODIFIERS
 		`OR1200_ALUOP_ADD : begin
 			flagforw = (result_sum == 32'h0000_0000);
@@ -291,7 +291,7 @@ always @(alu_op or cy_sum
 `endif
 `endif
 ) begin
-	casex (alu_op)		// synopsys parallel_case
+	casez (alu_op)		// synopsys parallel_case
 `ifdef OR1200_IMPL_CY
 		`OR1200_ALUOP_ADD : begin
 			cyforw = cy_sum;

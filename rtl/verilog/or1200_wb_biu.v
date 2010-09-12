@@ -337,17 +337,17 @@ module or1200_wb_biu(
       end
       else begin
 	 // WB ack toggle counter
-	 if (wb_fsm_state_cur == wb_fsm_idle | !clmode)
+	 if (wb_fsm_state_cur == wb_fsm_idle | !(|clmode))
 	   wb_ack_cnt	<=  1'b0;
 	 else if (wb_stb_o & wb_ack)
 	   wb_ack_cnt	<=  !wb_ack_cnt;
 	 // WB err toggle counter
-	 if (wb_fsm_state_cur == wb_fsm_idle | !clmode)
+	 if (wb_fsm_state_cur == wb_fsm_idle | !(|clmode))
 	   wb_err_cnt	<=  1'b0;
 	 else if (wb_stb_o & wb_err_i)
 	   wb_err_cnt	<=  !wb_err_cnt;
 	 // WB rty toggle counter
-	 if (wb_fsm_state_cur == wb_fsm_idle | !clmode)
+	 if (wb_fsm_state_cur == wb_fsm_idle | !(|clmode))
 	   wb_rty_cnt	<=  1'b0;
 	 else if (wb_stb_o & wb_rty_i)
 	   wb_rty_cnt	<=  !wb_rty_cnt;
@@ -371,17 +371,17 @@ module or1200_wb_biu(
 	 else
 	   biu_stb_reg	<=  biu_stb_i;
 	 // BIU ack toggle counter
-	 if (wb_fsm_state_cur == wb_fsm_idle | !clmode)
+	 if (wb_fsm_state_cur == wb_fsm_idle | !(|clmode))
 	   biu_ack_cnt	<=  1'b0 ;
 	 else if (biu_ack_o)
 	   biu_ack_cnt	<=  !biu_ack_cnt ;
 	 // BIU err toggle counter
-	 if (wb_fsm_state_cur == wb_fsm_idle | !clmode)
+	 if (wb_fsm_state_cur == wb_fsm_idle | !(|clmode))
 	   biu_err_cnt	<=  1'b0 ;
 	 else if (wb_err_i & biu_err_o)
 	   biu_err_cnt	<=  !biu_err_cnt ;
 	 // BIU rty toggle counter
-	 if (wb_fsm_state_cur == wb_fsm_idle | !clmode)
+	 if (wb_fsm_state_cur == wb_fsm_idle | !(|clmode))
 	   biu_rty_cnt	<=  1'b0 ;
 	 else if (biu_rty)
 	   biu_rty_cnt	<=  !biu_rty_cnt ;
