@@ -62,8 +62,8 @@ module or1200_ctrl
    wb_flushpipe,
    id_freeze, ex_freeze, wb_freeze, if_insn, id_insn, ex_insn, abort_mvspr, 
    id_branch_op, ex_branch_op, ex_branch_taken, pc_we, 
-   rf_addra, rf_addrb, rf_rda, rf_rdb, alu_op, mac_op, shrot_op, comp_op, 
-   rf_addrw, rfwb_op, fpu_op,
+   rf_addra, rf_addrb, rf_rda, rf_rdb, alu_op, alu_op2, mac_op, shrot_op,
+   comp_op, rf_addrw, rfwb_op, fpu_op,
    wb_insn, id_simm, ex_simm, id_branch_addrtarget, ex_branch_addrtarget, sel_a,
    sel_b, id_lsu_op,
    cust5_op, cust5_limm, id_pc, ex_pc, du_hwbkpt, 
@@ -100,6 +100,7 @@ output	[`OR1200_REGFILE_ADDR_WIDTH-1:0]	rf_addrb;
 output					rf_rda;
 output					rf_rdb;
 output	[`OR1200_ALUOP_WIDTH-1:0]		alu_op;
+output [`OR1200_ALUOP2_WIDTH-1:0] 		alu_op2;
 output	[`OR1200_MACOP_WIDTH-1:0]		mac_op;
 output	[`OR1200_SHROTOP_WIDTH-1:0]		shrot_op;
 output	[`OR1200_RFWBOP_WIDTH-1:0]		rfwb_op;
@@ -144,6 +145,7 @@ output  				dc_no_writethrough;
 reg	[`OR1200_BRANCHOP_WIDTH-1:0]		id_branch_op;
 reg	[`OR1200_BRANCHOP_WIDTH-1:0]		ex_branch_op;
 reg	[`OR1200_ALUOP_WIDTH-1:0]		alu_op;
+reg [`OR1200_ALUOP2_WIDTH-1:0]      		alu_op2;
 wire					if_maci_op;
 `ifdef OR1200_MAC_IMPLEMENTED
 reg	[`OR1200_MACOP_WIDTH-1:0]		ex_mac_op;
@@ -750,6 +752,11 @@ always @(posedge clk or `OR1200_RST_EVENT rst) begin
 		| (id_insn[3:0] == `OR1200_ALUOP_ADDC)
 `endif
 
+`ifdef OR1200_IMPL_ALU_FFL1
+`else
+		| (id_insn[3:0] == `OR1200_ALUOP_FFL1)
+`endif
+
 `ifdef OR1200_IMPL_ALU_ROTATE
 `else
 		| ((id_insn[3:0] == `OR1200_ALUOP_SHROT) &
@@ -843,6 +850,21 @@ always @(posedge clk or `OR1200_RST_EVENT rst) begin
 	  
 	end
 end
+
+
+//
+// Decode of alu_op2 (field of bits 9:8)
+//
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE)
+		alu_op2 <=  0;
+	else if (!ex_freeze & id_freeze | ex_flushpipe)
+	        alu_op2 <= 0;
+   	else if (!ex_freeze) begin
+		alu_op2 <=  id_insn[`OR1200_ALUOP2_POS];
+	end
+end
+
 
 //
 // Decode of spr_read, spr_write

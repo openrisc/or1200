@@ -345,6 +345,11 @@
 `define OR1200_IMPL_ALU_COMP2
 
 //
+// Implement Find First/Last '1'
+//
+`define OR1200_IMPL_ALU_FFL1
+
+//
 // Implement multiplier
 //
 // By default multiplier is implemented
@@ -466,7 +471,15 @@
 `define OR1200_ALUOP_MTSR	4'd14
 `define OR1200_ALUOP_MFSR	4'd15
 `define OR1200_ALUOP_CMOV	4'd14
-`define OR1200_ALUOP_FF1	4'd15
+`define OR1200_ALUOP_FFL1	4'd15
+
+
+// ALU instructions second opcode field (previously multicycle field in 
+// machine word)
+`define OR1200_ALUOP2_POS		9:8
+`define OR1200_ALUOP2_WIDTH	2
+
+
 //
 // MACOPs
 //
@@ -624,9 +637,6 @@
 
 // SHROT_OP position in machine word
 `define OR1200_SHROTOP_POS		7:6
-
-// ALU instructions multicycle field in machine word
-`define OR1200_ALUMCYC_POS		9:8
 
 //
 // Instruction opcode groups (basic)

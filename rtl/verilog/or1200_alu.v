@@ -53,7 +53,7 @@
 
 module or1200_alu(
 	a, b, mult_mac_result, macrc_op,
-	alu_op, shrot_op, comp_op,
+	alu_op, alu_op2, shrot_op, comp_op,
 	cust5_op, cust5_limm,
 	result, flagforw, flag_we,
 	cyforw, cy_we, carry, flag
@@ -69,6 +69,7 @@ input	[width-1:0]		b;
 input	[width-1:0]		mult_mac_result;
 input				macrc_op;
 input	[`OR1200_ALUOP_WIDTH-1:0]	alu_op;
+input	[`OR1200_ALUOP2_WIDTH-1:0]	alu_op2;
 input	[`OR1200_SHROTOP_WIDTH-1:0]	shrot_op;
 input	[`OR1200_COMPOP_WIDTH-1:0]	comp_op;
 input	[4:0]			cust5_op;
@@ -142,7 +143,8 @@ end
 //
 // Central part of the ALU
 //
-always @(alu_op or a or b or result_sum or result_and or macrc_op or shifted_rotated or mult_mac_result or flag or result_cust5 or carry
+always @(alu_op or alu_op2 or a or b or result_sum or result_and or macrc_op
+	 or shifted_rotated or mult_mac_result or flag or result_cust5 or carry
 `ifdef OR1200_IMPL_ADDC
          or result_csum
 `endif
@@ -152,9 +154,22 @@ always @(alu_op or a or b or result_sum or result_and or macrc_op or shifted_rot
 `else
 	casez (alu_op)		// synopsys full_case parallel_case
 `endif
-		`OR1200_ALUOP_FF1: begin
+`ifdef OR1200_IMPL_ALU_FFL1	  
+		`OR1200_ALUOP_FFL1: begin
+`ifdef OR1200_CASE_DEFAULT
+		   casez (alu_op2) // synopsys parallel_case
+`else
+		   casez (alu_op2) // synopsys full_case parallel_case
+`endif
+		     0: begin // FF1
 			result = a[0] ? 1 : a[1] ? 2 : a[2] ? 3 : a[3] ? 4 : a[4] ? 5 : a[5] ? 6 : a[6] ? 7 : a[7] ? 8 : a[8] ? 9 : a[9] ? 10 : a[10] ? 11 : a[11] ? 12 : a[12] ? 13 : a[13] ? 14 : a[14] ? 15 : a[15] ? 16 : a[16] ? 17 : a[17] ? 18 : a[18] ? 19 : a[19] ? 20 : a[20] ? 21 : a[21] ? 22 : a[22] ? 23 : a[23] ? 24 : a[24] ? 25 : a[25] ? 26 : a[26] ? 27 : a[27] ? 28 : a[28] ? 29 : a[29] ? 30 : a[30] ? 31 : a[31] ? 32 : 0;
-		end
+		     end
+		     default: begin // FL1
+			result = a[31] ? 32 : a[30] ? 31 : a[29] ? 30 : a[28] ? 29 : a[27] ? 28 : a[26] ? 27 : a[25] ? 26 : a[24] ? 25 : a[23] ? 24 : a[22] ? 23 : a[21] ? 22 : a[20] ? 21 : a[19] ? 20 : a[18] ? 19 : a[17] ? 18 : a[16] ? 17 : a[15] ? 16 : a[14] ? 15 : a[13] ? 14 : a[12] ? 13 : a[11] ? 12 : a[10] ? 11 : a[9] ? 10 : a[8] ? 9 : a[7] ? 8 : a[6] ? 7 : a[5] ? 6 : a[4] ? 5 : a[3] ? 4 : a[2] ? 3 : a[1] ? 2 : a[0] ? 1 : 0 ;
+		     end
+		   endcase // casez (alu_op2)
+		end // case: `OR1200_ALUOP_FFL1
+`endif	  
 		`OR1200_ALUOP_CUST5 : begin 
 				result = result_cust5;
 		end
