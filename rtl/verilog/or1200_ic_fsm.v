@@ -58,7 +58,7 @@
 `define OR1200_ICFSM_IFETCH	2'd3
 
 //
-// Data cache FSM for cache line of 16 bytes (4x singleword)
+// Instruction cache FSM
 //
 
 module or1200_ic_fsm(
@@ -67,9 +67,13 @@ module or1200_ic_fsm(
 
 	// Internal i/f to top level IC
 	ic_en, icqmem_cycstb_i, icqmem_ci_i,
-	tagcomp_miss, biudata_valid, biudata_error, start_addr, saved_addr,
-	icram_we, biu_read, first_hit_ack, first_miss_ack, first_miss_err,
-	burst, tag_we
+	tagcomp_miss, 
+	biudata_valid, biudata_error, 
+        start_addr, saved_addr,
+	icram_we, tag_we,
+        biu_read, 
+        first_hit_ack, first_miss_ack, first_miss_err,
+	burst
 );
 
 //
@@ -98,11 +102,12 @@ output				tag_we;
 //
 reg	[31:0]			saved_addr_r;
 reg	[1:0]			state;
-reg	[2:0]			cnt;
+reg [`OR1200_ICLS-1:0]    	cnt;
 reg				hitmiss_eval;
 reg				load;
 reg				cache_inhibit;
-
+reg 				last_eval_miss; // JPB
+   
    //
    // Generate of ICRAM write enables
    //
@@ -142,8 +147,10 @@ reg				cache_inhibit;
 	 saved_addr_r <=  32'b0;
 	 hitmiss_eval <=  1'b0;
 	 load <=  1'b0;
-	 cnt <=  3'b000;
+	 cnt <=  `OR1200_ICLS'd0;
 	 cache_inhibit <=  1'b0;
+	 last_eval_miss <= 0; // JPB
+	 
       end
       else
 	case (state)	// synopsys parallel_case
@@ -154,20 +161,20 @@ reg				cache_inhibit;
 	       hitmiss_eval <=  1'b1;
 	       load <=  1'b1;
 	       cache_inhibit <=  icqmem_ci_i;
+	       last_eval_miss <= 0; // JPB
 	    end
 	    else begin			// idle
 	       hitmiss_eval <=  1'b0;
 	       load <=  1'b0;
 	       cache_inhibit <=  1'b0;
-	    end
+	    end	  
 	  `OR1200_ICFSM_CFETCH: begin	// fetch
 	     
 	     if (icqmem_cycstb_i & icqmem_ci_i)
 	       cache_inhibit <=  1'b1;
 	     
 	     if (hitmiss_eval)
-	       saved_addr_r[31:13] <=  start_addr[31:13];
-	     
+	       saved_addr_r[31:`OR1200_ICTAGL] <= start_addr[31:`OR1200_ICTAGL];
 	     if ((!ic_en) ||
 		 // fetch aborted (usually caused by IMMU)
 		 (hitmiss_eval & !icqmem_cycstb_i) ||	
@@ -179,28 +186,35 @@ reg				cache_inhibit;
 		load <=  1'b0;
 		cache_inhibit <=  1'b0;
 	     end // if ((!ic_en) ||...	     
-	     // fetch missed, finish current external fetch and refill
+	     // fetch missed, wait for first fetch and continue filling line
 	     else if (tagcomp_miss & biudata_valid) begin	
 		state <=  `OR1200_ICFSM_LREFILL3;
-		saved_addr_r[3:2] <=  saved_addr_r[3:2] + 1'd1;
+		saved_addr_r[`OR1200_ICLS-1:2] 
+		  <= saved_addr_r[`OR1200_ICLS-1:2] + 1;
 		hitmiss_eval <=  1'b0;
-		cnt <=  `OR1200_ICLS-2;
+		cnt <= ((1 << `OR1200_ICLS) - (2 * 4));
 		cache_inhibit <=  1'b0;
 	     end
 	     // fetch aborted (usually caused by exception)
-	     else if (!icqmem_cycstb_i) begin	
+	     else if (!icqmem_cycstb_i
+		      & !last_eval_miss // JPB
+		      ) begin	
 		state <=  `OR1200_ICFSM_IDLE;
 		hitmiss_eval <=  1'b0;
 		load <=  1'b0;
 		cache_inhibit <=  1'b0;
 	     end
-	     // fetch hit, finish immediately
-	     else if (!tagcomp_miss & !icqmem_ci_i) begin 
+	     // fetch hit, wait in this state for now
+	     else if (!tagcomp_miss & !icqmem_ci_i) begin
 		saved_addr_r <=  start_addr;
 		cache_inhibit <=  1'b0;
 	     end
 	     else   // fetch in-progress
 	       hitmiss_eval <=  1'b0;
+
+	     if (hitmiss_eval & !tagcomp_miss) // JPB
+	       last_eval_miss <= 1; // JPB
+	     
 	  end
 	  `OR1200_ICFSM_LREFILL3 : begin
 	     // abort because IC has just been turned off
@@ -213,8 +227,9 @@ reg				cache_inhibit;
              end
 	     // refill ack, more fetchs to come
 	     else if (biudata_valid && (|cnt)) begin	
-		cnt <=  cnt - 3'd1;
-		saved_addr_r[3:2] <=  saved_addr_r[3:2] + 1'd1;
+		cnt <=  cnt - `OR1200_ICLS'd4;
+		saved_addr_r[`OR1200_ICLS-1:2] 
+		  <= saved_addr_r[`OR1200_ICLS-1:2] + 1;
 	     end
 	     // last fetch of line refill
 	     else if (biudata_valid) begin

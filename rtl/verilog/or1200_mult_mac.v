@@ -11,13 +11,15 @@
 ////                                                              ////
 ////  To Do:                                                      ////
 ////   - make signed division better, w/o negating the operands   ////
+////   - implement non-serial divider that is synthesizable       ////
 ////                                                              ////
 ////  Author(s):                                                  ////
 ////      - Damjan Lampret, lampret@opencores.org                 ////
+////      - Julius Baxter, julius@opencores.org                   ////
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 ////                                                              ////
-//// Copyright (C) 2000 Authors and OPENCORES.ORG                 ////
+//// Copyright (C) 2000, 2010 Authors and OPENCORES.ORG           ////
 ////                                                              ////
 //// This source file may be used and distributed without         ////
 //// restriction provided that this copyright statement is not    ////
@@ -56,278 +58,391 @@
 `include "or1200_defines.v"
 
 module or1200_mult_mac(
-	// Clock and reset
-	clk, rst,
+		       // Clock and reset
+		       clk, rst,
 
-	// Multiplier/MAC interface
-	ex_freeze, id_macrc_op, macrc_op, a, b, mac_op, alu_op, result, mac_stall_r,
+		       // Multiplier/MAC interface
+		       ex_freeze, id_macrc_op, macrc_op, a, b, mac_op, alu_op, 
+		       result, mult_mac_stall,
 
-	// SPR interface
-	spr_cs, spr_write, spr_addr, spr_dat_i, spr_dat_o
-);
+		       // SPR interface
+		       spr_cs, spr_write, spr_addr, spr_dat_i, spr_dat_o
+		       );
 
-parameter width = `OR1200_OPERAND_WIDTH;
+   parameter width = `OR1200_OPERAND_WIDTH;
 
-//
-// I/O
-//
+   //
+   // I/O
+   //
 
-//
-// Clock and reset
-//
-input				clk;
-input				rst;
+   //
+   // Clock and reset
+   //
+   input				clk;
+   input				rst;
 
-//
-// Multiplier/MAC interface
-//
-input				ex_freeze;
-input				id_macrc_op;
-input				macrc_op;
-input	[width-1:0]		a;
-input	[width-1:0]		b;
-input	[`OR1200_MACOP_WIDTH-1:0]	mac_op;
-input	[`OR1200_ALUOP_WIDTH-1:0]	alu_op;
-output	[width-1:0]		result;
-output				mac_stall_r;
+   //
+   // Multiplier/MAC interface
+   //
+   input				ex_freeze;
+   input				id_macrc_op;
+   input				macrc_op;
+   input [width-1:0] 			a;
+   input [width-1:0] 			b;
+   input [`OR1200_MACOP_WIDTH-1:0] 	mac_op;
+   input [`OR1200_ALUOP_WIDTH-1:0] 	alu_op;
+   output [width-1:0] 			result;
+   output				mult_mac_stall;
 
-//
-// SPR interface
-//
-input				spr_cs;
-input				spr_write;
-input	[31:0]			spr_addr;
-input	[31:0]			spr_dat_i;
-output	[31:0]			spr_dat_o;
+   //
+   // SPR interface
+   //
+   input				spr_cs;
+   input				spr_write;
+   input [31:0] 			spr_addr;
+   input [31:0] 			spr_dat_i;
+   output [31:0] 			spr_dat_o;
 
-//
-// Internal wires and regs
-//
+   //
+   // Internal wires and regs
+   //
+   reg [width-1:0] 			result;
 `ifdef OR1200_MULT_IMPLEMENTED
-reg	[width-1:0]		result;
-reg	[2*width-1:0]		mul_prod_r;
-`else
-wire	[width-1:0]		result;
-wire	[2*width-1:0]		mul_prod_r;
-`endif
-wire	[2*width-1:0]		mul_prod;
-wire	[`OR1200_MACOP_WIDTH-1:0]	mac_op;
-`ifdef OR1200_MAC_IMPLEMENTED
-reg	[`OR1200_MACOP_WIDTH-1:0]	mac_op_r1;
-reg	[`OR1200_MACOP_WIDTH-1:0]	mac_op_r2;
-reg	[`OR1200_MACOP_WIDTH-1:0]	mac_op_r3;
-reg				mac_stall_r;
-reg	[63:0]		mac_r;
-`else
-wire	[`OR1200_MACOP_WIDTH-1:0]	mac_op_r1;
-wire	[`OR1200_MACOP_WIDTH-1:0]	mac_op_r2;
-wire	[`OR1200_MACOP_WIDTH-1:0]	mac_op_r3;
-wire				mac_stall_r;
-wire	[63:0]		mac_r;
-`endif
-wire	[width-1:0]		x;
-wire	[width-1:0]		y;
-wire				spr_maclo_we;
-wire				spr_machi_we;
-wire				alu_op_div_divu;
-wire				alu_op_div;
-reg				div_free;
-`ifdef OR1200_DIV_IMPLEMENTED
-wire	[width-1:0]		div_tmp;
-reg	[5:0]			div_cntr;
-`endif
-
-//
-// Combinatorial logic
-//
-`ifdef OR1200_MAC_IMPLEMENTED
-assign spr_maclo_we = spr_cs & spr_write & spr_addr[`OR1200_MAC_ADDR];
-assign spr_machi_we = spr_cs & spr_write & !spr_addr[`OR1200_MAC_ADDR];
-assign spr_dat_o = spr_addr[`OR1200_MAC_ADDR] ? mac_r[31:0] : mac_r[63:32];
-`else
-assign spr_maclo_we = 1'b0;
-assign spr_machi_we = 1'b0;
-assign spr_dat_o = 32'h0000_0000;
-`endif
-`ifdef OR1200_LOWPWR_MULT
-assign x = (alu_op_div & a[31]) ? ~a + 1'b1 : 
-	   alu_op_div_divu | (alu_op == `OR1200_ALUOP_MUL) | (|mac_op) ? 
-	   a : 32'h0000_0000;
-assign y = (alu_op_div & b[31]) ? ~b + 1'b1 : 
-	   alu_op_div_divu | (alu_op == `OR1200_ALUOP_MUL) | (|mac_op) ? 
-	   b : 32'h0000_0000;
-`else
-assign x = alu_op_div & a[31] ? ~a + 32'b1 : a;
-assign y = alu_op_div & b[31] ? ~b + 32'b1 : b;
-`endif
-`ifdef OR1200_DIV_IMPLEMENTED
-assign alu_op_div = (alu_op == `OR1200_ALUOP_DIV);
-assign alu_op_div_divu = alu_op_div | (alu_op == `OR1200_ALUOP_DIVU);
-assign div_tmp = mul_prod_r[63:32] - y;
-`else
-assign alu_op_div = 1'b0;
-assign alu_op_div_divu = 1'b0;
-`endif
-
-`ifdef OR1200_MULT_IMPLEMENTED
-
-//
-// Select result of current ALU operation to be forwarded
-// to next instruction and to WB stage
-//
-always @*
-  casez(alu_op)	// synopsys parallel_case
- `ifdef OR1200_DIV_IMPLEMENTED
-    `OR1200_ALUOP_DIV: begin
-       result = a[31] ^ b[31] ? ~mul_prod_r[31:0] + 32'd1 : mul_prod_r[31:0];
-    end
-    `OR1200_ALUOP_DIVU,
+   reg [2*width-1:0] 			mul_prod_r;
+   wire 				alu_op_smul;   
+   wire 				alu_op_umul;   
+   wire 				alu_op_mul;      
+ `ifdef OR1200_MULT_SERIAL
+   reg [5:0] 				serial_mul_cnt;   
+   reg 					mul_free;   
  `endif
-    `OR1200_ALUOP_MUL: begin
-       result = mul_prod_r[31:0];
-    end
-    default:
- `ifdef OR1200_MAC_SHIFTBY
-      result = mac_r[`OR1200_MAC_SHIFTBY+31:`OR1200_MAC_SHIFTBY];
+`else
+   wire [2*width-1:0] 			mul_prod_r;
+`endif
+   wire [2*width-1:0] 			mul_prod;
+   wire 				mul_stall;
+   
+   wire [`OR1200_MACOP_WIDTH-1:0] 	mac_op;
+`ifdef OR1200_MAC_IMPLEMENTED
+   reg [`OR1200_MACOP_WIDTH-1:0] 	mac_op_r1;
+   reg [`OR1200_MACOP_WIDTH-1:0] 	mac_op_r2;
+   reg [`OR1200_MACOP_WIDTH-1:0] 	mac_op_r3;
+   reg 					mac_stall_r;
+   reg [63:0] 				mac_r;
+`else
+   wire [`OR1200_MACOP_WIDTH-1:0] 	mac_op_r1;
+   wire [`OR1200_MACOP_WIDTH-1:0] 	mac_op_r2;
+   wire [`OR1200_MACOP_WIDTH-1:0] 	mac_op_r3;
+   wire 				mac_stall_r;
+   wire [63:0] 				mac_r;
+`endif
+   wire [width-1:0] 			x;
+   wire [width-1:0] 			y;
+   wire 				spr_maclo_we;
+   wire 				spr_machi_we; 
+   wire 				alu_op_div;  
+   wire 				alu_op_udiv;
+   wire 				alu_op_sdiv;
+   reg 					div_free;
+   wire 			        div_stall;
+`ifdef OR1200_DIV_IMPLEMENTED
+ `ifdef OR1200_DIV_SERIAL
+   reg [2*width-1:0] 			div_quot_r;   
+   wire [width-1:0] 			div_tmp;
+   reg [5:0] 				div_cntr;
  `else
-      result = mac_r[31:0];
+   reg [width-1:0] 			div_quot_r;      
+   reg [width-1:0] 			div_quot_generic;   
+ `endif   
+`endif
+
+   //
+   // Combinatorial logic
+   //
+`ifdef OR1200_MULT_IMPLEMENTED
+   assign alu_op_smul = (alu_op == `OR1200_ALUOP_MUL);
+   assign alu_op_umul = (alu_op == `OR1200_ALUOP_MULU);
+   assign alu_op_mul = alu_op_smul | alu_op_umul;
+`endif   
+`ifdef OR1200_MAC_IMPLEMENTED
+   assign spr_maclo_we = spr_cs & spr_write & spr_addr[`OR1200_MAC_ADDR];
+   assign spr_machi_we = spr_cs & spr_write & !spr_addr[`OR1200_MAC_ADDR];
+   assign spr_dat_o = spr_addr[`OR1200_MAC_ADDR] ? mac_r[31:0] : mac_r[63:32];
+`else
+   assign spr_maclo_we = 1'b0;
+   assign spr_machi_we = 1'b0;
+   assign spr_dat_o = 32'h0000_0000;
+`endif
+`ifdef OR1200_DIV_IMPLEMENTED
+   assign alu_op_sdiv = (alu_op == `OR1200_ALUOP_DIV);
+   assign alu_op_udiv = (alu_op == `OR1200_ALUOP_DIVU);
+   assign alu_op_div = alu_op_sdiv | alu_op_udiv;   
+`else
+   assign alu_op_udiv = 1'b0;
+   assign alu_op_sdiv = 1'b0;
+   assign alu_op_div = 1'b0;   
+`endif
+
+   assign x = (alu_op_sdiv | alu_op_smul) & a[31] ? ~a + 32'b1 : 
+	      alu_op_div | alu_op_mul | (|mac_op) ? a : 32'd0;
+   assign y = (alu_op_sdiv | alu_op_smul) & b[31] ? ~b + 32'b1 : 
+	      alu_op_div | alu_op_mul | (|mac_op) ? b : 32'd0;
+
+   //
+   // Select result of current ALU operation to be forwarded
+   // to next instruction and to WB stage
+   //
+   always @*
+     casez(alu_op)	// synopsys parallel_case
+`ifdef OR1200_DIV_IMPLEMENTED
+       `OR1200_ALUOP_DIV: begin
+	  result = a[31] ^ b[31] ? ~div_quot_r[31:0] + 32'd1 : div_quot_r[31:0];
+       end
+       `OR1200_ALUOP_DIVU: begin
+	  result = div_quot_r[31:0];
+       end
+`endif
+`ifdef OR1200_MULT_IMPLEMENTED    
+       `OR1200_ALUOP_MUL: begin
+	  result = a[31] ^ b[31] ? ~mul_prod_r[31:0] + 32'd1 : mul_prod_r[31:0];
+       end
+	 `OR1200_ALUOP_MULU: begin
+	  result = mul_prod_r[31:0];
+       end
+`endif    
+       default:
+`ifdef OR1200_MAC_IMPLEMENTED      
+ `ifdef OR1200_MAC_SHIFTBY
+	 result = mac_r[`OR1200_MAC_SHIFTBY+31:`OR1200_MAC_SHIFTBY];
+ `else
+       result = mac_r[31:0];
  `endif
-  endcase
+`else
+       result = {width{1'b0}};    
+`endif    
+     endcase
+
+`ifdef OR1200_MULT_IMPLEMENTED
+ `ifdef OR1200_MULT_SERIAL
+
+   always @(`OR1200_RST_EVENT rst or posedge clk)
+     if (rst == `OR1200_RST_VALUE) begin
+	mul_prod_r <=  64'h0000_0000_0000_0000;
+	serial_mul_cnt <= 6'd0;
+	mul_free <= 1'b1;
+	
+     end
+     else if (|serial_mul_cnt) begin
+	serial_mul_cnt <= serial_mul_cnt - 6'd1;
+	if (mul_prod_r[0])
+	  mul_prod_r[(width*2)-1:width-1] <= mul_prod_r[(width*2)-1:width] + x;
+	else
+	  mul_prod_r[(width*2)-1:width-1] <= {1'b0,mul_prod_r[(width*2)-1:
+							      width]};
+	mul_prod_r[width-2:0] <= mul_prod_r[width-1:1];
+	
+     end
+     else if (alu_op_mul && mul_free) begin
+	mul_prod_r <= {32'd0, y};
+	mul_free <= 0;
+	serial_mul_cnt <= 6'b10_0000;
+     end
+     else if (!ex_freeze | mul_free) begin
+	mul_free <= 1'b1;	
+     end
+
+   assign mul_stall = (|serial_mul_cnt);
+   
+ `else
    
    //
    // Instantiation of the multiplier
    //
- `ifdef OR1200_ASIC_MULTP2_32X32
-or1200_amultp2_32x32 or1200_amultp2_32x32(
-	.X(x),
-	.Y(y),
-	.RST(rst),
-	.CLK(clk),
-	.P(mul_prod)
-);
-`else // OR1200_ASIC_MULTP2_32X32
-or1200_gmultp2_32x32 or1200_gmultp2_32x32(
-	.X(x),
-	.Y(y),
-	.RST(rst),
-	.CLK(clk),
-	.P(mul_prod)
-);
-`endif // OR1200_ASIC_MULTP2_32X32
+  `ifdef OR1200_ASIC_MULTP2_32X32
+   or1200_amultp2_32x32 or1200_amultp2_32x32(
+					     .X(x),
+					     .Y(y),
+					     .RST(rst),
+					     .CLK(clk),
+					     .P(mul_prod)
+					     );
+  `else // OR1200_ASIC_MULTP2_32X32
+   or1200_gmultp2_32x32 or1200_gmultp2_32x32(
+					     .X(x),
+					     .Y(y),
+					     .RST(rst),
+					     .CLK(clk),
+					     .P(mul_prod)
+					     );
+  `endif // OR1200_ASIC_MULTP2_32X32   
+   
+   //
+   // Registered output from the multiplier
+   //
+   always @(`OR1200_RST_EVENT rst or posedge clk)
+     if (rst == `OR1200_RST_VALUE) begin
+	mul_prod_r <=  64'h0000_0000_0000_0000;
+     end
+     else begin
+	mul_prod_r <=  mul_prod[63:0];
+     end
 
-//
-// Registered output from the multiplier and
-// an optional divider
-//
-always @(`OR1200_RST_EVENT rst or posedge clk)
-	if (rst == `OR1200_RST_VALUE) begin
-		mul_prod_r <=  64'h0000_0000_0000_0000;
-		div_free <=  1'b1;
-`ifdef OR1200_DIV_IMPLEMENTED
-		div_cntr <=  6'b00_0000;
-`endif
-	end
-`ifdef OR1200_DIV_IMPLEMENTED
-	else if (|div_cntr) begin
-		if (div_tmp[31])
-			mul_prod_r <=  {mul_prod_r[62:0], 1'b0};
-		else
-			mul_prod_r <=  {div_tmp[30:0], mul_prod_r[31:0], 1'b1};
-		div_cntr <=  div_cntr - 6'd1;
-	end
-	else if (alu_op_div_divu && div_free) begin
-		mul_prod_r <=  {31'b0, x[31:0], 1'b0};
-		div_cntr <=  6'b10_0000;
-		div_free <=  1'b0;
-	end
-`endif // OR1200_DIV_IMPLEMENTED
-	else if (div_free | !ex_freeze) begin
-		mul_prod_r <=  mul_prod[63:0];
-		div_free <=  1'b1;
-	end
-
+   assign mul_stall = 0;
+ `endif // !`ifdef OR1200_MULT_SERIAL   
+   
 `else // OR1200_MULT_IMPLEMENTED
-assign result = {width{1'b0}};
-assign mul_prod = {2*width{1'b0}};
-assign mul_prod_r = {2*width{1'b0}};
+   assign mul_prod = {2*width{1'b0}};
+   assign mul_prod_r = {2*width{1'b0}};
+   assign mul_stall = 0;   
 `endif // OR1200_MULT_IMPLEMENTED
 
 `ifdef OR1200_MAC_IMPLEMENTED
-// Signal to indicate when we should check for new MAC op
-reg ex_freeze_r;
+   // Signal to indicate when we should check for new MAC op
+   reg ex_freeze_r;
    
-always @(posedge clk or `OR1200_RST_EVENT rst)
-  if (rst == `OR1200_RST_VALUE)
-    ex_freeze_r <= 1'b1;
-  else
-    ex_freeze_r <= ex_freeze;
+   always @(posedge clk or `OR1200_RST_EVENT rst)
+     if (rst == `OR1200_RST_VALUE)
+       ex_freeze_r <= 1'b1;
+     else
+       ex_freeze_r <= ex_freeze;
    
-//
-// Propagation of l.mac opcode, only register it for one cycle
-//
-always @(posedge clk or `OR1200_RST_EVENT rst)
-	if (rst == `OR1200_RST_VALUE)
-		mac_op_r1 <=  `OR1200_MACOP_WIDTH'b0;
-	else
-		mac_op_r1 <=  !ex_freeze_r ? mac_op : `OR1200_MACOP_WIDTH'b0;
+   //
+   // Propagation of l.mac opcode, only register it for one cycle
+   //
+   always @(posedge clk or `OR1200_RST_EVENT rst)
+     if (rst == `OR1200_RST_VALUE)
+       mac_op_r1 <=  `OR1200_MACOP_WIDTH'b0;
+     else
+       mac_op_r1 <=  !ex_freeze_r ? mac_op : `OR1200_MACOP_WIDTH'b0;
 
-//
-// Propagation of l.mac opcode
-//
-always @(posedge clk or `OR1200_RST_EVENT rst)
-	if (rst == `OR1200_RST_VALUE)
-		mac_op_r2 <=  `OR1200_MACOP_WIDTH'b0;
-	else
-		mac_op_r2 <=  mac_op_r1;
+   //
+   // Propagation of l.mac opcode
+   //
+   always @(posedge clk or `OR1200_RST_EVENT rst)
+     if (rst == `OR1200_RST_VALUE)
+       mac_op_r2 <=  `OR1200_MACOP_WIDTH'b0;
+     else
+       mac_op_r2 <=  mac_op_r1;
 
-//
-// Propagation of l.mac opcode
-//
-always @(posedge clk or `OR1200_RST_EVENT rst)
-	if (rst == `OR1200_RST_VALUE)
-		mac_op_r3 <=  `OR1200_MACOP_WIDTH'b0;
-	else
-		mac_op_r3 <=  mac_op_r2;
+   //
+   // Propagation of l.mac opcode
+   //
+   always @(posedge clk or `OR1200_RST_EVENT rst)
+     if (rst == `OR1200_RST_VALUE)
+       mac_op_r3 <=  `OR1200_MACOP_WIDTH'b0;
+     else
+       mac_op_r3 <=  mac_op_r2;
 
-//
-// Implementation of MAC
-//
-always @(`OR1200_RST_EVENT rst or posedge clk)
-	if (rst == `OR1200_RST_VALUE)
-		mac_r <=  64'h0000_0000_0000_0000;
-`ifdef OR1200_MAC_SPR_WE
-	else if (spr_maclo_we)
-		mac_r[31:0] <=  spr_dat_i;
-	else if (spr_machi_we)
-		mac_r[63:32] <=  spr_dat_i;
-`endif
-	else if (mac_op_r3 == `OR1200_MACOP_MAC)
-		mac_r <=  mac_r + mul_prod_r;
-	else if (mac_op_r3 == `OR1200_MACOP_MSB)
-		mac_r <=  mac_r - mul_prod_r;
-	else if (macrc_op && !ex_freeze)
-		mac_r <=  64'h0000_0000_0000_0000;
+   //
+   // Implementation of MAC
+   //
+   always @(`OR1200_RST_EVENT rst or posedge clk)
+     if (rst == `OR1200_RST_VALUE)
+       mac_r <=  64'h0000_0000_0000_0000;
+ `ifdef OR1200_MAC_SPR_WE
+     else if (spr_maclo_we)
+       mac_r[31:0] <=  spr_dat_i;
+     else if (spr_machi_we)
+       mac_r[63:32] <=  spr_dat_i;
+ `endif
+     else if (mac_op_r3 == `OR1200_MACOP_MAC)
+       mac_r <=  mac_r + mul_prod_r;
+     else if (mac_op_r3 == `OR1200_MACOP_MSB)
+       mac_r <=  mac_r - mul_prod_r;
+     else if (macrc_op && !ex_freeze)
+       mac_r <=  64'h0000_0000_0000_0000;
 
-//
-// Stall CPU if l.macrc is in ID and MAC still has to process l.mac instructions
-// in EX stage (e.g. inside multiplier)
-// This stall signal is also used by the divider.
-//
-always @(`OR1200_RST_EVENT rst or posedge clk)
-	if (rst == `OR1200_RST_VALUE)
-		mac_stall_r <=  1'b0;
-	else
-		mac_stall_r <=  (|mac_op | (|mac_op_r1) | (|mac_op_r2)) & (id_macrc_op | mac_stall_r)
-`ifdef OR1200_DIV_IMPLEMENTED
-				| (|div_cntr)
-`endif
-				;
+   //
+   // Stall CPU if l.macrc is in ID and MAC still has to process l.mac 
+   // instructions in EX stage (e.g. inside multiplier)
+   // This stall signal is also used by the divider.
+   //
+   always @(`OR1200_RST_EVENT rst or posedge clk)
+     if (rst == `OR1200_RST_VALUE)
+       mac_stall_r <=  1'b0;
+     else
+       mac_stall_r <=  (|mac_op | (|mac_op_r1) | (|mac_op_r2)) & 
+		       (id_macrc_op | mac_stall_r);
 `else // OR1200_MAC_IMPLEMENTED
-assign mac_stall_r = 1'b0;
-assign mac_r = {2*width{1'b0}};
-assign mac_op_r1 = `OR1200_MACOP_WIDTH'b0;
-assign mac_op_r2 = `OR1200_MACOP_WIDTH'b0;
-assign mac_op_r3 = `OR1200_MACOP_WIDTH'b0;
+   assign mac_stall_r = 1'b0;
+   assign mac_r = {2*width{1'b0}};
+   assign mac_op_r1 = `OR1200_MACOP_WIDTH'b0;
+   assign mac_op_r2 = `OR1200_MACOP_WIDTH'b0;
+   assign mac_op_r3 = `OR1200_MACOP_WIDTH'b0;
 `endif // OR1200_MAC_IMPLEMENTED
 
+`ifdef OR1200_DIV_IMPLEMENTED   
+   
+   //
+   // Serial division
+   //
+ `ifdef OR1200_DIV_SERIAL
+   assign div_tmp = div_quot_r[63:32] - y;   
+   always @(`OR1200_RST_EVENT rst or posedge clk)
+     if (rst == `OR1200_RST_VALUE) begin
+	div_quot_r <=  64'h0000_0000_0000_0000;
+	div_free <=  1'b1;
+	div_cntr <=  6'b00_0000;
+     end
+     else if (|div_cntr) begin
+	if (div_tmp[31])
+	  div_quot_r <=  {div_quot_r[62:0], 1'b0};
+	else
+	  div_quot_r <=  {div_tmp[30:0], div_quot_r[31:0], 1'b1};
+	div_cntr <=  div_cntr - 6'd1;
+     end
+     else if (alu_op_div && div_free) begin
+	div_quot_r <=  {31'b0, x[31:0], 1'b0};
+	div_cntr <=  6'b10_0000;
+	div_free <=  1'b0;
+     end
+     else if (div_free | !ex_freeze) begin
+	//div_quot_r <=  div_quot[63:0];
+	div_free <=  1'b1;
+     end
+
+   assign div_stall = (|div_cntr);
+
+
+ `else // !`ifdef OR1200_DIV_SERIAL
+
+   // Full divider
+   // TODO: Perhaps provide module that can be technology dependent.
+   always @(`OR1200_RST_EVENT rst or posedge clk) begin     
+      if (rst == `OR1200_RST_VALUE) begin
+	 div_quot_r <=  32'd0;	   
+	 div_quot_generic <= 32'd0;	   
+      end
+      else begin
+	 if (alu_op_udiv & !(|y)) // unsigned divide by 0 - force to MAX
+	   div_quot_generic[31:0] <= 32'hffff_ffff;	   
+	 else if (alu_op_div)
+	   div_quot_generic[31:0] <= x / y;
+      end
+
+      // Add any additional statges of pipelining as required here. Ensure
+      // ends with div_quot_r.
+      // Then add logic to ensure div_stall stays high for as long as the
+      // division should take.      
+      
+      div_quot_r[31:0] <= div_quot_generic;
+
+   end     
+   
+   assign div_stall = 0;
+   
+ `endif   
+
+`else // !`ifdef OR1200_DIV_IMPLEMENTED
+
+   assign div_stall = 0;
+
+`endif // !`ifdef OR1200_DIV_IMPLEMENTED
+   
+   
+   //   
+   // Stall output
+   //
+   assign mult_mac_stall = mac_stall_r | div_stall | mul_stall;
+   
 endmodule

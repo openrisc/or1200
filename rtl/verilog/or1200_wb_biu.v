@@ -79,7 +79,10 @@ module or1200_wb_biu(
 
    parameter dw = `OR1200_OPERAND_WIDTH;
    parameter aw = `OR1200_OPERAND_WIDTH;
-
+   parameter bl = 4; /* Can currently be either 4 or 8 - the two optional line
+		      sizes for the OR1200. */
+		      
+   
    //
    // RISC clock, reset and clock control
    //
@@ -153,7 +156,7 @@ module or1200_wb_biu(
    assign retry_cnt = 1'b0;
 `endif
 `ifdef OR1200_WB_B3
-   reg [1:0] 				burst_len;	// burst counter
+   reg [3:0] 				burst_len;	// burst counter
 `endif
 
    reg  				biu_stb_reg;	// WB strobe
@@ -197,14 +200,14 @@ module or1200_wb_biu(
    // 
    always @(posedge wb_clk_i or `OR1200_RST_EVENT wb_rst_i) begin
       if (wb_rst_i == `OR1200_RST_VALUE) begin
-	 burst_len <=  2'h0;
+	 burst_len <= 0;
       end
       else begin
 	 // burst counter
 	 if (wb_fsm_state_cur == wb_fsm_idle)
-	   burst_len <=  2'h2;
+	   burst_len <=  bl[3:0] - 2;
 	 else if (wb_stb_o & wb_ack)
-	   burst_len <=  burst_len - 1'b1;
+	   burst_len <=  burst_len - 1;
       end
    end
 
@@ -232,15 +235,11 @@ module or1200_wb_biu(
 			!(wb_ack & wb_cti_o == 3'b111);
 	   
 	   wb_stb_nxt = !wb_stb_o | !wb_err_i & !wb_rty_i & !wb_ack | 
-			!wb_err_i & !wb_rty_i & wb_cti_o == 3'b010 /*& !wb_we_o -- Removed to add burst write, JPB*/;
-	   
+			!wb_err_i & !wb_rty_i & wb_cti_o == 3'b010 ;
 	   wb_cti_nxt[2] = wb_stb_o & wb_ack & burst_len == 'h0 | wb_cti_o[2];
 	   wb_cti_nxt[1] = 1'b1  ;
 	   wb_cti_nxt[0] = wb_stb_o & wb_ack & burst_len == 'h0 | wb_cti_o[0];
-	   
-	   //if ((!biu_cyc_i | !biu_stb | !biu_cab_i) & wb_cti_o == 3'b010  | 
-	   //     biu_sel_i != wb_sel_o | biu_we_i != wb_we_o)
-	   
+
 	   if ((!biu_cyc_i | !biu_stb | !biu_cab_i | biu_sel_i != wb_sel_o | 
 		biu_we_i != wb_we_o) & wb_cti_o == 3'b010)
 	     wb_fsm_state_nxt = wb_fsm_last;
@@ -282,7 +281,7 @@ module or1200_wb_biu(
 	 wb_cyc_o	<=  1'b0;
 	 wb_stb_o	<=  1'b0;
 	 wb_cti_o	<=  3'b111;
-	 wb_bte_o	<=  2'b01;	// 4-beat wrap burst = constant
+	 wb_bte_o	<=  (bl==8) ? 2'b10 : (bl==4) ? 2'b01 : 2'b00;
 `ifdef OR1200_WB_CAB
 	 wb_cab_o	<=  1'b0;
 `endif
@@ -295,13 +294,15 @@ module or1200_wb_biu(
       end
       else begin
 	 wb_cyc_o	<=  wb_cyc_nxt;
-	 //		wb_stb_o	<=  wb_stb_nxt;
+
          if (wb_ack & wb_cti_o == 3'b111) 
            wb_stb_o        <=  1'b0;
          else
            wb_stb_o        <=  wb_stb_nxt;
+`ifndef OR1200_NO_BURSTS
 	 wb_cti_o	<=  wb_cti_nxt;
-	 wb_bte_o	<=  2'b01;	// 4-beat wrap burst = constant
+`endif	 
+	 wb_bte_o	<=  (bl==8) ? 2'b10 : (bl==4) ? 2'b01 : 2'b00;
 `ifdef OR1200_WB_CAB
 	 wb_cab_o	<=  biu_cab_i;
 `endif
@@ -315,7 +316,12 @@ module or1200_wb_biu(
 	    wb_adr_o	<=  biu_adr_i;
 	 end 
 	 else if (wb_stb_o & wb_ack) begin
-	    wb_adr_o[3:2]	<=  wb_adr_o[3:2] + 1'b1;
+	    if (bl==4) begin
+	       wb_adr_o[3:2]	<=  wb_adr_o[3:2] + 1;
+	    end
+	    if (bl==8) begin
+	       wb_adr_o[4:2]	<=  wb_adr_o[4:2] + 1;
+	    end
 	 end
 `ifdef OR1200_NO_DC	 
 	 // dat - write data changed after avery subsequent write access

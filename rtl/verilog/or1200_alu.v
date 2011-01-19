@@ -195,9 +195,6 @@ always @(alu_op or alu_op2 or a or b or result_sum or result_and or macrc_op
 		`OR1200_ALUOP_OR  : begin
 				result = a | b;
 		end
-		`OR1200_ALUOP_IMM : begin
-				result = b;
-		end
 		`OR1200_ALUOP_MOVHI : begin
 				if (macrc_op) begin
 					result = mult_mac_result;
@@ -211,7 +208,8 @@ always @(alu_op or alu_op2 or a or b or result_sum or result_and or macrc_op
 		`OR1200_ALUOP_DIV,
 		`OR1200_ALUOP_DIVU,
 `endif
-		`OR1200_ALUOP_MUL : begin
+		`OR1200_ALUOP_MUL,
+		`OR1200_ALUOP_MULU : begin
 				result = mult_mac_result;
 		end
 `endif

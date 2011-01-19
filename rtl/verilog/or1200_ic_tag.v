@@ -48,43 +48,6 @@
 // Minor update: 
 // Coding style changed.
 //
-// Revision 1.7  2004/06/08 18:17:36  lampret
-// Non-functional changes. Coding style fixes.
-//
-// Revision 1.6  2004/04/08 11:00:46  simont
-// Add support for 512B instruction cache.
-//
-// Revision 1.5  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.3.4.1  2003/12/09 11:46:48  simons
-// Mbist nameing changed, Artisan ram instance signal names fixed, some synthesis waning fixed.
-//
-// Revision 1.3  2002/10/24 22:19:04  mohor
-// Signal scanb_eni renamed to scanb_en
-//
-// Revision 1.2  2002/10/17 20:04:40  lampret
-// Added BIST scan. Special VS RAMs need to be used to implement BIST.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.8  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.7  2001/10/14 13:12:09  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:36  igorm
-// no message
-//
-// Revision 1.2  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-// Revision 1.1  2001/07/20 00:46:03  lampret
-// Development version of RTL. Libraries are missing.
-//
-//
 
 // synopsys translate_off
 `include "timescale.v"
@@ -152,30 +115,11 @@ assign mbist_so_o = mbist_si_i;
 //
 // Instantiation of TAG RAM block
 //
-`ifdef OR1200_IC_1W_512B
-//or1200_spram_32x24 ic_tag0(
    or1200_spram #
      (
-      .aw(5),
-      .dw(24)
+      .aw(`OR1200_ICTAG),
+      .dw(`OR1200_ICTAG_W)
       )
-`endif
-`ifdef OR1200_IC_1W_4KB
-//or1200_spram_256x21 ic_tag0(
-   or1200_spram #
-     (
-      .aw(8),
-      .dw(21)
-      )
-`endif
-`ifdef OR1200_IC_1W_8KB
-//or1200_spram_512x20 ic_tag0(
-   or1200_spram #
-     (
-      .aw(9),
-      .dw(20)
-      )
-`endif
    ic_tag0
      (
 `ifdef OR1200_BIST

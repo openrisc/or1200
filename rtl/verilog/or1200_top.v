@@ -432,7 +432,9 @@ wire  [3:0] dcqmem_tag_qmem;
 //
 // Instantiation of Instruction WISHBONE BIU
 //
-or1200_wb_biu iwb_biu(
+or1200_wb_biu
+  #(.bl((1 << (`OR1200_ICLS-2))))
+  iwb_biu(
 	// RISC clk, rst and clock control
 	.clk(clk_i),
 	.rst(rst_i),
@@ -476,7 +478,9 @@ assign icbiu_adr_ic_word = {icbiu_adr_ic[31:2], 2'h0};
 //
 // Instantiation of Data WISHBONE BIU
 //
-or1200_wb_biu dwb_biu(
+or1200_wb_biu
+  #(.bl((1 << (`OR1200_DCLS-2))))
+  dwb_biu(
 	// RISC clk, rst and clock control
 	.clk(clk_i),
 	.rst(rst_i),

@@ -3,7 +3,7 @@
 ////  OR1200's Instruction MMU top level                          ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
-////  http://www.opencores.org/cores/or1k/                        ////
+////  http://www.opencores.org/project,or1k                       ////
 ////                                                              ////
 ////  Description                                                 ////
 ////  Instantiation of all IMMU blocks.                           ////
@@ -40,81 +40,6 @@
 //// from http://www.opencores.org/lgpl.shtml                     ////
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
-//
-// CVS Revision History
-//
-// $Log: or1200_immu_top.v,v $
-// Revision 2.0  2010/06/30 11:00:00  ORSoC
-// Major update: 
-// Structure reordered and bugs fixed. 
-//
-// Revision 1.15  2004/06/08 18:17:36  lampret
-// Non-functional changes. Coding style fixes.
-//
-// Revision 1.14  2004/04/05 08:29:57  lampret
-// Merged branch_qmem into main tree.
-//
-// Revision 1.12.4.2  2003/12/09 11:46:48  simons
-// Mbist nameing changed, Artisan ram instance signal names fixed, some synthesis waning fixed.
-//
-// Revision 1.12.4.1  2003/07/08 15:36:37  lampret
-// Added embedded memory QMEM.
-//
-// Revision 1.12  2003/06/06 02:54:47  lampret
-// When OR1200_NO_IMMU and OR1200_NO_IC are not both defined or undefined at the same time, results in a IC bug. Fixed.
-//
-// Revision 1.11  2002/10/17 20:04:40  lampret
-// Added BIST scan. Special VS RAMs need to be used to implement BIST.
-//
-// Revision 1.10  2002/09/16 03:08:56  lampret
-// Disabled cache inhibit atttribute.
-//
-// Revision 1.9  2002/08/18 19:54:17  lampret
-// Added store buffer.
-//
-// Revision 1.8  2002/08/14 06:23:50  lampret
-// Disabled ITLB translation when 1) doing access to ITLB SPRs or 2) crossing page. This modification was tested only with parts of IMMU test - remaining test cases needs to be run.
-//
-// Revision 1.7  2002/08/12 05:31:30  lampret
-// Delayed external access at page crossing.
-//
-// Revision 1.6  2002/03/29 15:16:56  lampret
-// Some of the warnings fixed.
-//
-// Revision 1.5  2002/02/11 04:33:17  lampret
-// Speed optimizations (removed duplicate _cyc_ and _stb_). Fixed D/IMMU cache-inhibit attr.
-//
-// Revision 1.4  2002/02/01 19:56:54  lampret
-// Fixed combinational loops.
-//
-// Revision 1.3  2002/01/28 01:16:00  lampret
-// Changed 'void' nop-ops instead of insn[0] to use insn[16]. Debug unit stalls the tick timer. Prepared new flag generation for add and and insns. Blocked DC/IC while they are turned off. Fixed I/D MMU SPRs layout except WAYs. TODO: smart IC invalidate, l.j 2 and TLB ways.
-//
-// Revision 1.2  2002/01/14 06:18:22  lampret
-// Fixed mem2reg bug in FAST implementation. Updated debug unit to work with new genpc/if.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.6  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.5  2001/10/14 13:12:09  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:36  igorm
-// no message
-//
-// Revision 1.1  2001/08/17 08:03:35  lampret
-// *** empty log message ***
-//
-// Revision 1.2  2001/07/22 03:31:53  lampret
-// Fixed RAM's oen bug. Cache bypass under development.
-//
-// Revision 1.1  2001/07/20 00:46:03  lampret
-// Development version of RTL. Libraries are missing.
-//
-//
 
 // synopsys translate_off
 `include "timescale.v"
@@ -254,27 +179,35 @@ reg				dis_spr_access_scnd_clk;
 always @(`OR1200_RST_EVENT rst or posedge clk)
 	// default value 
 	if (rst == `OR1200_RST_VALUE) begin
+	        // select async. value due to reset state
 		icpu_adr_default <=  32'h0000_0100;
-		icpu_adr_select  <=  1'b1;		// select async. value due to reset state
+		icpu_adr_select  <=  1'b1;		
 	end
-	// selected value (different from default) is written into FF after reset state
+	// selected value (different from default) is written 
+        // into FF after reset state
 	else if (icpu_adr_select) begin
-		icpu_adr_default <=  icpu_adr_boot;	// dynamic value can only be assigned to FF out of reset! 
-		icpu_adr_select  <=  1'b0;		// select FF value 
+	        // dynamic value can only be assigned to FF out of reset!
+		icpu_adr_default <=  icpu_adr_boot;
+	        // select FF value 
+		icpu_adr_select  <=  1'b0;
 	end
 	else begin
 		icpu_adr_default <=  icpu_adr_i;
 	end
 
-// select async. value for boot address after reset - PC jumps to the address selected after boot! 
-//assign icpu_adr_boot = {(boot_adr_sel_i ? `OR1200_EXCEPT_EPH1_P : `OR1200_EXCEPT_EPH0_P), 12'h100} ;
+// select async. value for boot address after reset - PC jumps to the address 
+// selected after boot! 
+   //assign icpu_adr_boot = {(boot_adr_sel_i ? `OR1200_EXCEPT_EPH1_P : 
+   // `OR1200_EXCEPT_EPH0_P), 12'h100} ;
    assign icpu_adr_boot = `OR1200_BOOT_ADR; // jb
 
 always @(icpu_adr_boot or icpu_adr_default or icpu_adr_select)
 	if (icpu_adr_select)
-		icpu_adr_o = icpu_adr_boot ;		// async. value is selected due to reset state 
+	        // async. value is selected due to reset state 
+		icpu_adr_o = icpu_adr_boot ;
 	else
-		icpu_adr_o = icpu_adr_default ;		// FF value is selected 2nd clock after reset state 
+	        // FF value is selected 2nd clock after reset state 
+		icpu_adr_o = icpu_adr_default ;		
 `else
 Unsupported !!!
 `endif

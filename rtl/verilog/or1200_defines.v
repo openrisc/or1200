@@ -163,8 +163,12 @@
 //`define OR1200_IC_1W_512B
 //`define OR1200_IC_1W_4KB
 `define OR1200_IC_1W_8KB
+//`define OR1200_IC_1W_16KB
+//`define OR1200_IC_1W_32KB
 //`define OR1200_DC_1W_4KB
 `define OR1200_DC_1W_8KB
+//`define OR1200_DC_1W_16KB
+//`define OR1200_DC_1W_32KB
 
 `endif
 
@@ -360,38 +364,37 @@
 // Implement multiply-and-accumulate
 //
 // By default MAC is implemented. To
-// implement MAC, multiplier needs to be
+// implement MAC, multiplier (non-serial) needs to be
 // implemented.
 //
-`define OR1200_MAC_IMPLEMENTED
+//`define OR1200_MAC_IMPLEMENTED
 
 //
 // Implement optional l.div/l.divu instructions
 //
 // By default divide instructions are not implemented
-// to save area and increase clock frequency. or32 C/C++
-// compiler can use soft library for division.
+// to save area.
 //
-// To implement divide, both multiplier and MAC needs to be implemented.
 //
 `define OR1200_DIV_IMPLEMENTED
 
 //
-// Low power, slower multiplier
+// Serial multiplier.
 //
-// Select between low-power (larger) multiplier
-// and faster multiplier. The actual difference
-// is only AND logic that prevents distribution
-// of operands into the multiplier when instruction
-// in execution is not multiply instruction
+//`define OR1200_MULT_SERIAL
+
 //
-//`define OR1200_LOWPWR_MULT
+// Serial divider.
+// Uncomment to use a serial divider, otherwise will
+// be a generic parallel implementation.
+//
+`define OR1200_DIV_SERIAL
 
 //
 // Implement HW Single Precision FPU
 //
 //`define OR1200_FPU_IMPLEMENTED
-//
+
 
 //
 // Clock ratio RISC clock versus WB clock
@@ -464,8 +467,8 @@
 `define OR1200_ALUOP_SHROT	4'd8
 `define OR1200_ALUOP_DIV	4'd9
 `define OR1200_ALUOP_DIVU	4'd10
-/* Order not specifically defined. */
-`define OR1200_ALUOP_IMM	4'd11
+`define OR1200_ALUOP_MULU	4'd11
+/* Values sent to ALU from decode unit - not strictly defined by ISA */
 `define OR1200_ALUOP_MOVHI	4'd12
 `define OR1200_ALUOP_COMP	4'd13
 `define OR1200_ALUOP_MTSR	4'd14
@@ -1025,7 +1028,7 @@
 `define OR1200_PIC_IMPLEMENTED
 
 // Define number of interrupt inputs (2-31)
-`define OR1200_PIC_INTS 31
+`define OR1200_PIC_INTS 20
 
 // Address offsets of PIC registers inside PIC group
 `define OR1200_PIC_OFS_PICMR 2'd0
@@ -1220,19 +1223,23 @@
 // Insn cache (IC)
 //
 
-// 3 for 8 bytes, 4 for 16 bytes etc
-`define OR1200_ICLS		4
+// 4 for 16 byte line, 5 for 32 byte lines.
+`ifdef OR1200_IC_1W_32KB
+ `define OR1200_ICLS		5
+`else
+ `define OR1200_ICLS		4
+`endif
 
 //
 // IC configurations
 //
 `ifdef OR1200_IC_1W_512B
-`define OR1200_ICSIZE   9     // 512
-`define OR1200_ICINDX   `OR1200_ICSIZE-2 // 7
-`define OR1200_ICINDXH  `OR1200_ICSIZE-1 // 8
-`define OR1200_ICTAGL   `OR1200_ICINDXH+1 // 9
-`define OR1200_ICTAG    `OR1200_ICSIZE-`OR1200_ICLS // 5
-`define OR1200_ICTAG_W  24
+`define OR1200_ICSIZE                   9                       // 512
+`define OR1200_ICINDX                   `OR1200_ICSIZE-2        // 7
+`define OR1200_ICINDXH                  `OR1200_ICSIZE-1        // 8
+`define OR1200_ICTAGL                   `OR1200_ICINDXH+1       // 9
+`define OR1200_ICTAG                    `OR1200_ICSIZE-`OR1200_ICLS // 5
+`define OR1200_ICTAG_W                  24
 `endif
 `ifdef OR1200_IC_1W_4KB
 `define OR1200_ICSIZE			12			// 4096
@@ -1250,6 +1257,22 @@
 `define	OR1200_ICTAG			`OR1200_ICSIZE-`OR1200_ICLS	// 9
 `define	OR1200_ICTAG_W			20
 `endif
+`ifdef OR1200_IC_1W_16KB
+`define OR1200_ICSIZE			14			// 16384
+`define OR1200_ICINDX			`OR1200_ICSIZE-2	// 12
+`define OR1200_ICINDXH			`OR1200_ICSIZE-1	// 13
+`define OR1200_ICTAGL			`OR1200_ICINDXH+1	// 14
+`define	OR1200_ICTAG			`OR1200_ICSIZE-`OR1200_ICLS	// 10
+`define	OR1200_ICTAG_W			19
+`endif
+`ifdef OR1200_IC_1W_32KB
+`define OR1200_ICSIZE			15			// 32768
+`define OR1200_ICINDX			`OR1200_ICSIZE-2	// 13
+`define OR1200_ICINDXH			`OR1200_ICSIZE-1	// 14
+`define OR1200_ICTAGL			`OR1200_ICINDXH+1	// 14
+`define	OR1200_ICTAG			`OR1200_ICSIZE-`OR1200_ICLS	// 10
+`define	OR1200_ICTAG_W			18
+`endif
 
 
 /////////////////////////////////////////////////
@@ -1257,8 +1280,12 @@
 // Data cache (DC)
 //
 
-// 3 for 8 bytes, 4 for 16 bytes etc
-`define OR1200_DCLS		4
+// 4 for 16 bytes, 5 for 32 bytes
+`ifdef OR1200_DC_1W_32KB
+ `define OR1200_DCLS		5
+`else
+ `define OR1200_DCLS		4
+`endif
 
 // Define to enable default behavior of cache as write through
 // Turning this off enabled write back statergy
@@ -1297,6 +1324,22 @@
 `define OR1200_DCTAGL			`OR1200_DCINDXH+1	// 13
 `define	OR1200_DCTAG			`OR1200_DCSIZE-`OR1200_DCLS	// 9
 `define	OR1200_DCTAG_W			20
+`endif
+`ifdef OR1200_DC_1W_16KB
+`define OR1200_DCSIZE			14			// 16384
+`define OR1200_DCINDX			`OR1200_DCSIZE-2	// 12
+`define OR1200_DCINDXH			`OR1200_DCSIZE-1	// 13
+`define OR1200_DCTAGL			`OR1200_DCINDXH+1	// 14
+`define	OR1200_DCTAG			`OR1200_DCSIZE-`OR1200_DCLS	// 10
+`define	OR1200_DCTAG_W			19
+`endif
+`ifdef OR1200_DC_1W_32KB
+`define OR1200_DCSIZE			15			// 32768
+`define OR1200_DCINDX			`OR1200_DCSIZE-2	// 13
+`define OR1200_DCINDXH			`OR1200_DCSIZE-1	// 14
+`define OR1200_DCTAGL			`OR1200_DCINDXH+1	// 15
+`define	OR1200_DCTAG			`OR1200_DCSIZE-`OR1200_DCLS	// 10
+`define	OR1200_DCTAG_W			18
 `endif
 
 
@@ -1721,10 +1764,18 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 // Boot Address Selection                                                    //
-// This only changes where the initial reset occurs. EPH setting is still    //
-// used to determine where vectors are located.                              //
+//                                                                           //
+// Allows a definable boot address, potentially different to the usual reset //
+// vector to allow for power-on code to be run, if desired.                  //
+//                                                                           //
+// OR1200_BOOT_ADR should be the 32-bit address of the boot location         //
+// OR1200_BOOT_PCREG_DEFAULT should be ((OR1200_BOOT_ADR-4)>>2)              //
+//                                                                           //
+// For default reset behavior uncomment the settings under the "Boot 0x100"  //
+// comment below.                                                            //
+//                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
- // Boot from 0xf0000100
+// Boot from 0xf0000100
 //`define OR1200_BOOT_PCREG_DEFAULT 30'h3c00003f
 //`define OR1200_BOOT_ADR 32'hf0000100
 // Boot from 0x100

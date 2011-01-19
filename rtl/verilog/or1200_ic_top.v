@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////
 ////                                                              ////
-////  OR1200's Data Cache top level                               ////
+////  OR1200's Instruction Cache top level                        ////
 ////                                                              ////
 ////  This file is part of the OpenRISC 1200 project              ////
 ////  http://opencores.org/project,or1k                           ////
@@ -51,20 +51,19 @@
 `include "or1200_defines.v"
 
 //
-// Data cache
+// Instruction cache top
 //
 module or1200_ic_top(
 	// Rst, clk and clock control
 	clk, rst,
 
 	// External i/f
-	icbiu_dat_o, icbiu_adr_o, icbiu_cyc_o, icbiu_stb_o, icbiu_we_o, icbiu_sel_o, icbiu_cab_o,
-	icbiu_dat_i, icbiu_ack_i, icbiu_err_i,
+	icbiu_dat_o, icbiu_adr_o, icbiu_cyc_o, icbiu_stb_o, icbiu_we_o, 
+	icbiu_sel_o, icbiu_cab_o, icbiu_dat_i, icbiu_ack_i, icbiu_err_i,
 
 	// Internal i/f
 	ic_en,
-	icqmem_adr_i, icqmem_cycstb_i, icqmem_ci_i,
-	icqmem_sel_i, icqmem_tag_i,
+	icqmem_adr_i, icqmem_cycstb_i, icqmem_ci_i, icqmem_sel_i, icqmem_tag_i,
 	icqmem_dat_o, icqmem_ack_o, icqmem_rty_o, icqmem_err_o, icqmem_tag_o,
 
 `ifdef OR1200_BIST
@@ -145,7 +144,9 @@ wire	[3:0]			icram_we;
 wire				ictag_we;
 wire	[31:0]			ic_addr;
 wire				icfsm_biu_read;
+/* verilator lint_off UNOPTFLAT */    
 reg				tagcomp_miss;
+/* verilator lint_on UNOPTFLAT */    
 wire	[`OR1200_ICINDXH:`OR1200_ICLS]	ictag_addr;
 wire				ictag_en;
 wire				ictag_v; 
@@ -155,6 +156,8 @@ wire				icfsm_first_miss_ack;
 wire				icfsm_first_miss_err;
 wire				icfsm_burst;
 wire				icfsm_tag_we;
+reg 				ic_inv_q;
+   
 `ifdef OR1200_BIST
 //
 // RAM BIST
@@ -217,13 +220,24 @@ assign to_icram = icbiu_dat_i;
 assign icqmem_dat_o = icfsm_first_miss_ack | !ic_en ? icbiu_dat_i : from_icram;
 
 //
+// Detect falling edge of IC invalidate signal
+// 
+always @(posedge clk or `OR1200_RST_EVENT rst)
+   if (rst==`OR1200_RST_VALUE)
+     ic_inv_q <= 1'b0;
+   else
+     ic_inv_q <= ic_inv;
+   
+   
+//
 // Tag comparison
 //
+// During line invalidate, ensure it stays the same
 always @(tag or saved_addr or tag_v) begin
-	if ((tag != saved_addr[31:`OR1200_ICTAGL]) || !tag_v)
-		tagcomp_miss = 1'b1;
-	else
-		tagcomp_miss = 1'b0;
+	  if ((tag != saved_addr[31:`OR1200_ICTAGL]) | !tag_v)
+	    tagcomp_miss = 1'b1;
+	  else
+	    tagcomp_miss = 1'b0;
 end
 
 //

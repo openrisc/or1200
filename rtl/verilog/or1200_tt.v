@@ -41,49 +41,6 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 //
-// CVS Revision History
-//
-// $Log: or1200_tt.v,v $
-// Revision 2.0  2010/06/30 11:00:00  ORSoC
-// No update 
-//
-// Revision 1.5  2004/06/08 18:17:36  lampret
-// Non-functional changes. Coding style fixes.
-//
-// Revision 1.4  2002/03/29 15:16:56  lampret
-// Some of the warnings fixed.
-//
-// Revision 1.3  2002/02/12 01:33:47  lampret
-// No longer using async rst as sync reset for the counter.
-//
-// Revision 1.2  2002/01/28 01:16:00  lampret
-// Changed 'void' nop-ops instead of insn[0] to use insn[16]. Debug unit stalls the tick timer. Prepared new flag generation for add and and insns. Blocked DC/IC while they are turned off. Fixed I/D MMU SPRs layout except WAYs. TODO: smart IC invalidate, l.j 2 and TLB ways.
-//
-// Revision 1.1  2002/01/03 08:16:15  lampret
-// New prefixes for RTL files, prefixed module names. Updated cache controllers and MMUs.
-//
-// Revision 1.10  2001/11/13 10:00:49  lampret
-// Fixed tick timer interrupt reporting by using TTCR[IP] bit.
-//
-// Revision 1.9  2001/11/10 03:43:57  lampret
-// Fixed exceptions.
-//
-// Revision 1.8  2001/10/21 17:57:16  lampret
-// Removed params from generic_XX.v. Added translate_off/on in sprs.v and id.v. Removed spr_addr from dc.v and ic.v. Fixed CR+LF.
-//
-// Revision 1.7  2001/10/14 13:12:10  lampret
-// MP3 version.
-//
-// Revision 1.1.1.1  2001/10/06 10:18:35  igorm
-// no message
-//
-// Revision 1.2  2001/08/09 13:39:33  lampret
-// Major clean-up.
-//
-// Revision 1.1  2001/07/20 00:46:23  lampret
-// Development version of RTL. Libraries are missing.
-//
-//
 
 // synopsys translate_off
 `include "timescale.v"

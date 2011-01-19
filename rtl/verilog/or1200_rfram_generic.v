@@ -126,6 +126,7 @@ reg	[32*dw-1:0]		mem;
 reg	[dw-1:0]		do_a;
 reg	[dw-1:0]		do_b;
 
+`ifdef verilator
    // Function to access GPRs (for use by Verilator). No need to hide this one
    // from the simulator, since it has an input (as required by IEEE 1364-2001).
    function [31:0] get_gpr;
@@ -151,6 +152,51 @@ reg	[dw-1:0]		do_b;
       
    endfunction // get_gpr
 
+   // Function to access GPRs (for use by Verilator). No need to hide this one
+   // from the simulator, since it has an input (as required by IEEE 1364-2001).
+   function [31:0] set_gpr;
+      // verilator public
+      input [aw-1:0] 		gpr_no;
+      input [dw-1:0] 		value;
+
+      mem[gpr_no*32 + 31]   = value[31];
+      mem[gpr_no*32 + 30] = value[30];
+      mem[gpr_no*32 + 29]  = value[29];
+      mem[gpr_no*32 + 28] = value[28];
+      mem[gpr_no*32 + 27]  = value[27];
+      mem[gpr_no*32 + 26] = value[26];
+      mem[gpr_no*32 + 25]  = value[25];
+      mem[gpr_no*32 + 24] = value[24];
+      mem[gpr_no*32 + 23]  = value[23];
+      mem[gpr_no*32 + 22] = value[22];
+      mem[gpr_no*32 + 21]  = value[21];
+      mem[gpr_no*32 + 20] = value[20];
+      mem[gpr_no*32 + 19]  = value[19];
+      mem[gpr_no*32 + 18] = value[18];
+      mem[gpr_no*32 + 17]  = value[17];
+      mem[gpr_no*32 + 16] = value[16];
+      mem[gpr_no*32 + 15]  = value[15];
+      mem[gpr_no*32 + 14] = value[14];
+      mem[gpr_no*32 + 13]  = value[13];
+      mem[gpr_no*32 + 12] = value[12];
+      mem[gpr_no*32 + 11]  = value[11];
+      mem[gpr_no*32 + 10] = value[10];
+      mem[gpr_no*32 +  9]  = value[ 9];
+      mem[gpr_no*32 +  8] = value[ 8];
+      mem[gpr_no*32 +  7]  = value[ 7];
+      mem[gpr_no*32 +  6] = value[ 6];
+      mem[gpr_no*32 +  5]  = value[ 5];
+      mem[gpr_no*32 +  4] = value[ 4];
+      mem[gpr_no*32 +  3]  = value[ 3];
+      mem[gpr_no*32 +  2] = value[ 2];
+      mem[gpr_no*32 +  1]  = value[ 1];
+      mem[gpr_no*32 +  0] = value[ 0];
+
+      set_gpr = 0;
+      
+   endfunction // set_gpr
+`endif //  `ifdef verilator
+   
 //
 // Write port
 //

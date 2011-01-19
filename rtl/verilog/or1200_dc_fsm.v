@@ -125,7 +125,7 @@ module or1200_dc_fsm
    //
    reg [31:0] 				addr_r;
    reg [2:0] 				state;
-   reg [2:0] 				cnt;
+   reg [`OR1200_DCLS-1:0] 		cnt;
    reg 					hitmiss_eval;
    reg 					store;
    reg 					load;
@@ -150,7 +150,7 @@ module or1200_dc_fsm
    wire 				tagram_dirty_bit_set;   
    wire 				writethrough;
    wire 				cache_inhibit_with_eval;
-   wire [1:0] 				next_addr_word;
+   wire [(`OR1200_DCLS-1)-2:0]		next_addr_word;
 
    //
    // Cache inhibit
@@ -268,8 +268,9 @@ module or1200_dc_fsm
    //                        the line to memory. (1 selects DCRAM)
    assign biu_do_sel = (state == `OR1200_DCFSM_LOOP2) & store;
 
-   // 2-bit wire for calculating next word of burst write
-   assign next_addr_word = addr_r[3:2] + 1;
+   // 3-bit wire for calculating next word of burst write, depending on
+   // line size of data cache.
+   assign next_addr_word =  addr_r[`OR1200_DCLS-1:2] + 1;
    
    // Address to cache RAM (tag address also derived from this)   
    assign dc_addr =
@@ -285,7 +286,7 @@ module or1200_dc_fsm
 		    // to increment, but it's needed immediately for burst)
 		    // otherwise, output our registered address.
 		    (state==`OR1200_DCFSM_LOOP2 & biudata_valid & store ) ? 
-		    {addr_r[31:4], next_addr_word, 2'b00} : addr_r;
+		    {addr_r[31:`OR1200_DCLS], next_addr_word, 2'b00} : addr_r;
    
 `ifdef OR1200_DC_WRITETHROUGH
  `ifdef OR1200_DC_NOSTACKWRITETHROUGH   
@@ -342,9 +343,9 @@ module or1200_dc_fsm
    // tell from value of cnt), and we're loading a line to read from it (not
    // loading to write to it, in the case of a write without writethrough.)
    assign load_miss_ack =  ((state== `OR1200_DCFSM_LOOP2) & load &
-			     (cnt==`OR1200_DCLS-1) & biudata_valid & 
+			    (cnt==((1 << `OR1200_DCLS) - 4)) & biudata_valid & 
 			    !(dcqmem_we_i & !writethrough));
-
+   
    assign load_inhibit_ack = (state == `OR1200_DCFSM_CLOADSTORE) &
 			     load & cache_inhibit & biudata_valid;   
    
@@ -362,11 +363,11 @@ module or1200_dc_fsm
    always @(posedge clk or `OR1200_RST_EVENT rst) begin
       if (rst == `OR1200_RST_VALUE) begin
 	 state <=  `OR1200_DCFSM_IDLE;
-	 addr_r <=  32'b0;
+	 addr_r <=  32'd0;
 	 hitmiss_eval <=  1'b0;
 	 store <=  1'b0;
 	 load <=  1'b0;
-	 cnt <=  3'd0;
+	 cnt <=  `OR1200_DCLS'd0;
          cache_miss <=  1'b0;
 	 cache_dirty_needs_writeback <= 1'b0;
 	 cache_inhibit <=  1'b0;
@@ -430,7 +431,7 @@ module or1200_dc_fsm
 		  end // else: !if(dirty)
 		  state <= `OR1200_DCFSM_LOOP2;		  
 		  // Set the counter for the burst accesses
-		  cnt <=  `OR1200_DCLS-1;
+		  cnt <=  ((1 << `OR1200_DCLS) - 4);
 	       end
              else if (// Strobe goes low
 		      !dcqmem_cycstb_i |
@@ -453,11 +454,11 @@ module or1200_dc_fsm
                 state <=  `OR1200_DCFSM_IDLE;
                 load <=  1'b0;
 		store <= 1'b0;
-		cnt <= 3'd0;
+		cnt <= `OR1200_DCLS'd0;
              end
              if (biudata_valid & (|cnt)) begin
-                cnt <=  cnt - 3'd1;
-                addr_r[3:2] <=  addr_r[3:2] + 1'b1;
+                cnt <=  cnt - 4;
+                addr_r[`OR1200_DCLS-1:2] <=  addr_r[`OR1200_DCLS-1:2] + 1;
              end
 	     else if (biudata_valid & !(|cnt)) begin
 		state <= `OR1200_DCFSM_LOOP3;
@@ -478,7 +479,7 @@ module or1200_dc_fsm
 		// Just did store of the dirty line so now load new one
 		load <= 1'b1;
 		// Set the counter for the burst accesses
-		cnt <=  `OR1200_DCLS-1;
+		cnt <=  ((1 << `OR1200_DCLS) - 4);
 		// Address of line to be loaded
 		addr_r <=  lsu_addr;
 		cache_dirty_needs_writeback <= 1'b0;
@@ -526,7 +527,7 @@ module or1200_dc_fsm
 `endif
 		     state <= `OR1200_DCFSM_LOOP2;		  
 		     // Set the counter for the burst accesses
-		     cnt <=  `OR1200_DCLS-1;
+		     cnt <=  ((1 << `OR1200_DCLS) - 4);
 		  end
 		  else if (cache_spr_block_flush & !dirty)
 		    begin

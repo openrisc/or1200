@@ -312,7 +312,7 @@ wire				ex_macrc_op;
 wire	[`OR1200_MACOP_WIDTH-1:0] id_mac_op;
 wire	[`OR1200_MACOP_WIDTH-1:0] mac_op;
 wire	[31:0]			mult_mac_result;
-wire				mac_stall;
+wire				mult_mac_stall;
 wire	[13:0]			except_trig;
 wire	[13:0]			except_stop;
 wire				genpc_refetch;
@@ -644,7 +644,7 @@ or1200_mult_mac or1200_mult_mac(
 	.mac_op(mac_op),
 	.alu_op(alu_op),
 	.result(mult_mac_result),
-	.mac_stall_r(mac_stall),
+	.mult_mac_stall(mult_mac_stall),
 	.spr_cs(spr_cs[`OR1200_SPR_GROUP_MAC]),
 	.spr_write(spr_we),
 	.spr_addr(spr_addr),
@@ -785,7 +785,7 @@ or1200_freeze or1200_freeze(
 	.force_dslot_fetch(force_dslot_fetch),
 	.abort_ex(abort_ex),
 	.du_stall(du_stall),
-	.mac_stall(mac_stall),
+	.mac_stall(mult_mac_stall),
 	.saving_if_insn(saving_if_insn),
 	.genpc_freeze(genpc_freeze),
 	.if_freeze(if_freeze),
