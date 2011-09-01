@@ -222,7 +222,6 @@ wire	[dw-1:2]		id_branch_addrtarget;
 wire	[dw-1:2]		ex_branch_addrtarget;
 wire	[`OR1200_ALUOP_WIDTH-1:0]	alu_op;
 wire	[`OR1200_ALUOP2_WIDTH-1:0]	alu_op2;
-wire	[`OR1200_SHROTOP_WIDTH-1:0]	shrot_op;
 wire	[`OR1200_COMPOP_WIDTH-1:0]	comp_op;
 wire	[`OR1200_BRANCHOP_WIDTH-1:0]	pre_branch_op;
 wire	[`OR1200_BRANCHOP_WIDTH-1:0]	branch_op;
@@ -487,7 +486,6 @@ or1200_ctrl or1200_ctrl(
 	.alu_op(alu_op),
 	.alu_op2(alu_op2),			
 	.mac_op(mac_op),
-	.shrot_op(shrot_op),
 	.comp_op(comp_op),
 	.rf_addrw(rf_addrw),
 	.rfwb_op(rfwb_op),
@@ -585,7 +583,6 @@ or1200_alu or1200_alu(
 	.macrc_op(ex_macrc_op),
 	.alu_op(alu_op),
 	.alu_op2(alu_op2),		      
-	.shrot_op(shrot_op),
 	.comp_op(comp_op),
 	.cust5_op(cust5_op),
 	.cust5_limm(cust5_limm),

@@ -53,7 +53,7 @@
 
 module or1200_alu(
 	a, b, mult_mac_result, macrc_op,
-	alu_op, alu_op2, shrot_op, comp_op,
+	alu_op, alu_op2, comp_op,
 	cust5_op, cust5_limm,
 	result, flagforw, flag_we,
 	cyforw, cy_we, carry, flag
@@ -70,7 +70,6 @@ input	[width-1:0]		mult_mac_result;
 input				macrc_op;
 input	[`OR1200_ALUOP_WIDTH-1:0]	alu_op;
 input	[`OR1200_ALUOP2_WIDTH-1:0]	alu_op2;
-input	[`OR1200_SHROTOP_WIDTH-1:0]	shrot_op;
 input	[`OR1200_COMPOP_WIDTH-1:0]	comp_op;
 input	[4:0]			cust5_op;
 input	[5:0]			cust5_limm;
@@ -87,6 +86,7 @@ input         flag;
 //
 reg	[width-1:0]		result;
 reg	[width-1:0]		shifted_rotated;
+reg	[width-1:0]		extended;   
 reg	[width-1:0]		result_cust5;
 reg				flagforw;
 reg				flagcomp;
@@ -148,6 +148,9 @@ always @(alu_op or alu_op2 or a or b or result_sum or result_and or macrc_op
 `ifdef OR1200_IMPL_ADDC
          or result_csum
 `endif
+`ifdef OR1200_IMPL_ALU_EXT
+         or extended
+`endif	 
 ) begin
 `ifdef OR1200_CASE_DEFAULT
 	casez (alu_op)		// synopsys parallel_case
@@ -169,10 +172,13 @@ always @(alu_op or alu_op2 or a or b or result_sum or result_and or macrc_op
 		     end
 		   endcase // casez (alu_op2)
 		end // case: `OR1200_ALUOP_FFL1
-`endif	  
+`endif //  `ifdef OR1200_IMPL_ALU_FFL1
+`ifdef OR1200_IMPL_ALU_CUST5
+	  
 		`OR1200_ALUOP_CUST5 : begin 
 				result = result_cust5;
 		end
+`endif		     
 		`OR1200_ALUOP_SHROT : begin 
 				result = shifted_rotated;
 		end
@@ -195,6 +201,14 @@ always @(alu_op or alu_op2 or a or b or result_sum or result_and or macrc_op
 		`OR1200_ALUOP_OR  : begin
 				result = a | b;
 		end
+`ifdef OR1200_IMPL_ALU_EXT		     
+		`OR1200_ALUOP_EXTHB  : begin
+		                result = extended;
+		end
+		`OR1200_ALUOP_EXTW  : begin
+		                result = extended;
+		end		
+`endif     
 		`OR1200_ALUOP_MOVHI : begin
 				if (macrc_op) begin
 					result = mult_mac_result;
@@ -224,34 +238,6 @@ always @(alu_op or alu_op2 or a or b or result_sum or result_and or macrc_op
 `endif
 			result=result_and;
 		end 
-	endcase
-end
-
-//
-// l.cust5 custom instructions
-//
-// Examples for move byte, set bit and clear bit
-//
-always @(cust5_op or cust5_limm or a or b) begin
-	casez (cust5_op)		// synopsys parallel_case
-		5'h1 : begin 
-			casez (cust5_limm[1:0])
-				2'h0: result_cust5 = {a[31:8], b[7:0]};
-				2'h1: result_cust5 = {a[31:16], b[7:0], a[7:0]};
-				2'h2: result_cust5 = {a[31:24], b[7:0], a[15:0]};
-				2'h3: result_cust5 = {b[7:0], a[23:0]};
-			endcase
-		end
-		5'h2 :
-			result_cust5 = a | (1 << cust5_limm);
-		5'h3 :
-			result_cust5 = a & (32'hffffffff ^ (1 << cust5_limm));
-//
-// *** Put here new l.cust5 custom instructions ***
-//
-		default: begin
-			result_cust5 = a;
-		end
 	endcase
 end
 
@@ -333,19 +319,22 @@ end
 //
 // Shifts and rotation
 //
-always @(shrot_op or a or b) begin
-	case (shrot_op)		// synopsys parallel_case
-	`OR1200_SHROTOP_SLL :
+always @(alu_op2 or a or b) begin
+	case (alu_op2)		// synopsys parallel_case
+	  `OR1200_SHROTOP_SLL :
 				shifted_rotated = (a << b[4:0]);
-		`OR1200_SHROTOP_SRL :
+	  `OR1200_SHROTOP_SRL :
 				shifted_rotated = (a >> b[4:0]);
 
 `ifdef OR1200_IMPL_ALU_ROTATE
-		`OR1200_SHROTOP_ROR :
-				shifted_rotated = (a << (6'd32-{1'b0, b[4:0]})) | (a >> b[4:0]);
+	  `OR1200_SHROTOP_ROR :
+	                        shifted_rotated = (a << (6'd32-{1'b0,b[4:0]})) |
+						  (a >> b[4:0]);
 `endif
-		default:
-				shifted_rotated = ({32{a[31]}} << (6'd32-{1'b0, b[4:0]})) | a >> b[4:0];
+	  default:
+	                        shifted_rotated = ({32{a[31]}} << 
+						   (6'd32-{1'b0, b[4:0]})) | 
+						  a >> b[4:0];
 	endcase
 end
 
@@ -396,5 +385,48 @@ always @(comp_op or comp_a or comp_b) begin
 	endcase
 end
 `endif
+
+`ifdef OR1200_IMPL_ALU_EXT
+   always @(alu_op or alu_op2 or a) begin
+      casez (alu_op2)
+	`OR1200_EXTHBOP_HS : extended = {{16{a[15]}},a[15:0]};
+	`OR1200_EXTHBOP_BS : extended = {{24{a[7]}},a[7:0]};
+	`OR1200_EXTHBOP_HZ : extended = {16'd0,a[15:0]};
+	`OR1200_EXTHBOP_BZ : extended = {24'd0,a[7:0]};
+	default: extended = a; // Used for l.extw instructions
+      endcase // casez (alu_op2)
+   end
+`endif 
+	     
+
+//
+// l.cust5 custom instructions
+//
+`ifdef OR1200_IMPL_ALU_CUST5
+// Examples for move byte, set bit and clear bit
+//
+always @(cust5_op or cust5_limm or a or b) begin
+	casez (cust5_op)		// synopsys parallel_case
+		5'h1 : begin 
+			casez (cust5_limm[1:0])
+			  2'h0: result_cust5 = {a[31:8], b[7:0]};
+			  2'h1: result_cust5 = {a[31:16], b[7:0], a[7:0]};
+			  2'h2: result_cust5 = {a[31:24], b[7:0], a[15:0]};
+			  2'h3: result_cust5 = {b[7:0], a[23:0]};
+			endcase
+		end
+		5'h2 :
+			result_cust5 = a | (1 << cust5_limm);
+		5'h3 :
+			result_cust5 = a & (32'hffffffff ^ (1 << cust5_limm));
+//
+// *** Put here new l.cust5 custom instructions ***
+//
+		default: begin
+			result_cust5 = a;
+		end
+	endcase
+end // always @ (cust5_op or cust5_limm or a or b)
+`endif   
 
 endmodule

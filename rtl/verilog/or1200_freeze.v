@@ -130,11 +130,11 @@ assign genpc_freeze = (du_stall & !saving_if_insn) | flushpipe_r;
 assign if_freeze = id_freeze | extend_flush;
 
 assign id_freeze = (lsu_stall | (~lsu_unstall & if_stall) | multicycle_freeze 
-		    | (|waiting_on) | force_dslot_fetch) | du_stall | mac_stall;
+		    | (|waiting_on) | force_dslot_fetch) | du_stall;
 assign ex_freeze = wb_freeze;
 
 assign wb_freeze = (lsu_stall | (~lsu_unstall & if_stall) | multicycle_freeze 
-		    | (|waiting_on)) | du_stall | mac_stall | abort_ex;
+		    | (|waiting_on)) | du_stall | abort_ex;
 
 //
 // registered flushpipe
@@ -171,6 +171,8 @@ always @(posedge clk or `OR1200_RST_EVENT rst)
 always @(posedge clk or `OR1200_RST_EVENT rst)
   if (rst == `OR1200_RST_VALUE)
     waiting_on <= 0;
+  else if ((waiting_on == `OR1200_WAIT_ON_MULTMAC) & !mac_stall)
+    waiting_on <= 0;   
   else if ((waiting_on == `OR1200_WAIT_ON_FPU) & fpu_done)
     waiting_on <= 0;
   else if ((waiting_on == `OR1200_WAIT_ON_MTSPR) & mtspr_done)

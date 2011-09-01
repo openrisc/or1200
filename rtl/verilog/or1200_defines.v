@@ -354,6 +354,16 @@
 `define OR1200_IMPL_ALU_FFL1
 
 //
+// Implement l.cust5 ALU instruction
+//
+//`define OR1200_IMPL_ALU_CUST5
+
+//
+// Implement l.extXs and l.extXz instructions
+//
+`define OR1200_IMPL_ALU_EXT
+
+//
 // Implement multiplier
 //
 // By default multiplier is implemented
@@ -394,7 +404,6 @@
 // Implement HW Single Precision FPU
 //
 //`define OR1200_FPU_IMPLEMENTED
-
 
 //
 // Clock ratio RISC clock versus WB clock
@@ -452,36 +461,34 @@
 //
 // ALUOPs
 //
-`define OR1200_ALUOP_WIDTH	4
-`define OR1200_ALUOP_NOP	4'd4
-/* Order defined by arith insns that have two source operands both in regs
-   (see binutils/include/opcode/or32.h) */
-`define OR1200_ALUOP_ADD	4'd0
-`define OR1200_ALUOP_ADDC	4'd1
-`define OR1200_ALUOP_SUB	4'd2
-`define OR1200_ALUOP_AND	4'd3
-`define OR1200_ALUOP_OR		4'd4
-`define OR1200_ALUOP_XOR	4'd5
-`define OR1200_ALUOP_MUL	4'd6
-`define OR1200_ALUOP_CUST5	4'd7
-`define OR1200_ALUOP_SHROT	4'd8
-`define OR1200_ALUOP_DIV	4'd9
-`define OR1200_ALUOP_DIVU	4'd10
-`define OR1200_ALUOP_MULU	4'd11
-/* Values sent to ALU from decode unit - not strictly defined by ISA */
-`define OR1200_ALUOP_MOVHI	4'd12
-`define OR1200_ALUOP_COMP	4'd13
-`define OR1200_ALUOP_MTSR	4'd14
-`define OR1200_ALUOP_MFSR	4'd15
-`define OR1200_ALUOP_CMOV	4'd14
-`define OR1200_ALUOP_FFL1	4'd15
+`define OR1200_ALUOP_WIDTH	5
+`define OR1200_ALUOP_NOP	5'b0_0100
+/* LS-nibble encodings correspond to bits [3:0] of instruction */
+`define OR1200_ALUOP_ADD	5'b0_0000 // 0
+`define OR1200_ALUOP_ADDC	5'b0_0001 // 1
+`define OR1200_ALUOP_SUB	5'b0_0010 // 2
+`define OR1200_ALUOP_AND	5'b0_0011 // 3
+`define OR1200_ALUOP_OR		5'b0_0100 // 4
+`define OR1200_ALUOP_XOR	5'b0_0101 // 5
+`define OR1200_ALUOP_MUL	5'b0_0110 // 6
+`define OR1200_ALUOP_RESERVED	5'b0_0111 // 7
+`define OR1200_ALUOP_SHROT	5'b0_1000 // 8
+`define OR1200_ALUOP_DIV	5'b0_1001 // 9
+`define OR1200_ALUOP_DIVU	5'b0_1010 // a
+`define OR1200_ALUOP_MULU	5'b0_1011 // b
+`define OR1200_ALUOP_EXTHB	5'b0_1100 // c
+`define OR1200_ALUOP_EXTW	5'b0_1101 // d
+`define OR1200_ALUOP_CMOV	5'b0_1110 // e
+`define OR1200_ALUOP_FFL1	5'b0_1111 // f
 
+/* Values sent to ALU from decode unit - not defined by ISA */
+`define OR1200_ALUOP_COMP       5'b1_0000 // Comparison
+`define OR1200_ALUOP_MOVHI      5'b1_0001 // Move-high
+`define OR1200_ALUOP_CUST5	5'b1_0010 // l.cust5
 
-// ALU instructions second opcode field (previously multicycle field in 
-// machine word)
-`define OR1200_ALUOP2_POS		9:8
-`define OR1200_ALUOP2_WIDTH	2
-
+// ALU instructions second opcode field
+`define OR1200_ALUOP2_POS	9:6
+`define OR1200_ALUOP2_WIDTH	4
 
 //
 // MACOPs
@@ -494,12 +501,24 @@
 //
 // Shift/rotate ops
 //
-`define OR1200_SHROTOP_WIDTH	2
-`define OR1200_SHROTOP_NOP	2'd0
-`define OR1200_SHROTOP_SLL	2'd0
-`define OR1200_SHROTOP_SRL	2'd1
-`define OR1200_SHROTOP_SRA	2'd2
-`define OR1200_SHROTOP_ROR	2'd3
+`define OR1200_SHROTOP_WIDTH	4
+`define OR1200_SHROTOP_NOP	4'd0
+`define OR1200_SHROTOP_SLL	4'd0
+`define OR1200_SHROTOP_SRL	4'd1
+`define OR1200_SHROTOP_SRA	4'd2
+`define OR1200_SHROTOP_ROR	4'd3
+
+//
+// Zero/Sign Extend ops
+//
+`define OR1200_EXTHBOP_WIDTH      4
+`define OR1200_EXTHBOP_BS         4'h1
+`define OR1200_EXTHBOP_HS         4'h0
+`define OR1200_EXTHBOP_BZ         4'h3
+`define OR1200_EXTHBOP_HZ         4'h2
+`define OR1200_EXTWOP_WIDTH       4
+`define OR1200_EXTWOP_WS          4'h0
+`define OR1200_EXTWOP_WZ          4'h1
 
 // Execution cycles per instruction
 `define OR1200_MULTICYCLE_WIDTH	3
@@ -508,8 +527,11 @@
 
 // Execution control which will "wait on" a module to finish
 `define OR1200_WAIT_ON_WIDTH 2
-`define OR1200_WAIT_ON_FPU `OR1200_WAIT_ON_WIDTH'd1
-`define OR1200_WAIT_ON_MTSPR `OR1200_WAIT_ON_WIDTH'd2
+`define OR1200_WAIT_ON_NOTHING    `OR1200_WAIT_ON_WIDTH'd0
+`define OR1200_WAIT_ON_MULTMAC    `OR1200_WAIT_ON_WIDTH'd1
+`define OR1200_WAIT_ON_FPU        `OR1200_WAIT_ON_WIDTH'd2
+`define OR1200_WAIT_ON_MTSPR      `OR1200_WAIT_ON_WIDTH'd3
+
 
 // Operand MUX selects
 `define OR1200_SEL_WIDTH		2
@@ -650,6 +672,7 @@
 `define OR1200_OR32_BF                6'b000100
 `define OR1200_OR32_NOP               6'b000101
 `define OR1200_OR32_MOVHI             6'b000110
+`define OR1200_OR32_MACRC             6'b000110
 `define OR1200_OR32_XSYNC             6'b001000
 `define OR1200_OR32_RFE               6'b001001
 /* */
@@ -681,8 +704,7 @@
 `define OR1200_OR32_SH                6'b110111
 `define OR1200_OR32_ALU               6'b111000
 `define OR1200_OR32_SFXX              6'b111001
-//`define OR1200_OR32_CUST5             6'b111100
-
+`define OR1200_OR32_CUST5             6'b111100
 
 /////////////////////////////////////////////////////
 //
