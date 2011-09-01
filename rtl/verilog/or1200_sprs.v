@@ -57,6 +57,7 @@ module or1200_sprs(
 
 		   // Internal CPU interface
 		   flagforw, flag_we, flag, cyforw, cy_we, carry,
+		   ovforw, ov_we,
 		   addrbase, addrofs, dat_i, branch_op, ex_spr_read, 
 		   ex_spr_write, 
 		   epcr, eear, esr, except_started,
@@ -96,6 +97,8 @@ module or1200_sprs(
    input 				cyforw;		// From ALU
    input 				cy_we;		// From ALU
    output 				carry;		// SR[CY]
+   input 				ovforw;		// From ALU
+   input 				ov_we;		// From ALU
    input [width-1:0] 			addrbase;	// SPR base address
    input [15:0] 			addrofs;	// SPR offset
    input [width-1:0] 			dat_i;		// SPR write data
@@ -285,18 +288,23 @@ module or1200_sprs(
    //
    // What to write into SR
    //
-   assign to_sr[`OR1200_SR_FO:`OR1200_SR_OV] 
-	    = (except_started) ? sr[`OR1200_SR_FO:`OR1200_SR_OV] :
+   assign to_sr[`OR1200_SR_FO:`OR1200_SR_OVE] 
+	    = (except_started) ? {sr[`OR1200_SR_FO:`OR1200_SR_DSX],1'b0} :
 	      (branch_op == `OR1200_BRANCHOP_RFE) ? 
-	      esr[`OR1200_SR_FO:`OR1200_SR_OV] : (spr_we && sr_sel) ? 
-	      {1'b1, spr_dat_o[`OR1200_SR_FO-1:`OR1200_SR_OV]} :
-	      sr[`OR1200_SR_FO:`OR1200_SR_OV];
+	      esr[`OR1200_SR_FO:`OR1200_SR_OVE] : (spr_we && sr_sel) ? 
+	      {1'b1, spr_dat_o[`OR1200_SR_FO-1:`OR1200_SR_OVE]} :
+	      sr[`OR1200_SR_FO:`OR1200_SR_OVE];
    assign to_sr[`OR1200_SR_TED] 
 	    = (except_started) ? 1'b1 :
 	      (branch_op == `OR1200_BRANCHOP_RFE) ? esr[`OR1200_SR_TED] :
 	      (spr_we && sr_sel) ? spr_dat_o[`OR1200_SR_TED] :
 	      sr[`OR1200_SR_TED];
-   
+   assign to_sr[`OR1200_SR_OV] 
+	    = (except_started) ? sr[`OR1200_SR_OV] :
+	      (branch_op == `OR1200_BRANCHOP_RFE) ? esr[`OR1200_SR_OV] :
+	      ov_we ? ovforw :
+	      (spr_we && sr_sel) ? spr_dat_o[`OR1200_SR_OV] :
+	      sr[`OR1200_SR_OV];
    assign to_sr[`OR1200_SR_CY] 
 	    = (except_started) ? sr[`OR1200_SR_CY] :
 	      (branch_op == `OR1200_BRANCHOP_RFE) ? esr[`OR1200_SR_CY] :
@@ -345,7 +353,7 @@ module or1200_sprs(
    // Write enables for system SPRs
    //
    assign sr_we = (spr_we && sr_sel) | (branch_op == `OR1200_BRANCHOP_RFE) | 
-		  flag_we | cy_we;
+		  flag_we | cy_we | ov_we;
    assign pc_we = (du_write && (npc_sel | ppc_sel));
    assign epcr_we = (spr_we && epcr_sel);
    assign eear_we = (spr_we && eear_sel);
@@ -375,7 +383,7 @@ module or1200_sprs(
    // Carry alias
    //
    assign carry = sr[`OR1200_SR_CY];
-
+   
    //
    // Supervision register
    //

@@ -299,7 +299,7 @@
 // If you don't use them, then disable implementation
 // to save area.
 //
-//`define OR1200_IMPL_ADDC
+`define OR1200_IMPL_ADDC
 
 //
 // Implement l.sub instruction
@@ -321,7 +321,24 @@
 // instructions and if these three insns are not
 // implemented there is not much point having SR[CY].
 //
-//`define OR1200_IMPL_CY
+`define OR1200_IMPL_CY
+
+//
+// Implement carry bit SR[OV]
+//
+// Compiler doesn't use this, but other code may like
+// to.
+//
+`define OR1200_IMPL_OV
+
+//
+// Implement carry bit SR[OVE]
+//
+// Overflow interrupt indicator. When enabled, SR[OV] flag
+// does not remain asserted after exception.
+//
+`define OR1200_IMPL_OVE
+
 
 //
 // Implement rotate in the ALU
@@ -825,9 +842,9 @@
 `define OR1200_SR_LEE  7
 `define OR1200_SR_CE   8
 `define OR1200_SR_F    9
-`define OR1200_SR_CY   10	// Unused
-`define OR1200_SR_OV   11	// Unused
-`define OR1200_SR_OVE  12	// Unused
+`define OR1200_SR_CY   10	// Optional
+`define OR1200_SR_OV   11	// Optional
+`define OR1200_SR_OVE  12	// Optional
 `define OR1200_SR_DSX  13	// Unused
 `define OR1200_SR_EPH  14
 `define OR1200_SR_FO   15

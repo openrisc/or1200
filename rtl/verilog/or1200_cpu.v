@@ -271,6 +271,10 @@ wire				flag_we_fpu;
 wire				carry;
 wire				cyforw;
 wire				cy_we_alu;
+wire				ovforw;
+wire				ov_we_alu;
+wire				ovforw_mult_mac;
+wire				ov_we_mult_mac;   
 wire				cy_we_rf;
 wire				lsu_stall;
 wire				epcr_we;
@@ -292,6 +296,7 @@ wire    			fpu_except_started;
 wire	[31:0]			wb_insn;
 wire				sig_syscall;
 wire				sig_trap;
+wire    			sig_range;
 wire				sig_fp;
 wire	[31:0]			spr_dat_cfgr;
 wire	[31:0]			spr_dat_rf;
@@ -393,9 +398,15 @@ assign flagforw = (flag_we_alu & flagforw_alu) | (flagforw_fpu & flag_we_fpu);
 assign flag_we = (flag_we_alu | flag_we_fpu) & ~abort_mvspr;
 
 //
-//  Flag for any MTSPR instructions, that must block execution, to indicate done
+// Flag for any MTSPR instructions, that must block execution, to indicate done
 //
 assign mtspr_done = mtspr_dc_done;
+
+//
+// Range exception
+//
+assign sig_range = sr[`OR1200_SR_OV];
+   
    
    
 //
@@ -591,6 +602,8 @@ or1200_alu or1200_alu(
 	.flag_we(flag_we_alu),
 	.cyforw(cyforw),
 	.cy_we(cy_we_alu),
+	.ovforw(ovforw),
+	.ov_we(ov_we_alu),		      
 	.flag(flag),
 	.carry(carry)
 );
@@ -641,6 +654,8 @@ or1200_mult_mac or1200_mult_mac(
 	.mac_op(mac_op),
 	.alu_op(alu_op),
 	.result(mult_mac_result),
+	.ovforw(ovforw_mult_mac), 
+	.ov_we(ov_we_mult_mac),
 	.mult_mac_stall(mult_mac_stall),
 	.spr_cs(spr_cs[`OR1200_SPR_GROUP_MAC]),
 	.spr_write(spr_we),
@@ -666,6 +681,8 @@ or1200_sprs or1200_sprs(
 	.cyforw(cyforw),
 	.cy_we(cy_we_rf),
 	.carry(carry),
+	.ovforw(ovforw | ovforw_mult_mac),
+	.ov_we(ov_we_alu | ov_we_mult_mac),
 	.to_wbmux(sprs_dataout),
 
 	.du_addr(du_addr),
@@ -803,7 +820,7 @@ or1200_except or1200_except(
 	.sig_dbuserr(except_dbuserr),
 	.sig_illegal(except_illegal),
 	.sig_align(except_align),
-	.sig_range(1'b0),
+	.sig_range(sig_range),
 	.sig_dtlbmiss(except_dtlbmiss),
 	.sig_dmmufault(except_dmmufault),
 	.sig_int(sig_int),

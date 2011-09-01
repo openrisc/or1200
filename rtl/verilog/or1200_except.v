@@ -176,7 +176,8 @@ reg	[2:0]			delayed_tee;
 wire				int_pending;
 wire				tick_pending;
 wire    			fp_pending;
-   
+wire    			range_pending;
+			
 reg trace_trap      ;
 reg ex_freeze_prev;
 reg sr_ted_prev;
@@ -207,6 +208,13 @@ assign tick_pending = sig_tick & (sr[`OR1200_SR_TEE] |
 
 assign fp_pending = sig_fp & fpcsr_fpee & ~ex_freeze & ~ex_branch_taken 
 		    & ~ex_dslot;
+
+`ifdef OR1200_IMPL_OVE   
+assign range_pending =  sig_range & sr[`OR1200_SR_OVE] & ~ex_freeze & 
+		       ~ex_branch_taken & ~ex_dslot;
+`else
+assign range_pending = 0;
+`endif   
    
 // Abort write into RF by load & other instructions   
 assign abort_ex = sig_dbuserr | sig_dmmufault | sig_dtlbmiss | sig_align | 
@@ -234,7 +242,7 @@ assign except_trig = {
 		      sig_syscall       & ~du_dsr[`OR1200_DU_DSR_SCE] & ~ex_freeze,
 		      sig_dmmufault	& ~du_dsr[`OR1200_DU_DSR_DPFE],
 		      sig_dbuserr	& ~du_dsr[`OR1200_DU_DSR_BUSEE],
-		      sig_range		& ~du_dsr[`OR1200_DU_DSR_RE],
+		      range_pending	& ~du_dsr[`OR1200_DU_DSR_RE],
 		      fp_pending	& ~du_dsr[`OR1200_DU_DSR_FPE],
 		      int_pending 	& ~du_dsr[`OR1200_DU_DSR_IE],
 		      tick_pending	& ~du_dsr[`OR1200_DU_DSR_TTE]
@@ -260,7 +268,7 @@ assign except_stop = {
 			sig_dtlbmiss		& du_dsr[`OR1200_DU_DSR_DME],
 			sig_dmmufault		& du_dsr[`OR1200_DU_DSR_DPFE],
 			sig_dbuserr		& du_dsr[`OR1200_DU_DSR_BUSEE],
-			sig_range		& du_dsr[`OR1200_DU_DSR_RE],
+			range_pending		& du_dsr[`OR1200_DU_DSR_RE],
 			sig_trap		& du_dsr[`OR1200_DU_DSR_TE],
 		        fp_pending  		& du_dsr[`OR1200_DU_DSR_FPE],
 			sig_syscall		& du_dsr[`OR1200_DU_DSR_SCE] & ~ex_freeze

@@ -65,6 +65,9 @@ module or1200_mult_mac(
 		       ex_freeze, id_macrc_op, macrc_op, a, b, mac_op, alu_op, 
 		       result, mult_mac_stall,
 
+		       // Overflow
+		       ovforw, ov_we,
+		       
 		       // SPR interface
 		       spr_cs, spr_write, spr_addr, spr_dat_i, spr_dat_o
 		       );
@@ -93,7 +96,8 @@ module or1200_mult_mac(
    input [`OR1200_ALUOP_WIDTH-1:0] 	alu_op;
    output [width-1:0] 			result;
    output				mult_mac_stall;
-
+   output 				ovforw, ov_we;
+   
    //
    // SPR interface
    //
@@ -154,9 +158,11 @@ module or1200_mult_mac(
  `else
    reg [width-1:0] 			div_quot_r;      
    reg [width-1:0] 			div_quot_generic;   
- `endif   
+ `endif
+   wire 				div_by_zero;
 `endif
-
+   reg 					ovforw, ov_we;
+   
    //
    // Combinatorial logic
    //
@@ -188,6 +194,9 @@ module or1200_mult_mac(
 	      alu_op_div | alu_op_mul | (|mac_op) ? a : 32'd0;
    assign y = (alu_op_sdiv | alu_op_smul) & b[31] ? ~b + 32'b1 : 
 	      alu_op_div | alu_op_mul | (|mac_op) ? b : 32'd0;
+
+   assign div_by_zero = !(|b) & alu_op_div;
+   
 
    // Used to indicate when we should check for new multiply or MAC ops
    always @(posedge clk or `OR1200_RST_EVENT rst)
@@ -228,7 +237,43 @@ module or1200_mult_mac(
 `else
        result = {width{1'b0}};    
 `endif    
-     endcase
+     endcase // casez (alu_op)
+
+
+   //
+   // Overflow generation
+   //
+   always @*
+     casez(alu_op)	// synopsys parallel_case
+`ifdef OR1200_IMPL_OV       
+ `ifdef OR1200_MULT_IMPLEMENTED
+       `OR1200_ALUOP_MUL: begin
+	  // Actually doing unsigned multiply internally, and then negate on
+	  // output as appropriate, so if sign bit is set, then is overflow
+	  ovforw = mul_prod_r[31];
+	  ov_we = 1;
+       end
+       `OR1200_ALUOP_MULU : begin
+	  // Overflow on unsigned multiply is simpler.
+	  ovforw = mul_prod_r[32];
+	  ov_we = 1;
+       end
+ `endif //  `ifdef OR1200_MULT_IMPLEMENTED
+ `ifdef OR1200_DIV_IMPLEMENTED
+       `OR1200_ALUOP_DIVU,
+       `OR1200_ALUOP_DIV: begin
+	  // Overflow on divide by zero
+	  ovforw = div_by_zero;
+	  ov_we = 1;
+       end
+ `endif
+`endif //  `ifdef OR1200_IMPL_OV
+       default: begin
+	  ovforw = 0;
+	  ov_we = 0;
+       end
+     endcase // casez (alu_op)
+   
 
 `ifdef OR1200_MULT_IMPLEMENTED
  `ifdef OR1200_MULT_SERIAL
@@ -394,6 +439,11 @@ module or1200_mult_mac(
    assign div_tmp = div_quot_r[63:32] - y;   
    always @(`OR1200_RST_EVENT rst or posedge clk)
      if (rst == `OR1200_RST_VALUE) begin
+	div_quot_r <=  64'h0000_0000_0000_0000;
+	div_free <=  1'b1;
+	div_cntr <=  6'b00_0000;
+     end
+     else if (div_by_zero) begin
 	div_quot_r <=  64'h0000_0000_0000_0000;
 	div_free <=  1'b1;
 	div_cntr <=  6'b00_0000;

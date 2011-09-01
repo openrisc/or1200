@@ -56,6 +56,7 @@ module or1200_alu(
 	alu_op, alu_op2, comp_op,
 	cust5_op, cust5_limm,
 	result, flagforw, flag_we,
+	ovforw, ov_we,
 	cyforw, cy_we, carry, flag
 );
 
@@ -78,6 +79,8 @@ output				flagforw;
 output				flag_we;
 output				cyforw;
 output				cy_we;
+output				ovforw;
+output				ov_we;
 input				carry;
 input         flag;
 
@@ -91,7 +94,10 @@ reg	[width-1:0]		result_cust5;
 reg				flagforw;
 reg				flagcomp;
 reg				flag_we;
+reg				cyforw;
 reg				cy_we;
+reg				ovforw;
+reg				ov_we;   
 wire	[width-1:0]		comp_a;
 wire	[width-1:0]		comp_b;
 `ifdef OR1200_IMPL_ALU_COMP1
@@ -99,16 +105,17 @@ wire				a_eq_b;
 wire				a_lt_b;
 `endif
 wire	[width-1:0]		result_sum;
-`ifdef OR1200_IMPL_ADDC
-wire	[width-1:0]		result_csum;
-wire				cy_csum;
-`endif
 wire	[width-1:0]		result_and;
 wire				cy_sum;
 `ifdef OR1200_IMPL_SUB
 wire				cy_sub;
 `endif
-reg				cyforw;
+wire    			ov_sum;
+wire    [width-1:0] 		carry_in;
+
+wire    [width-1:0]		b_mux;
+   
+   
 
 //
 // Combinatorial logic
@@ -120,12 +127,24 @@ assign a_eq_b = (comp_a == comp_b);
 assign a_lt_b = (comp_a < comp_b);
 `endif
 `ifdef OR1200_IMPL_SUB
-assign cy_sub = a < b;
+assign cy_sub = (comp_a < comp_b);
 `endif
-assign {cy_sum, result_sum} = a + b;
-`ifdef OR1200_IMPL_ADDC
-assign {cy_csum, result_csum} = a + b + {`OR1200_OPERAND_WIDTH'd0, carry};
+`ifdef OR1200_IMPL_ADDC   
+assign carry_in = (alu_op==`OR1200_ALUOP_ADDC) ? 
+		  {{width-1{1'b0}},carry} : {width{1'b0}};
+`else
+assign carry_in = {width-1{1'b0}};
 `endif
+`ifdef OR1200_IMPL_SUB
+assign b_mux = (alu_op==`OR1200_ALUOP_SUB) ? (~b)+1 : b;
+`else
+assign b_mux = b;
+`endif   
+assign {cy_sum, result_sum} = (a + b_mux) + carry_in;
+// Numbers either both +ve and bit 31 of result set
+assign ov_sum = ((!a[width-1] & !b_mux[width-1]) & result_sum[width-1]) |
+// or both -ve and bit 31 of result clear
+		((a[width-1] & b_mux[width-1]) & !result_sum[width-1]);  
 assign result_and = a & b;
 
 //
@@ -145,9 +164,6 @@ end
 //
 always @(alu_op or alu_op2 or a or b or result_sum or result_and or macrc_op
 	 or shifted_rotated or mult_mac_result or flag or result_cust5 or carry
-`ifdef OR1200_IMPL_ADDC
-         or result_csum
-`endif
 `ifdef OR1200_IMPL_ALU_EXT
          or extended
 `endif	 
@@ -182,19 +198,15 @@ always @(alu_op or alu_op2 or a or b or result_sum or result_and or macrc_op
 		`OR1200_ALUOP_SHROT : begin 
 				result = shifted_rotated;
 		end
+`ifdef OR1200_IMPL_ADDC
+		`OR1200_ALUOP_ADDC,
+`endif
+`ifdef OR1200_IMPL_SUB
+		`OR1200_ALUOP_SUB,
+`endif	 
 		`OR1200_ALUOP_ADD : begin
 				result = result_sum;
 		end
-`ifdef OR1200_IMPL_ADDC
-		`OR1200_ALUOP_ADDC : begin
-				result = result_csum;
-		end
-`endif
-`ifdef OR1200_IMPL_SUB
-		`OR1200_ALUOP_SUB : begin
-				result = a - b;
-		end
-`endif
 		`OR1200_ALUOP_XOR : begin
 				result = a ^ b;
 		end
@@ -245,22 +257,16 @@ end
 // Generate flag and flag write enable
 //
 always @(alu_op or result_sum or result_and or flagcomp
-`ifdef OR1200_IMPL_ADDC
-         or result_csum
-`endif
 ) begin
 	casez (alu_op)		// synopsys parallel_case
 `ifdef OR1200_ADDITIONAL_FLAG_MODIFIERS
+`ifdef OR1200_IMPL_ADDC
+		`OR1200_ALUOP_ADDC,
+`endif	 
 		`OR1200_ALUOP_ADD : begin
 			flagforw = (result_sum == 32'h0000_0000);
 			flag_we = 1'b1;
 		end
-`ifdef OR1200_IMPL_ADDC
-		`OR1200_ALUOP_ADDC : begin
-			flagforw = (result_csum == 32'h0000_0000);
-			flag_we = 1'b1;
-		end
-`endif
 		`OR1200_ALUOP_AND: begin
 			flagforw = (result_and == 32'h0000_0000);
 			flag_we = 1'b1;
@@ -282,9 +288,6 @@ end
 //
 always @(alu_op or cy_sum
 `ifdef OR1200_IMPL_CY
-`ifdef OR1200_IMPL_ADDC
-	or cy_csum
-`endif
 `ifdef OR1200_IMPL_SUB
 	or cy_sub
 `endif
@@ -292,16 +295,13 @@ always @(alu_op or cy_sum
 ) begin
 	casez (alu_op)		// synopsys parallel_case
 `ifdef OR1200_IMPL_CY
+`ifdef OR1200_IMPL_ADDC
+		`OR1200_ALUOP_ADDC,
+`endif	  
 		`OR1200_ALUOP_ADD : begin
 			cyforw = cy_sum;
 			cy_we = 1'b1;
 		end
-`ifdef OR1200_IMPL_ADDC
-		`OR1200_ALUOP_ADDC: begin
-			cyforw = cy_csum;
-			cy_we = 1'b1;
-		end
-`endif
 `ifdef OR1200_IMPL_SUB
 		`OR1200_ALUOP_SUB: begin
 			cyforw = cy_sub;
@@ -316,6 +316,31 @@ always @(alu_op or cy_sum
 	endcase
 end
 
+
+//
+// Generate SR[OV] write enable
+//
+always @(alu_op or ov_sum) begin
+	casez (alu_op)		// synopsys parallel_case
+`ifdef OR1200_IMPL_OV
+`ifdef OR1200_IMPL_ADDC
+		`OR1200_ALUOP_ADDC,
+`endif
+`ifdef OR1200_IMPL_SUB
+		`OR1200_ALUOP_SUB,
+`endif	 
+		`OR1200_ALUOP_ADD : begin
+			ovforw = ov_sum;
+			ov_we = 1'b1;
+		end
+`endif	  
+		default: begin
+			ovforw = 1'b0;
+			ov_we = 1'b0;
+		end
+	endcase
+end
+   
 //
 // Shifts and rotation
 //
