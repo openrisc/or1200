@@ -259,7 +259,7 @@ module or1200_mult_mac(
 	mul_free <= 1'b1;	
      end
 
-   assign mul_stall = (|serial_mul_cnt);
+   assign mul_stall = (|serial_mul_cnt) | (alu_op_mul & !ex_freeze_r);
    
  `else
    
@@ -411,11 +411,10 @@ module or1200_mult_mac(
 	div_free <=  1'b0;
      end
      else if (div_free | !ex_freeze) begin
-	//div_quot_r <=  div_quot[63:0];
 	div_free <=  1'b1;
      end
 
-   assign div_stall = (|div_cntr);
+   assign div_stall = (|div_cntr) | (!ex_freeze_r & alu_op_div);
 
 
  `else // !`ifdef OR1200_DIV_SERIAL
