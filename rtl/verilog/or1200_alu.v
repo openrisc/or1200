@@ -100,10 +100,8 @@ reg				ovforw;
 reg				ov_we;   
 wire	[width-1:0]		comp_a;
 wire	[width-1:0]		comp_b;
-`ifdef OR1200_IMPL_ALU_COMP1
 wire				a_eq_b;
 wire				a_lt_b;
-`endif
 wire	[width-1:0]		result_sum;
 wire	[width-1:0]		result_and;
 wire				cy_sum;
@@ -120,26 +118,54 @@ wire    [width-1:0]		b_mux;
 //
 // Combinatorial logic
 //
+
 assign comp_a = {a[width-1] ^ comp_op[3] , a[width-2:0]};
 assign comp_b = {b[width-1] ^ comp_op[3] , b[width-2:0]};
 `ifdef OR1200_IMPL_ALU_COMP1
 assign a_eq_b = (comp_a == comp_b);
 assign a_lt_b = (comp_a < comp_b);
 `endif
-`ifdef OR1200_IMPL_SUB
-assign cy_sub = (comp_a < comp_b);
+`ifdef OR1200_IMPL_ALU_COMP3
+assign a_eq_b = !(|result_sum);
+// signed compare when comp_op[3] is set
+assign a_lt_b = comp_op[3] ? ((a[width-1] & !b[width-1]) |  
+			      (!a[width-1] & !b[width-1] & result_sum[width-1])|
+			      (a[width-1] & b[width-1] & result_sum[width-1])):
+// a < b if (a - b) subtraction wrapped and a[width-1] wasn't set
+		(result_sum[width-1] & !a[width-1]) |
+// or if (a - b) wrapped and both a[width-1] and b[width-1] were set
+		(result_sum[width-1] & a[width-1] & b[width-1] );
 `endif
+   
+`ifdef OR1200_IMPL_SUB
+ `ifdef OR1200_IMPL_ALU_COMP3
+assign cy_sub =	a_lt_b;
+ `else			      
+assign cy_sub = (comp_a < comp_b);
+ `endif			      
+`endif
+   
 `ifdef OR1200_IMPL_ADDC   
 assign carry_in = (alu_op==`OR1200_ALUOP_ADDC) ? 
 		  {{width-1{1'b0}},carry} : {width{1'b0}};
 `else
 assign carry_in = {width-1{1'b0}};
 `endif
+
+`ifdef OR1200_IMPL_ALU_COMP3
+`ifdef OR1200_IMPL_SUB
+assign b_mux = ((alu_op==`OR1200_ALUOP_SUB) | (alu_op==`OR1200_ALUOP_COMP)) ? 
+		(~b)+1 : b;
+`else
+assign b_mux = (alu_op==`OR1200_ALUOP_COMP) ? (~b)+1 : b;
+`endif
+`else // ! `ifdef OR1200_IMPL_ALU_COMP3
 `ifdef OR1200_IMPL_SUB
 assign b_mux = (alu_op==`OR1200_ALUOP_SUB) ? (~b)+1 : b;
 `else
 assign b_mux = b;
-`endif   
+`endif
+`endif			      
 assign {cy_sum, result_sum} = (a + b_mux) + carry_in;
 // Numbers either both +ve and bit 31 of result set
 assign ov_sum = ((!a[width-1] & !b_mux[width-1]) & result_sum[width-1]) |
@@ -409,7 +435,29 @@ always @(comp_op or comp_a or comp_b) begin
 			flagcomp = 1'b0;
 	endcase
 end
+`endif //  `ifdef OR1200_IMPL_ALU_COMP2
+
+`ifdef OR1200_IMPL_ALU_COMP3
+always @(comp_op or a_eq_b or a_lt_b) begin
+	case(comp_op[2:0])	// synopsys parallel_case
+		`OR1200_COP_SFEQ:
+			flagcomp = a_eq_b;
+		`OR1200_COP_SFNE:
+			flagcomp = ~a_eq_b;
+		`OR1200_COP_SFGT:
+			flagcomp = ~(a_eq_b | a_lt_b);
+		`OR1200_COP_SFGE:
+			flagcomp = ~a_lt_b;
+		`OR1200_COP_SFLT:
+			flagcomp = a_lt_b;
+		`OR1200_COP_SFLE:
+			flagcomp = a_eq_b | a_lt_b;
+		default:
+			flagcomp = 1'b0;
+	endcase
+end
 `endif
+   
 
 `ifdef OR1200_IMPL_ALU_EXT
    always @(alu_op or alu_op2 or a) begin

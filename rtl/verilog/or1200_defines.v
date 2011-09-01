@@ -359,11 +359,12 @@
 //
 // Type of ALU compare to implement
 //
-// Try either one to find what yields
-// higher clock frequencyin your case.
+// Try to find which synthesizes with
+// most efficient logic use or highest speed.
 //
 //`define OR1200_IMPL_ALU_COMP1
-`define OR1200_IMPL_ALU_COMP2
+//`define OR1200_IMPL_ALU_COMP2
+`define OR1200_IMPL_ALU_COMP3
 
 //
 // Implement Find First/Last '1'
@@ -1658,7 +1659,7 @@
 `define OR1200_DMMUCFGR_NAE		3'h0	// No ATB entries
 `define OR1200_DMMUCFGR_CRI		1'b0	// No control register
 `define OR1200_DMMUCFGR_PRI		1'b0	// No protection reg
-`define OR1200_DMMUCFGR_TEIRI		1'b1	// TLB entry inv reg impl.
+`define OR1200_DMMUCFGR_TEIRI		1'b0	// TLB entry inv reg NOT impl.
 `define OR1200_DMMUCFGR_HTR		1'b0	// No HW TLB reload
 `define OR1200_DMMUCFGR_RES1		20'h00000
 `endif
@@ -1689,7 +1690,7 @@
 `define OR1200_IMMUCFGR_NAE		3'h0	// No ATB entry
 `define OR1200_IMMUCFGR_CRI		1'b0	// No control reg
 `define OR1200_IMMUCFGR_PRI		1'b0	// No protection reg
-`define OR1200_IMMUCFGR_TEIRI		1'b1	// TLB entry inv reg impl
+`define OR1200_IMMUCFGR_TEIRI		1'b0	// TLB entry inv reg NOT impl
 `define OR1200_IMMUCFGR_HTR		1'b0	// No HW TLB reload
 `define OR1200_IMMUCFGR_RES1		20'h00000
 `endif

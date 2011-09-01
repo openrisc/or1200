@@ -197,29 +197,21 @@ always @(`OR1200_RST_EVENT rst or posedge clk)
 	else if (~wb_freeze)
 		rf_we_allow <=  ~flushpipe;
 
-//assign rf_we = ((spr_valid & spr_write) | (we & ~wb_freeze)) & rf_we_allow & (supv | (|rf_addrw));
 assign rf_we = ((spr_valid & spr_write) | (we & ~wb_freeze)) & rf_we_allow;
-//assign cy_we_o = cy_we_i && rf_we;
+
 assign cy_we_o = cy_we_i && ~wb_freeze && rf_we_allow;
-   
    
 //
 // CS RF A asserted when instruction reads operand A and ID stage
 // is not stalled
 //
-//assign rf_ena = rda & ~id_freeze | spr_valid;	// probably works with fixed binutils
-assign rf_ena = (rda & ~id_freeze) | (spr_valid & !spr_write) | spr_cs_fe;	// probably works with fixed binutils
-// assign rf_ena = 1'b1;			// does not work with single-stepping
-//assign rf_ena = ~id_freeze | spr_valid;	// works with broken binutils 
+assign rf_ena = (rda & ~id_freeze) | (spr_valid & !spr_write) | spr_cs_fe;
 
 //
 // CS RF B asserted when instruction reads operand B and ID stage
 // is not stalled
 //
-//assign rf_enb = rdb & ~id_freeze | spr_valid;
 assign rf_enb = rdb & ~id_freeze;
-// assign rf_enb = 1'b1;
-//assign rf_enb = ~id_freeze | spr_valid;	// works with broken binutils 
 
 `ifdef OR1200_RFRAM_TWOPORT
 

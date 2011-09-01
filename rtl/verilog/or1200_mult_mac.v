@@ -250,20 +250,24 @@ module or1200_mult_mac(
        `OR1200_ALUOP_MUL: begin
 	  // Actually doing unsigned multiply internally, and then negate on
 	  // output as appropriate, so if sign bit is set, then is overflow
-	  ovforw = mul_prod_r[31];
+          // unless incoming signs differ and result is 2^(width-1)
+          ovforw = (mul_prod_r[width-1] && 
+                    !((a[width-1]^b[width-1]) && ~|mul_prod_r[width-2:0])) ||
+                   |mul_prod_r[2*width-1:32];
+
 	  ov_we = 1;
        end
        `OR1200_ALUOP_MULU : begin
 	  // Overflow on unsigned multiply is simpler.
-	  ovforw = mul_prod_r[32];
+	  ovforw = |mul_prod_r[2*width-1:32];
 	  ov_we = 1;
        end
  `endif //  `ifdef OR1200_MULT_IMPLEMENTED
  `ifdef OR1200_DIV_IMPLEMENTED
        `OR1200_ALUOP_DIVU,
        `OR1200_ALUOP_DIV: begin
-	  // Overflow on divide by zero
-	  ovforw = div_by_zero;
+	  // Overflow on divide by zero or -2^(width-1)/-1
+	  ovforw = div_by_zero || (a==32'h8000_0000 && b==32'hffff_ffff);
 	  ov_we = 1;
        end
  `endif
