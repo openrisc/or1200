@@ -108,14 +108,15 @@ module or1200_dpram
       
    endfunction // get_gpr
 
-   task set_gpr;
+   function [31:0] set_gpr;
       // verilator public
       input [aw-1:0] 		gpr_no;
       input [dw-1:0] 		value;
-
-      mem[gpr_no] = value;
-      
-   endtask // get_gpr
+      begin
+	 mem[gpr_no] = value;
+	 set_gpr = 0;
+      end
+   endfunction // get_gpr
    
    //
    // Data output drivers
