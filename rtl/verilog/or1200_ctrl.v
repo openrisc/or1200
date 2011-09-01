@@ -438,6 +438,8 @@ always @(rf_addrw or sel_imm or id_insn or rfwb_op or wbforw_valid or
 //
 always @(id_insn) begin
   case (id_insn[31:26])		// synopsys parallel_case
+    // l.rfe
+    `OR1200_OR32_RFE,
     // l.mfspr
     `OR1200_OR32_MFSPR:
       multicycle = `OR1200_TWO_CYCLES;	// to read from ITLB/DTLB (sync RAMs)

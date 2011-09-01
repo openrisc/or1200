@@ -112,11 +112,11 @@ module or1200_mult_mac(
    //
    reg [width-1:0] 			result;
    reg 					ex_freeze_r;
+   wire 				alu_op_mul;
+   wire 				alu_op_smul;      
 `ifdef OR1200_MULT_IMPLEMENTED
    reg [2*width-1:0] 			mul_prod_r;
-   wire 				alu_op_smul;   
    wire 				alu_op_umul;   
-   wire 				alu_op_mul;      
  `ifdef OR1200_MULT_SERIAL
    reg [5:0] 				serial_mul_cnt;   
    reg 					mul_free;   
@@ -170,7 +170,10 @@ module or1200_mult_mac(
    assign alu_op_smul = (alu_op == `OR1200_ALUOP_MUL);
    assign alu_op_umul = (alu_op == `OR1200_ALUOP_MULU);
    assign alu_op_mul = alu_op_smul | alu_op_umul;
-`endif   
+`else
+   assign alu_op_smul = 0;
+   assign alu_op_mul = 0;
+`endif
 `ifdef OR1200_MAC_IMPLEMENTED
    assign spr_maclo_we = spr_cs & spr_write & spr_addr[`OR1200_MAC_ADDR];
    assign spr_machi_we = spr_cs & spr_write & !spr_addr[`OR1200_MAC_ADDR];
