@@ -40,6 +40,10 @@ supported instructions table.
 v0.11	| 19/1/11	| Julius Baxter	| Cache information update.
 Wishbone behavior clarification. Serial integer multiply/divide update.
 Reset address clarification
+
+v0.12	| 13/9/11	| Julius Baxter	| Addition of extension instructions
+l.extbs, l.extbz, l.exths, l.exthz, l.extws and l.extwz. Range exception 
+support, overflow bit in supervision register.
 __vend__
 ////
 
@@ -238,6 +242,7 @@ Core exceptions can be generated when an exception condition occurs.
 - Internal errors, such as an attempt to execute unimplemented opcode
 - System call
 - Internal exception, such as breakpoint exceptions
+- Arithmetic overflow
 
 ((Exception handling)) is transparent to user software and uses the same
 mechanism to handle all types of exceptions. When an exception is taken,
@@ -593,6 +598,12 @@ optionally implemented are indicated as such.
 | ((l.bf))		|
 | ((l.bnf))		|
 | ((l.div))		| Yes
+| ((l.extbs))		| Yes
+| ((l.extbz))		| Yes
+| ((l.exths))		| Yes
+| ((l.exthz))		| Yes
+| ((l.extws))		| Yes
+| ((l.extwz))		| Yes
 | ((l.ff1))		| Yes
 | ((l.fl1))		| Yes
 | ((l.j))		|
@@ -784,6 +795,8 @@ exception is taken, the following conditions are met:
   interrupt asserted.
 | D-TLB Miss	| 0x900	| No matching entry in DTLB (DTLB miss).
 | I-TLB Miss	| 0xA00	| No matching entry in ITLB (ITLB miss).
+| Range		| 0xB00	| If programmed in the SR, the setting of  SR[OV], 
+  usually by an arithmetic instruction, causes a range exception.
 | System Call	| 0xC00	| System call initiated by software.
 | Floating point exception	| 0xD00	| FP operation caused flags in FPCSR to
   become set.
