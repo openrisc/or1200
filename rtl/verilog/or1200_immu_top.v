@@ -75,6 +75,7 @@ module or1200_immu_top(
 
 parameter dw = `OR1200_OPERAND_WIDTH;
 parameter aw = `OR1200_OPERAND_WIDTH;
+parameter boot_adr = `OR1200_BOOT_ADR;
 
 //
 // I/O
@@ -148,7 +149,6 @@ wire				fault;
 wire				miss;
 wire				page_cross;
 reg	[31:0]			icpu_adr_default;
-wire	[31:0]			icpu_adr_boot;
 reg				icpu_adr_select;
 reg		[31:0]		icpu_adr_o;
 reg	[31:`OR1200_IMMU_PS]	icpu_vpn_r;
@@ -176,6 +176,8 @@ reg				dis_spr_access_scnd_clk;
 // icpu_adr_o
 //
 `ifdef OR1200_REGISTERED_OUTPUTS
+wire	[31:0]			icpu_adr_boot = boot_adr;
+
 always @(`OR1200_RST_EVENT rst or posedge clk)
 	// default value 
 	if (rst == `OR1200_RST_VALUE) begin
@@ -199,7 +201,6 @@ always @(`OR1200_RST_EVENT rst or posedge clk)
 // selected after boot! 
    //assign icpu_adr_boot = {(boot_adr_sel_i ? `OR1200_EXCEPT_EPH1_P : 
    // `OR1200_EXCEPT_EPH0_P), 12'h100} ;
-   assign icpu_adr_boot = `OR1200_BOOT_ADR; // jb
 
 always @(icpu_adr_boot or icpu_adr_default or icpu_adr_select)
 	if (icpu_adr_select)

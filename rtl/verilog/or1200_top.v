@@ -97,6 +97,7 @@ module or1200_top(
 parameter dw = `OR1200_OPERAND_WIDTH;
 parameter aw = `OR1200_OPERAND_WIDTH;
 parameter ppic_ints = `OR1200_PIC_INTS;
+parameter boot_adr = `OR1200_BOOT_ADR;
 
 //
 // I/O
@@ -523,7 +524,9 @@ or1200_wb_biu
 //
 // Instantiation of IMMU
 //
-or1200_immu_top or1200_immu_top(
+or1200_immu_top
+#(.boot_adr(boot_adr))
+or1200_immu_top(
 	// Rst and clk
 	.clk(clk_i),
 	.rst(rst_i),
