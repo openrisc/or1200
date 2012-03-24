@@ -90,7 +90,9 @@ input         flag;
 reg	[width-1:0]		result;
 reg	[width-1:0]		shifted_rotated;
 reg	[width-1:0]		extended;   
+`ifdef OR1200_IMPL_ALU_CUST5
 reg	[width-1:0]		result_cust5;
+`endif
 reg				flagforw;
 reg				flagcomp;
 reg				flag_we;
@@ -187,10 +189,13 @@ end
 // Central part of the ALU
 //
 always @(alu_op or alu_op2 or a or b or result_sum or result_and or macrc_op
-	 or shifted_rotated or mult_mac_result or flag or result_cust5 or carry
+	 or shifted_rotated or mult_mac_result or flag or carry
 `ifdef OR1200_IMPL_ALU_EXT
          or extended
 `endif	 
+`ifdef OR1200_IMPL_ALU_CUST5
+	 or result_cust5
+`endif
 ) begin
 `ifdef OR1200_CASE_DEFAULT
 	casez (alu_op)		// synopsys parallel_case
