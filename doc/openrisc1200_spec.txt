@@ -44,6 +44,8 @@ Reset address clarification
 v0.12	| 13/9/11	| Julius Baxter	| Addition of extension instructions
 l.extbs, l.extbz, l.exths, l.exthz, l.extws and l.extwz. Range exception 
 support, overflow bit in supervision register.
+v0.13	| 27/5/12	| Julius Baxter	| Addition of support for delay-slot
+exception indicator bit in supervision register
 __vend__
 ////
 
@@ -248,6 +250,9 @@ Core exceptions can be generated when an exception condition occurs.
 mechanism to handle all types of exceptions. When an exception is taken,
 control is transferred to an exception handler at an offset defined by for
 the type of exception encountered. Exceptions are handled in supervisor mode.
+
+Exceptions caused by instructions in a delay slot will set the supervision
+register's DSX bit.
 
 Data Cache
 ~~~~~~~~~~
@@ -772,6 +777,7 @@ exception is taken, the following conditions are met:
 * Previous instructions finish and write back their results
 * The address of faulting instruction is saved in EPCR registers and the
   machine state is saved to ESR registers
+* If the exception occurred in a delay slot, the DSX bit of the SR is set
 
 [[exceptions_table]]
 .List of Implemented ((Exceptions))
@@ -803,8 +809,8 @@ exception is taken, the following conditions are met:
 | Trap	| 0xE00	| Trap instruction was decoded
 |===========================================================
 
-The OR1200 exception support does not include support for range exceptions
-or fast context switching.
+The OR1200 exception support does not include support for fast context 
+switching.
 
 Data Cache Operation
 ~~~~~~~~~~~~~~~~~~~~

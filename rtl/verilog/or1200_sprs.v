@@ -57,7 +57,7 @@ module or1200_sprs(
 
 		   // Internal CPU interface
 		   flagforw, flag_we, flag, cyforw, cy_we, carry,
-		   ovforw, ov_we,
+		   ovforw, ov_we, dsx,
 		   addrbase, addrofs, dat_i, branch_op, ex_spr_read, 
 		   ex_spr_write, 
 		   epcr, eear, esr, except_started,
@@ -99,6 +99,7 @@ module or1200_sprs(
    output 				carry;		// SR[CY]
    input 				ovforw;		// From ALU
    input 				ov_we;		// From ALU
+   input                                dsx;            // From except
    input [width-1:0] 			addrbase;	// SPR base address
    input [15:0] 			addrofs;	// SPR offset
    input [width-1:0] 			dat_i;		// SPR write data
@@ -289,7 +290,7 @@ module or1200_sprs(
    // What to write into SR
    //
    assign to_sr[`OR1200_SR_FO:`OR1200_SR_OVE] 
-	    = (except_started) ? {sr[`OR1200_SR_FO:`OR1200_SR_DSX],1'b0} :
+	    = (except_started) ? {sr[`OR1200_SR_FO:`OR1200_SR_EPH],dsx,1'b0} :
 	      (branch_op == `OR1200_BRANCHOP_RFE) ? 
 	      esr[`OR1200_SR_FO:`OR1200_SR_OVE] : (spr_we && sr_sel) ? 
 	      {1'b1, spr_dat_o[`OR1200_SR_FO-1:`OR1200_SR_OVE]} :

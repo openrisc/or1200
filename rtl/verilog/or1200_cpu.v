@@ -289,6 +289,7 @@ wire 				fpcsr_we;
 wire				sr_we;
 wire	[`OR1200_SR_WIDTH-1:0]	to_sr;
 wire	[`OR1200_SR_WIDTH-1:0]	sr;
+wire    			dsx;
 wire				except_flushpipe;
 wire				except_start;
 wire				except_started;
@@ -723,7 +724,8 @@ or1200_sprs or1200_sprs(
 	.sr_we(sr_we),
 	.to_sr(to_sr),
 	.sr(sr),
-	.branch_op(branch_op)
+	.branch_op(branch_op),
+	.dsx(dsx)
 );
 
 //
@@ -877,7 +879,8 @@ or1200_except or1200_except(
 	.sr_we(sr_we),
 	.to_sr(to_sr),
 	.sr(sr),
-	.abort_ex(abort_ex)
+	.abort_ex(abort_ex),
+	.dsx(dsx)
 );
 
 //

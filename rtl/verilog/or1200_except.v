@@ -78,7 +78,8 @@ module or1200_except
    except_stop, except_trig, ex_void, abort_mvspr, branch_op, spr_dat_ppc, 
    spr_dat_npc, datain, du_dsr, epcr_we, eear_we, esr_we, pc_we, epcr, eear, 
    du_dmr1, du_hwbkpt, du_hwbkpt_ls_r, esr, sr_we, to_sr, sr, lsu_addr, 
-   abort_ex, icpu_ack_i, icpu_err_i, dcpu_ack_i, dcpu_err_i, sig_fp, fpcsr_fpee
+   abort_ex, icpu_ack_i, icpu_err_i, dcpu_ack_i, dcpu_err_i, sig_fp, fpcsr_fpee,
+   dsx
    
 );
 
@@ -147,7 +148,8 @@ input				icpu_ack_i;
 input				icpu_err_i;
 input				dcpu_ack_i;
 input				dcpu_err_i;
-
+output 			        dsx;
+   
 //
 // Internal regs and wires
 //
@@ -177,6 +179,7 @@ wire				int_pending;
 wire				tick_pending;
 wire    			fp_pending;
 wire    			range_pending;
+reg 				dsx;
 			
 reg trace_trap      ;
 reg ex_freeze_prev;
@@ -462,6 +465,7 @@ assign except_flushpipe = |except_trig & ~|state;
 	 eear <=  32'b0;
 	 esr <=  {2'h1, {`OR1200_SR_WIDTH-3{1'b0}}, 1'b1};
 	 extend_flush_last <=  1'b0;
+	 dsx <= 1'b0;
       end
       else begin
 `ifdef OR1200_CASE_DEFAULT
@@ -482,6 +486,7 @@ assign except_flushpipe = |except_trig & ~|state;
 			       ex_pc : ex_pc;
 		       epcr <=  ex_dslot ? 
 			       wb_pc : ex_pc;
+		       dsx <= ex_dslot;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_IPF
@@ -495,6 +500,7 @@ assign except_flushpipe = |except_trig & ~|state;
 			       wb_pc : delayed1_ex_dslot ? 
 			       id_pc : delayed2_ex_dslot ? 
 			       id_pc : id_pc;
+		       dsx <= ex_dslot;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_BUSERR
@@ -504,6 +510,7 @@ assign except_flushpipe = |except_trig & ~|state;
 			       wb_pc : ex_pc;
 		       epcr <=  ex_dslot ? 
 			       wb_pc : ex_pc;
+		       dsx <= ex_dslot;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_ILLEGAL
@@ -512,6 +519,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		       eear <=  ex_pc;
 		       epcr <=  ex_dslot ? 
 			       wb_pc : ex_pc;
+		       dsx <= ex_dslot;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_ALIGN
@@ -520,6 +528,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		       eear <=  lsu_addr;
 		       epcr <=  ex_dslot ? 
 			       wb_pc : ex_pc;
+		       dsx <= ex_dslot;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_DTLBMISS
@@ -529,6 +538,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		       epcr <=  ex_dslot ? 
 			       wb_pc : delayed1_ex_dslot ? 
 			       dl_pc : ex_pc;
+		       dsx <= ex_dslot;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_TRAP			
@@ -537,6 +547,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		       epcr <=  ex_dslot ? 
 			       wb_pc : delayed1_ex_dslot ? 
 			       id_pc : ex_pc;
+		       dsx <= ex_dslot;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_SYSCALL
@@ -546,6 +557,7 @@ assign except_flushpipe = |except_trig & ~|state;
 			       wb_pc : delayed1_ex_dslot ? 
 			       id_pc : delayed2_ex_dslot ? 
 			       id_pc : id_pc;
+		       dsx <= ex_dslot;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_DPF
@@ -555,6 +567,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		       epcr <=  ex_dslot ? 
 			       wb_pc : delayed1_ex_dslot ? 
 			       dl_pc : ex_pc;
+		       dsx <= ex_dslot;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_BUSERR
@@ -564,6 +577,7 @@ assign except_flushpipe = |except_trig & ~|state;
 		       epcr <=  ex_dslot ? 
 			       wb_pc : delayed1_ex_dslot ? 
 			       dl_pc : ex_pc;
+		       dsx <= ex_dslot;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_RANGE
@@ -573,24 +587,28 @@ assign except_flushpipe = |except_trig & ~|state;
 			       wb_pc : delayed1_ex_dslot ? 
 			       dl_pc : delayed2_ex_dslot ? 
 			       id_pc : ex_pc;
+		       dsx <= ex_dslot;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_FLOAT
 		    14'b00_0000_0000_01??: begin
 		       except_type <=  `OR1200_EXCEPT_FLOAT;
 		       epcr <=  id_pc;
+		       dsx <= ex_dslot;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_INT
 		    14'b00_0000_0000_001?: begin
 		       except_type <=  `OR1200_EXCEPT_INT;
 		       epcr <=  id_pc;
+		       dsx <= ex_dslot;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_TICK
 		    14'b00_0000_0000_0001: begin
 		       except_type <=  `OR1200_EXCEPT_TICK;
 		       epcr <=  id_pc;
+		       dsx <= ex_dslot;
 		    end
 `endif
 		    default:
