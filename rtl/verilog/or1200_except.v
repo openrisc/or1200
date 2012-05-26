@@ -571,8 +571,8 @@ assign except_flushpipe = |except_trig & ~|state;
 		       except_type <=  `OR1200_EXCEPT_RANGE;
 		       epcr <=  ex_dslot ? 
 			       wb_pc : delayed1_ex_dslot ? 
-			       id_pc : delayed2_ex_dslot ? 
-			       id_pc : id_pc;
+			       dl_pc : delayed2_ex_dslot ? 
+			       id_pc : ex_pc;
 		    end
 `endif
 `ifdef OR1200_EXCEPT_FLOAT
