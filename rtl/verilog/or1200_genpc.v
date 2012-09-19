@@ -109,11 +109,11 @@ input				genpc_refetch;
 input				genpc_freeze;
 input				no_more_dslot;
 
+parameter boot_adr = `OR1200_BOOT_ADR;
 //
 // Internal wires and regs
 //
 reg	[31:2]			pcreg_default;
-wire	[31:0]			pcreg_boot;
 reg				pcreg_select;
 reg	[31:2]			pcreg;
 reg	[31:0]			pc;
@@ -258,7 +258,7 @@ reg				genpc_refetch_r;
    always @(posedge clk or `OR1200_RST_EVENT rst)
      // default value 
      if (rst == `OR1200_RST_VALUE) begin
-	pcreg_default <=  `OR1200_BOOT_PCREG_DEFAULT; // jb
+	pcreg_default <=  (boot_adr >>2) - 4;
 	pcreg_select <=  1'b1;// select async. value due to reset state
      end
    // selected value (different from default) is written into FF after
@@ -278,7 +278,7 @@ reg				genpc_refetch_r;
 
    // select async. value for pcreg after reset - PC jumps to the address selected
    // after boot.
-   assign  pcreg_boot = `OR1200_BOOT_ADR; // changed JB
+   wire [31:0] pcreg_boot = boot_adr;
 
    always @(pcreg_boot or pcreg_default or pcreg_select)
      if (pcreg_select)

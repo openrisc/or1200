@@ -1809,15 +1809,12 @@
 // vector to allow for power-on code to be run, if desired.                  //
 //                                                                           //
 // OR1200_BOOT_ADR should be the 32-bit address of the boot location         //
-// OR1200_BOOT_PCREG_DEFAULT should be ((OR1200_BOOT_ADR-4)>>2)              //
 //                                                                           //
 // For default reset behavior uncomment the settings under the "Boot 0x100"  //
 // comment below.                                                            //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 // Boot from 0xf0000100
-//`define OR1200_BOOT_PCREG_DEFAULT 30'h3c00003f
 //`define OR1200_BOOT_ADR 32'hf0000100
 // Boot from 0x100
- `define OR1200_BOOT_PCREG_DEFAULT 30'h0000003f
  `define OR1200_BOOT_ADR 32'h00000100

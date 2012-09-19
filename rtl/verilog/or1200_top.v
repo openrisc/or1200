@@ -616,7 +616,9 @@ or1200_ic_top or1200_ic_top(
 //
 // Instantiation of Instruction Cache
 //
-or1200_cpu or1200_cpu(
+or1200_cpu
+#(.boot_adr(boot_adr))
+or1200_cpu(
 	.clk(clk_i),
 	.rst(rst_i),
 

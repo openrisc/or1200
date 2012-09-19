@@ -90,6 +90,7 @@ module or1200_cpu(
 
 parameter dw = `OR1200_OPERAND_WIDTH;
 parameter aw = `OR1200_REGFILE_ADDR_WIDTH;
+parameter boot_adr = `OR1200_BOOT_ADR;
 
 //
 // I/O ports
@@ -413,7 +414,7 @@ assign sig_range = sr[`OR1200_SR_OV];
 //
 // Instantiation of instruction fetch block
 //
-or1200_genpc or1200_genpc(
+or1200_genpc #(.boot_adr(boot_adr)) or1200_genpc(
 	.clk(clk),
 	.rst(rst),
 	.icpu_adr_o(icpu_adr_o),
