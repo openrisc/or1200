@@ -412,6 +412,7 @@ wire				dcr0_sel,
 wire				dwcr0_sel,
 				dwcr1_sel; 	// DWCR selects
 reg				dbg_bp_r;
+reg 				ex_freeze_q;
 `ifdef OR1200_DU_HWBKPTS
 reg	[31:0]			match_cond0_ct;
 reg	[31:0]			match_cond1_ct;
@@ -529,12 +530,16 @@ assign dwcr0_sel = (spr_cs && (spr_addr[`OR1200_DUOFS_BITS] == `OR1200_DU_DWCR0)
 assign dwcr1_sel = (spr_cs && (spr_addr[`OR1200_DUOFS_BITS] == `OR1200_DU_DWCR1));
 `endif
 
+// Track previous ex_freeze to detect when signals are updated
+always @(posedge clk)
+  ex_freeze_q <= ex_freeze;
+
 //
 // Decode started exception
 //
 // du_except_stop comes from or1200_except
 //   
-always @(du_except_stop) begin
+always @(du_except_stop or ex_freeze_q) begin
 	except_stop = 14'b00_0000_0000_0000;
 	casez (du_except_stop)
 	        14'b1?_????_????_????:
@@ -566,16 +571,16 @@ always @(du_except_stop) begin
 			except_stop[`OR1200_DU_DRR_RE] = 1'b1;
 		end
 		14'b00_0000_0000_01??: begin
-			except_stop[`OR1200_DU_DRR_TE] = 1'b1;
+			except_stop[`OR1200_DU_DRR_TE] = 1'b1 & ~ex_freeze_q;
 		end
 		14'b00_0000_0000_001?: begin
 		        except_stop[`OR1200_DU_DRR_FPE] = 1'b1;
 		end	  
 		14'b00_0000_0000_0001:
-			except_stop[`OR1200_DU_DRR_SCE] = 1'b1;
+			except_stop[`OR1200_DU_DRR_SCE] = 1'b1 & ~ex_freeze_q;
 		default:
 			except_stop = 14'b00_0000_0000_0000;
-	endcase
+	endcase // casez (du_except_stop)
 end
 
 //
