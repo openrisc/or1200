@@ -312,7 +312,8 @@ module or1200_dc_fsm
    //                                  LSU straight off external data bus. In
    //                                  this was is also used for cache inhibit
    //                                  loads.
-   assign first_miss_ack = load_miss_ack | load_inhibit_ack;
+   // first_hit_ack takes precedence over first_miss_ack
+   assign first_miss_ack = ~first_hit_ack & (load_miss_ack | load_inhibit_ack);
    
    // ACK cache hit on load
    assign load_hit_ack = (state == `OR1200_DCFSM_CLOADSTORE) & 

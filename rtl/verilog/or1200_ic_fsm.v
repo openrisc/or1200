@@ -122,14 +122,18 @@ reg 				last_eval_miss; // JPB
    //assign saved_addr = hitmiss_eval ? start_addr : saved_addr_r;
    assign saved_addr = saved_addr_r;
 
-   //
-   // Assert for cache hit first word ready
-   // Assert for cache miss first word stored/loaded OK
-   // Assert for cache miss first word stored/loaded with an error
-   //
+   // Asserted when a cache hit occurs and the first word is ready/valid
    assign first_hit_ack = (state == `OR1200_ICFSM_CFETCH) & hitmiss_eval & 
 			  !tagcomp_miss & !cache_inhibit;
-   assign first_miss_ack = (state == `OR1200_ICFSM_CFETCH) & biudata_valid;
+
+   // Asserted when a cache miss occurs, but the first word of the new
+   // cache line is ready (on the bus)
+   // Cache hits overpower bus data
+   assign first_miss_ack = (state == `OR1200_ICFSM_CFETCH) & biudata_valid &
+			   ~first_hit_ack;
+   
+   // Asserted when a cache occurs, but there was a bus error with handling
+   // the old line or fetching the new line
    assign first_miss_err = (state == `OR1200_ICFSM_CFETCH) & biudata_error;
 
    //
@@ -175,6 +179,9 @@ reg 				last_eval_miss; // JPB
 	     
 	     if (hitmiss_eval)
 	       saved_addr_r[31:`OR1200_ICTAGL] <= start_addr[31:`OR1200_ICTAGL];
+
+	     // Check for stopped cache loads
+	         // instruction cache turned-off
 	     if ((!ic_en) ||
 		 // fetch aborted (usually caused by IMMU)
 		 (hitmiss_eval & !icqmem_cycstb_i) ||	
