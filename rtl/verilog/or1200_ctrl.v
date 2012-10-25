@@ -275,7 +275,8 @@ always @(id_insn) begin
 		id_simm = {{16{id_insn[15]}}, id_insn[15:0]};
 
 	// l.lxx (load instructions)
-	`OR1200_OR32_LWZ, `OR1200_OR32_LBZ, `OR1200_OR32_LBS, 
+	`OR1200_OR32_LWZ, `OR1200_OR32_LWS,
+   `OR1200_OR32_LBZ, `OR1200_OR32_LBS,
 	`OR1200_OR32_LHZ, `OR1200_OR32_LHS:
 		id_simm = {{16{id_insn[15]}}, id_insn[15:0]};
 
@@ -684,6 +685,7 @@ always @(posedge clk or `OR1200_RST_EVENT rst) begin
 		`OR1200_OR32_MACI,
 `endif
 		`OR1200_OR32_LWZ,
+		`OR1200_OR32_LWS,
 		`OR1200_OR32_LBZ,
 		`OR1200_OR32_LBS,
 		`OR1200_OR32_LHZ,
@@ -958,7 +960,11 @@ always @(posedge clk or `OR1200_RST_EVENT rst) begin
 		// l.lwz
 		`OR1200_OR32_LWZ:
 			rfwb_op <=  {`OR1200_RFWBOP_LSU, 1'b1};
-		  
+
+		// l.lws
+		`OR1200_OR32_LWS:
+			rfwb_op <=  {`OR1200_RFWBOP_LSU, 1'b1};
+
 		// l.lbz
 		`OR1200_OR32_LBZ:
 			rfwb_op <=  {`OR1200_RFWBOP_LSU, 1'b1};
@@ -1095,6 +1101,10 @@ always @(id_insn) begin
 	// l.lwz
 	`OR1200_OR32_LWZ:
 		id_lsu_op =  `OR1200_LSUOP_LWZ;
+
+	// l.lws
+	`OR1200_OR32_LWS:
+		id_lsu_op =  `OR1200_LSUOP_LWS;
 
 	// l.lbz
 	`OR1200_OR32_LBZ:
