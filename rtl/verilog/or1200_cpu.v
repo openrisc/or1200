@@ -441,7 +441,8 @@ or1200_genpc #(.boot_adr(boot_adr)) or1200_genpc(
 	.spr_pc_we(pc_we),
 	.genpc_refetch(genpc_refetch),
 	.genpc_freeze(genpc_freeze),
-	.no_more_dslot(no_more_dslot)
+	.no_more_dslot(no_more_dslot),
+	.lsu_stall(lsu_stall)
 );
 
 //

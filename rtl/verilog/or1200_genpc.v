@@ -64,7 +64,7 @@ module or1200_genpc(
 	id_branch_addrtarget, ex_branch_addrtarget, muxed_b, operand_b, 
 	flag, flagforw, ex_branch_taken, except_start,
 	epcr, spr_dat_i, spr_pc_we, genpc_refetch,
-	genpc_freeze, no_more_dslot
+	genpc_freeze, no_more_dslot, lsu_stall
 );
 
 //
@@ -108,6 +108,7 @@ input				spr_pc_we;
 input				genpc_refetch;
 input				genpc_freeze;
 input				no_more_dslot;
+input				lsu_stall;
 
 parameter boot_adr = `OR1200_BOOT_ADR;
 //
@@ -120,6 +121,7 @@ reg	[31:0]			pc;
 // Set in event of jump or taken branch   
 reg				ex_branch_taken;
 reg				genpc_refetch_r;
+reg				wait_lsu;
 
    //
    // Address of insn to be fecthed
@@ -131,9 +133,20 @@ reg				genpc_refetch_r;
    //
    // Control access to IC subsystem
    //
-   assign icpu_cycstb_o = ~(genpc_freeze | (|pre_branch_op && !icpu_rty_i));
+   assign icpu_cycstb_o = ~(genpc_freeze | (|pre_branch_op && !icpu_rty_i) | wait_lsu);
    assign icpu_sel_o = 4'b1111;
    assign icpu_tag_o = `OR1200_ITAG_NI;
+
+   //
+   // wait_lsu
+   //
+   always @(posedge clk or `OR1200_RST_EVENT rst)
+     if (rst == `OR1200_RST_VALUE)
+       wait_lsu <=  1'b0;
+     else if (!wait_lsu & |pre_branch_op & lsu_stall)
+       wait_lsu <=  1'b1;
+     else if (wait_lsu & ~|pre_branch_op)
+       wait_lsu <=  1'b0;
 
    //
    // genpc_freeze_r
