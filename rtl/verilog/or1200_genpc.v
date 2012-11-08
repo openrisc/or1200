@@ -265,6 +265,10 @@ reg				wait_lsu;
 	endcase
      end
 
+   // select async. value for pcreg after reset - PC jumps to the address selected
+   // after boot.
+   wire [31:0] pcreg_boot = boot_adr;
+
    //
    // PC register
    //
@@ -288,10 +292,6 @@ reg				wait_lsu;
 	      & !genpc_refetch) begin
 	pcreg_default <=  pc[31:2];
      end
-
-   // select async. value for pcreg after reset - PC jumps to the address selected
-   // after boot.
-   wire [31:0] pcreg_boot = boot_adr;
 
    always @(pcreg_boot or pcreg_default or pcreg_select)
      if (pcreg_select)
