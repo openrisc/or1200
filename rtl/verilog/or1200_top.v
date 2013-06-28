@@ -665,6 +665,7 @@ or1200_cpu(
 	.du_lsu_load_dat(du_lsu_load_dat),
 	.abort_mvspr(abort_mvspr),
 	.abort_ex(abort_ex),
+	.du_flush_pipe(du_flush_pipe),
 
 	// Connection IMMU and CPU internally
 	.immu_en(immu_en),
@@ -926,6 +927,7 @@ or1200_du or1200_du(
 	.id_pc(id_pc),
 	.du_dsr(du_dsr),
 	.du_dmr1(du_dmr1),
+	.du_flush_pipe(du_flush_pipe),
 
 	// For Trace buffer
 	.spr_dat_npc(spr_dat_npc),

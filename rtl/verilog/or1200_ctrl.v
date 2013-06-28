@@ -69,7 +69,7 @@ module or1200_ctrl
    cust5_op, cust5_limm, id_pc, ex_pc, du_hwbkpt, 
    multicycle, wait_on, wbforw_valid, sig_syscall, sig_trap,
    force_dslot_fetch, no_more_dslot, id_void, ex_void, ex_spr_read, 
-   ex_spr_write, 
+   ex_spr_write, du_flush_pipe,
    id_mac_op, id_macrc_op, ex_macrc_op, rfe, except_illegal, dc_no_writethrough
    );
 
@@ -136,8 +136,8 @@ output					ex_macrc_op;
 output					rfe;
 output					except_illegal;
 output  				dc_no_writethrough;
-   
-				
+input					du_flush_pipe;
+
 //
 // Internal wires and regs
 //
@@ -244,10 +244,10 @@ end
 //
 // Flush pipeline
 //
-assign if_flushpipe = except_flushpipe | pc_we | extend_flush;
-assign id_flushpipe = except_flushpipe | pc_we | extend_flush;
-assign ex_flushpipe = except_flushpipe | pc_we | extend_flush;
-assign wb_flushpipe = except_flushpipe | pc_we | extend_flush;
+assign if_flushpipe = except_flushpipe | pc_we | extend_flush | du_flush_pipe;
+assign id_flushpipe = except_flushpipe | pc_we | extend_flush | du_flush_pipe;
+assign ex_flushpipe = except_flushpipe | pc_we | extend_flush | du_flush_pipe;
+assign wb_flushpipe = except_flushpipe | pc_we | extend_flush | du_flush_pipe;
 
 //
 // EX Sign/Zero extension of immediates

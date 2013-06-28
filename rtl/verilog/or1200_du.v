@@ -64,7 +64,7 @@ module or1200_du(
 	ex_freeze, branch_op, ex_insn, id_pc,
 	spr_dat_npc, rf_dataw,
 	du_dsr, du_dmr1, du_stall, du_addr, du_dat_i, du_dat_o,
-	du_read, du_write, du_except_stop, du_hwbkpt,
+	du_read, du_write, du_except_stop, du_hwbkpt, du_flush_pipe,
 	spr_cs, spr_write, spr_addr, spr_dat_i, spr_dat_o,
 
 	// External Debug Interface
@@ -106,6 +106,7 @@ output				du_read;	// Debug Unit Read Enable
 output				du_write;	// Debug Unit Write Enable
 input	[13:0]			du_except_stop;	// Exception masked by DSR
 output				du_hwbkpt;	// Cause trap exception (HW Breakpoints)
+output				du_flush_pipe;	// Cause pipeline flush and pc<-npc
 input				spr_cs;		// SPR Chip Select
 input				spr_write;	// SPR Read/Write
 input	[aw-1:0]		spr_addr;	// SPR Address
@@ -163,6 +164,41 @@ assign du_addr = dbg_adr_i;
 assign du_dat_o = dbg_dat_i;
 assign du_read = dbg_stb_i && !dbg_we_i;
 assign du_write = dbg_stb_i && dbg_we_i;
+
+//
+// After a sw breakpoint, the replaced instruction need to be executed.
+// We flush the entire pipeline and set the pc to the current address
+// to execute the restored address.
+//
+
+reg du_flush_pipe_r;
+reg dbg_stall_i_r;
+
+assign du_flush_pipe = du_flush_pipe_r;
+
+//
+// Register du_flush_pipe
+//
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE) begin
+		du_flush_pipe_r   <=  1'b0;
+	end
+	else begin
+		du_flush_pipe_r   <=  (dbg_stall_i_r && !dbg_stall_i && |du_except_stop);
+	end
+end
+
+//
+// Detect dbg_stall falling edge
+//
+always @(posedge clk or `OR1200_RST_EVENT rst) begin
+	if (rst == `OR1200_RST_VALUE) begin
+		dbg_stall_i_r   <=  1'b0;
+	end
+	else begin
+		dbg_stall_i_r   <=  dbg_stall_i;
+	end
+end
 
 reg				dbg_ack;
 //

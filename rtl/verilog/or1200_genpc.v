@@ -64,7 +64,7 @@ module or1200_genpc(
 	id_branch_addrtarget, ex_branch_addrtarget, muxed_b, operand_b, 
 	flag, flagforw, ex_branch_taken, except_start,
 	epcr, spr_dat_i, spr_pc_we, genpc_refetch,
-	genpc_freeze, no_more_dslot, lsu_stall
+	genpc_freeze, no_more_dslot, lsu_stall, du_flush_pipe, spr_dat_npc
 );
 
 //
@@ -105,10 +105,12 @@ input				except_start;
 input	[31:0]			epcr;
 input	[31:0]			spr_dat_i;
 input				spr_pc_we;
+input [31:0] 			spr_dat_npc;
 input				genpc_refetch;
 input				genpc_freeze;
 input				no_more_dslot;
 input				lsu_stall;
+input				du_flush_pipe;
 
 parameter boot_adr = `OR1200_BOOT_ADR;
 //
@@ -126,7 +128,7 @@ reg				wait_lsu;
    //
    // Address of insn to be fecthed
    //
-   assign icpu_adr_o = !no_more_dslot & !except_start & !spr_pc_we 
+   assign icpu_adr_o = !no_more_dslot & !except_start & !spr_pc_we & !du_flush_pipe
 		       & (icpu_rty_i | genpc_refetch) ? 
 		       icpu_adr_i : {pc[31:2], 1'b0, ex_branch_taken|spr_pc_we};
 
@@ -165,14 +167,14 @@ reg				wait_lsu;
    //
    always @(pcreg or ex_branch_addrtarget or flag or branch_op or except_type
 	    or except_start or operand_b or epcr or spr_pc_we or spr_dat_i or 
-	    except_prefix) 
+	    except_prefix or du_flush_pipe) 
      begin
-	casez ({spr_pc_we, except_start, branch_op}) // synopsys parallel_case
-	  {2'b00, `OR1200_BRANCHOP_NOP}: begin
+	casez ({du_flush_pipe, spr_pc_we, except_start, branch_op}) // synopsys parallel_case
+	  {3'b000, `OR1200_BRANCHOP_NOP}: begin
 	     pc = {pcreg + 30'd1, 2'b0};
 	     ex_branch_taken = 1'b0;
 	  end
-	  {2'b00, `OR1200_BRANCHOP_J}: begin
+	  {3'b000, `OR1200_BRANCHOP_J}: begin
 `ifdef OR1200_VERBOSE
 	     // synopsys translate_off
 	     $display("%t: BRANCHOP_J: pc <= ex_branch_addrtarget %h"
@@ -182,7 +184,7 @@ reg				wait_lsu;
 	     pc = {ex_branch_addrtarget, 2'b00};
 	     ex_branch_taken = 1'b1;
 	  end
-	  {2'b00, `OR1200_BRANCHOP_JR}: begin
+	  {3'b000, `OR1200_BRANCHOP_JR}: begin
 `ifdef OR1200_VERBOSE
 	     // synopsys translate_off
 	     $display("%t: BRANCHOP_JR: pc <= operand_b %h", 
@@ -192,7 +194,7 @@ reg				wait_lsu;
 	     pc = operand_b;
 	     ex_branch_taken = 1'b1;
 	  end
-	  {2'b00, `OR1200_BRANCHOP_BF}:
+	  {3'b000, `OR1200_BRANCHOP_BF}:
 	    if (flag) begin
 `ifdef OR1200_VERBOSE
 	       // synopsys translate_off
@@ -212,7 +214,7 @@ reg				wait_lsu;
 	       pc = {pcreg + 30'd1, 2'b0};
 	       ex_branch_taken = 1'b0;
 	    end
-	  {2'b00, `OR1200_BRANCHOP_BNF}:
+	  {3'b000, `OR1200_BRANCHOP_BNF}:
 	    if (flag) begin
 `ifdef OR1200_VERBOSE
 	       // synopsys translate_off
@@ -232,7 +234,7 @@ reg				wait_lsu;
 	       pc = {ex_branch_addrtarget, 2'b00};
 	       ex_branch_taken = 1'b1;
 	    end
-	  {2'b00, `OR1200_BRANCHOP_RFE}: begin
+	  {3'b000, `OR1200_BRANCHOP_RFE}: begin
 `ifdef OR1200_VERBOSE
 	     // synopsys translate_off
 	     $display("%t: BRANCHOP_RFE: pc <= epcr %h", 
@@ -242,7 +244,16 @@ reg				wait_lsu;
 	     pc = epcr;
 	     ex_branch_taken = 1'b1;
 	  end
-	  {2'b01, 3'b???}: begin
+	  {3'b100, 3'b???}: begin
+`ifdef OR1200_VERBOSE
+	     // synopsys translate_off
+	     $display("Reload breaked ins at : %h.", spr_dat_npc);
+	     // synopsys translate_on
+`endif
+	     pc = spr_dat_npc;
+	     ex_branch_taken = 1'b1;
+	  end
+	  {3'b001, 3'b???}: begin
 `ifdef OR1200_VERBOSE
 	     // synopsys translate_off
 	     $display("Starting exception: %h.", except_type);
@@ -288,7 +299,7 @@ reg				wait_lsu;
      else if (spr_pc_we) begin
 	pcreg_default <=  spr_dat_i[31:2];
      end
-     else if (no_more_dslot | except_start | !genpc_freeze & !icpu_rty_i 
+     else if (du_flush_pipe | no_more_dslot | except_start | !genpc_freeze & !icpu_rty_i 
 	      & !genpc_refetch) begin
 	pcreg_default <=  pc[31:2];
      end

@@ -66,7 +66,7 @@ module or1200_cpu(
 	id_void, id_insn, ex_void, 
 	ex_insn, ex_freeze, wb_insn, wb_freeze, id_pc, ex_pc, wb_pc, branch_op,
 	spr_dat_npc, rf_dataw, ex_flushpipe, 
-	du_stall, du_addr, du_dat_du, du_read, du_write, du_except_stop, 
+	du_stall, du_addr, du_dat_du, du_read, du_write, du_except_stop, du_flush_pipe,
 	du_except_trig, du_dsr, du_dmr1, du_hwbkpt, du_hwbkpt_ls_r, du_dat_cpu,
 	du_lsu_store_dat, du_lsu_load_dat, 
 	abort_mvspr, abort_ex,
@@ -153,6 +153,7 @@ output	[dw-1:0]		du_dat_cpu;
 output	[dw-1:0]		rf_dataw;
 output	[dw-1:0]		du_lsu_store_dat;
 output	[dw-1:0]		du_lsu_load_dat;
+input				du_flush_pipe;
 
 //
 // Data (DC) interface
@@ -442,7 +443,9 @@ or1200_genpc #(.boot_adr(boot_adr)) or1200_genpc(
 	.genpc_refetch(genpc_refetch),
 	.genpc_freeze(genpc_freeze),
 	.no_more_dslot(no_more_dslot),
-	.lsu_stall(lsu_stall)
+	.lsu_stall(lsu_stall),
+	.du_flush_pipe(du_flush_pipe),
+	.spr_dat_npc(spr_dat_npc)
 );
 
 //
@@ -534,7 +537,8 @@ or1200_ctrl or1200_ctrl(
 	.rfe(rfe),
 	.du_hwbkpt(du_hwbkpt),
 	.except_illegal(except_illegal),
-	.dc_no_writethrough(dc_no_writethrough)
+	.dc_no_writethrough(dc_no_writethrough),
+	.du_flush_pipe(du_flush_pipe)
 );
 
 //
