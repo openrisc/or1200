@@ -698,7 +698,9 @@ always @(posedge clk or `OR1200_RST_EVENT rst) begin
 `ifdef OR1200_MULT_IMPLEMENTED
 		`OR1200_OR32_MULI,
 `endif
+`ifdef OR1200_IMPL_ALU_ROTATE		  
 		`OR1200_OR32_SH_ROTI,
+`endif
 		`OR1200_OR32_SFXXI,
 		`OR1200_OR32_MTSPR,
 `ifdef OR1200_MAC_IMPLEMENTED
@@ -810,11 +812,11 @@ always @(posedge clk or `OR1200_RST_EVENT rst) begin
 	    `OR1200_OR32_MULI:
 	      alu_op <=  `OR1200_ALUOP_MUL;
 `endif
-	    
+`ifdef OR1200_IMPL_ALU_ROTATE	    
 	    // Shift and rotate insns with immediate
 	    `OR1200_OR32_SH_ROTI:
 	      alu_op <=  `OR1200_ALUOP_SHROT;
-	    
+`endif  
 	    // SFXX insns with immediate
 	    `OR1200_OR32_SFXXI:
 	      alu_op <=  `OR1200_ALUOP_COMP;
@@ -1008,9 +1010,10 @@ always @(posedge clk or `OR1200_RST_EVENT rst) begin
 `endif
 		  
 		// Shift and rotate insns with immediate
+`ifdef OR1200_IMPL_ALU_ROTATE
 		`OR1200_OR32_SH_ROTI:
 			rfwb_op <=  {`OR1200_RFWBOP_ALU, 1'b1};
-		  
+`endif
 		// ALU instructions except the one with immediate
 		`OR1200_OR32_ALU:
 			rfwb_op <=  {`OR1200_RFWBOP_ALU, 1'b1};
