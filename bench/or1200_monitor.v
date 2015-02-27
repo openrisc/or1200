@@ -114,6 +114,8 @@ module or1200_monitor;
    // are supported
    //
    task display_arch_state;
+      input exception;
+
       reg [5:0] i;
       reg [31:0] r;
       integer 	 j;
@@ -123,13 +125,20 @@ module or1200_monitor;
  `ifdef OR1200_MONITOR_LOOKUP
 	 $fdisplay(flookup, "Instruction %d: %t", insns, $time);
  `endif
-	 $fwrite(fexe, "\nEXECUTED(%d): %h:  %h", insns,
-		 `OR1200_TOP.`CPU_cpu.`CPU_except.wb_pc,
-		 `OR1200_TOP.`CPU_cpu.`CPU_ctrl.wb_insn);
+	 if(exception)
+	   $fwrite(fexe, "\nEXECUTED(%d): %h:  %h  (exception)", insns,
+		   `OR1200_TOP.`CPU_cpu.`CPU_except.ex_pc,
+		   `OR1200_TOP.`CPU_cpu.`CPU_ctrl.ex_insn);
+	 else
+	   $fwrite(fexe, "\nEXECUTED(%d): %h:  %h", insns,
+		   `OR1200_TOP.`CPU_cpu.`CPU_except.wb_pc,
+		   `OR1200_TOP.`CPU_cpu.`CPU_ctrl.wb_insn);
  `ifdef OR1200_MONITOR_EXEC_LOG_DISASSEMBLY
-	 $fwrite(fexe,"\t");
-	 // Decode the instruction, print it out
-	 or1200_print_op(`OR1200_TOP.`CPU_cpu.`CPU_ctrl.wb_insn);
+	 if(!exception) begin
+	    $fwrite(fexe,"\t");
+	    // Decode the instruction, print it out
+	    or1200_print_op(`OR1200_TOP.`CPU_cpu.`CPU_ctrl.wb_insn);
+	 end
  `endif
 	 for(i = 0; i < 32; i = i + 1) begin
 	    if (i % 4 == 0)
@@ -147,13 +156,6 @@ module or1200_monitor;
 	 r = `OR1200_TOP.`CPU_cpu.`CPU_sprs.esr;
 	 $fdisplay(fexe, "ESR0 : %h", r);
 `endif //  `ifdef OR1200_MONITOR_EXEC_STATE
-`ifdef OR1200_DISPLAY_EXECUTED
-	 ref = ref + 1;
- `ifdef OR1200_MONITOR_LOOKUP
-	 $fdisplay(flookup, "Instruction %d: %t", insns, $time);
- `endif
-	 $fwrite(fexe, "\nEXECUTED(%d): %h:  %h", insns, `OR1200_TOP.`CPU_cpu.`CPU_except.wb_pc, `OR1200_TOP.`CPU_cpu.`CPU_ctrl.wb_insn);
-`endif
 	 insns = insns + 1;
       end
    endtask // display_arch_state
@@ -212,52 +214,6 @@ module or1200_monitor;
 
       end
    endtask // monitor_for_crash
-
-
-   //
-   // Write state of the OR1200 registers into a file; version for exception
-   //
-   task display_arch_state_except;
-      reg [5:0] i;
-      reg [31:0] r;
-      integer 	 j;
-      begin
-`ifdef OR1200_MONITOR_EXEC_STATE
-	 ref = ref + 1;
- `ifdef OR1200_MONITOR_LOOKUP
-	 $fdisplay(flookup, "Instruction %d: %t", insns, $time);
- `endif
-	 $fwrite(fexe, "\nEXECUTED(%d): %h:  %h  (exception)", insns, `OR1200_TOP.`CPU_cpu.`CPU_except.ex_pc, `OR1200_TOP.`CPU_cpu.`CPU_ctrl.ex_insn);
-	 for(i = 0; i < 32; i = i + 1) begin
-	    if (i % 4 == 0)
-	      $fdisplay(fexe);
-	    get_gpr(i, r);
-	    $fwrite(fexe, "GPR%d: %h  ", i, r);
-	 end
-	 $fdisplay(fexe);
-	 r = `OR1200_TOP.`CPU_cpu.`CPU_sprs.sr;
-	 $fwrite(fexe, "SR   : %h  ", r);
-	 r = `OR1200_TOP.`CPU_cpu.`CPU_sprs.epcr;
-	 $fwrite(fexe, "EPCR0: %h  ", r);
-	 r = `OR1200_TOP.`CPU_cpu.`CPU_sprs.eear;
-	 $fwrite(fexe, "EEAR0: %h  ", r);
-	 r = `OR1200_TOP.`CPU_cpu.`CPU_sprs.esr;
-	 $fdisplay(fexe, "ESR0 : %h", r);
-         insns = insns + 1;
-`endif //  `ifdef OR1200_MONITOR_EXEC_STATE
-`ifdef OR1200_DISPLAY_EXECUTED
-	 ref = ref + 1;
- `ifdef OR1200_MONITOR_LOOKUP
-	 $fdisplay(flookup, "Instruction %d: %t", insns, $time);
- `endif
-	 $fwrite(fexe, "\nEXECUTED(%d): %h:  %h  (exception)", insns,
-		 `OR1200_TOP.`CPU_cpu.`CPU_except.ex_pc,
-		 `OR1200_TOP.`CPU_cpu.`CPU_ctrl.ex_insn);
-	 insns = insns + 1;
-`endif
-
-      end
-   endtask
 
    integer iwb_progress;
    reg [31:0] iwb_progress_addr;
@@ -363,12 +319,12 @@ module or1200_monitor;
 	    & !(`OR1200_TOP.`CPU_cpu.`CPU_except.except_flushpipe &
 		`OR1200_TOP.`CPU_cpu.`CPU_except.ex_dslot))
 	  begin
-	     display_arch_state;
+	     display_arch_state(0);
 	     monitor_for_crash;
 	  end
 	else
 	  if (`OR1200_TOP.`CPU_cpu.`CPU_except.except_flushpipe)
-	    display_arch_state_except;
+	    display_arch_state(1);
 	// small hack to stop simulation (l.nop 1):
 	if (`OR1200_TOP.`CPU_cpu.`CPU_ctrl.wb_insn == 32'h1500_0001) begin
 	   get_gpr(3, r3);
