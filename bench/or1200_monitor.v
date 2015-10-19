@@ -335,7 +335,9 @@ module or1200_monitor;
        $display("exit(%0d)",r3);
 `endif
 	   $finish;
-	end
+	   //... or l.nop 0xc
+	end else if (`OR1200_TOP.`CPU_cpu.`CPU_ctrl.wb_insn == 32'h1500_000c)
+	  $finish;
 	// debug if test (l.nop 10)
 	if (`OR1200_TOP.`CPU_cpu.`CPU_ctrl.wb_insn == 32'h1500_000a) begin
 	   $fdisplay(fgeneral, "%t: l.nop dbg_if_test", $time);
