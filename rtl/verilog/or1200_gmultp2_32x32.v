@@ -70,7 +70,8 @@ input           CLK;
 input           RST;
 output  [`OR1200_WW-1:0]  P;
 
-reg     [`OR1200_WW-1:0]  p0;
+reg     [`OR1200_W-1:0]  X_saved;
+reg     [`OR1200_W-1:0]  Y_saved;
 reg     [`OR1200_WW-1:0]  p1;
 integer 		  xi;
 integer 		  yi;
@@ -78,32 +79,36 @@ integer 		  yi;
 //
 // Conversion unsigned to signed
 //
-always @(X)
-	xi = X;
+always @(X_saved)
+	xi = X_saved;
 
 //
 // Conversion unsigned to signed
 //
-always @(Y)
-	yi = Y;
+always @(Y_saved)
+	yi = Y_saved;
 
 //
 // First multiply stage
 //
 always @(posedge CLK or `OR1200_RST_EVENT RST)
-        if (RST == `OR1200_RST_VALUE)
-                p0 <= `OR1200_WW'b0;
-        else
-                p0 <=  xi * yi;
+        if (RST == `OR1200_RST_VALUE) begin
+           X_saved <= `OR1200_W'b0;
+	   Y_saved <= `OR1200_W'b0;
+	end
+        else begin
+           X_saved <= X;
+	   Y_saved <= Y;
+	end
 
 //
 // Second multiply stage
 //
 always @(posedge CLK or `OR1200_RST_EVENT RST)
         if (RST == `OR1200_RST_VALUE)
-                p1 <= `OR1200_WW'b0;
+          p1 <= `OR1200_WW'b0;
         else
-                p1 <=  p0;
+          p1 <=  xi * yi;
 
 assign P = p1;
 
